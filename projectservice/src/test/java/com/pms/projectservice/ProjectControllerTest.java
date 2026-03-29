@@ -39,4 +39,18 @@ class ProjectControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void createProject_shouldFail_whenNameIsBlank() throws Exception {
+
+        ProjectRequestDTO request = ProjectRequestDTO.builder()
+                .name("") // invalid
+                .description("Test Desc")
+                .build();
+
+        mockMvc.perform(post("/api/v1/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
 }

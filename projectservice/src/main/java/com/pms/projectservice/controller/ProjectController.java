@@ -2,6 +2,7 @@ package com.pms.projectservice.controller;
 
 import com.pms.projectservice.dto.*;
 import com.pms.projectservice.service.ProjectService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +19,7 @@ public class ProjectController {
     }
 
     @PostMapping
-    public ProjectResponseDTO createProject(@RequestBody ProjectRequestDTO request) {
+    public ProjectResponseDTO createProject(@Valid @RequestBody ProjectRequestDTO request) {
         return projectService.createProject(request);
     }
 }
