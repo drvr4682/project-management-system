@@ -6,6 +6,8 @@ import com.pms.projectservice.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import static com.pms.projectservice.security.JwtFilter.currentUser;
+
 @Service
 @RequiredArgsConstructor
 public class ProjectService {
@@ -18,17 +20,19 @@ public class ProjectService {
 
     public ProjectResponseDTO createProject(ProjectRequestDTO request) {
 
-        String currentUser = "TEMP_USER"; // placeholder (JWT later)
+        String currentUserName = currentUser.get();
+
+        if (currentUserName == null) {
+            throw new RuntimeException("Unauthorized");
+        }
 
         Project project = Project.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .owner(currentUser)
+                .owner(currentUserName)
                 .build();
 
-        Project saved = projectRepository.save(project);
-
-        return mapToResponse(saved);
+        return mapToResponse(projectRepository.save(project));
     }
 
     public ProjectResponseDTO getProjectById(Long id) {
