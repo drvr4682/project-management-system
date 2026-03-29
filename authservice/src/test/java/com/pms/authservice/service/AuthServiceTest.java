@@ -10,6 +10,7 @@ import com.pms.authservice.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
 
 import java.util.Optional;
 
@@ -20,9 +21,10 @@ class AuthServiceTest {
     private final UserRepository userRepository = Mockito.mock(UserRepository.class);
     private final PasswordEncoder passwordEncoder = Mockito.mock(PasswordEncoder.class);
     private final JwtUtil jwtUtil = Mockito.mock(JwtUtil.class);
+    private final AuthenticationManager authenticationManager = Mockito.mock(AuthenticationManager.class);
 
     private final AuthService authService =
-            new AuthServiceImpl(userRepository, passwordEncoder, jwtUtil);
+            new AuthServiceImpl(userRepository, passwordEncoder, jwtUtil, authenticationManager);
 
     @Test
     void shouldRegisterUserSuccessfully() {
@@ -74,10 +76,9 @@ class AuthServiceTest {
         Mockito.when(userRepository.findByEmail(request.getEmail()))
                 .thenReturn(Optional.of(user));
 
-        Mockito.when(passwordEncoder.matches("123", "hashed"))
-                .thenReturn(true);
+        Mockito.when(authenticationManager.authenticate(Mockito.any()))
+                .thenReturn(null);
 
-        // 🔥 THIS YOU MISSED
         Mockito.when(jwtUtil.generateToken(Mockito.any()))
                 .thenReturn("dummy-token");
 
