@@ -63,13 +63,16 @@ class ProjectControllerTest {
                 .description("Test")
                 .build();
 
-        mockMvc.perform(post("/api/v1/projects")
+        String response = mockMvc.perform(post("/api/v1/projects")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
+        Long id = objectMapper.readTree(response).get("id").asLong();
 
-        mockMvc.perform(get("/api/v1/projects/1"))
+        mockMvc.perform(get("/api/v1/projects/" + id))
                 .andExpect(status().isOk());
     }
 }

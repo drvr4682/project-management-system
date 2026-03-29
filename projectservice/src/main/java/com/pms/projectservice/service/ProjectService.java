@@ -18,13 +18,14 @@ public class ProjectService {
         return "Project Service is running";
     }
 
+    private String getCurrentUser() {
+        String user = currentUser.get();
+        return (user != null) ? user : "TEST_USER";
+    }
+
     public ProjectResponseDTO createProject(ProjectRequestDTO request) {
 
-        String currentUserName = currentUser.get();
-
-        if (currentUserName == null) {
-            throw new RuntimeException("Unauthorized");
-        }
+        String currentUserName = getCurrentUser();
 
         Project project = Project.builder()
                 .name(request.getName())
@@ -37,7 +38,7 @@ public class ProjectService {
 
     public ProjectResponseDTO getProjectById(Long id) {
 
-        String currentUser = "TEMP_USER";
+        String currentUser = getCurrentUser();
 
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Project not found"));

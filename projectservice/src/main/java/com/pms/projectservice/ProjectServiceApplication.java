@@ -6,6 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 
+import org.springframework.context.annotation.Profile;
+
 @SpringBootApplication
 public class ProjectServiceApplication {
 
@@ -14,6 +16,7 @@ public class ProjectServiceApplication {
     }
 
     @Bean
+    @Profile("!test")
     public FilterRegistrationBean<JwtFilter> jwtFilter(JwtFilter filter) {
         FilterRegistrationBean<JwtFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(filter);
