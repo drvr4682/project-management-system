@@ -1,5 +1,6 @@
 package com.pms.projectservice.controller;
 
+import com.pms.projectservice.dto.*;
 import com.pms.projectservice.service.ProjectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -14,5 +15,10 @@ public class ProjectController {
     @GetMapping("/health")
     public String health() {
         return projectService.healthCheck();
+    }
+
+    @PostMapping
+    public ProjectResponseDTO createProject(@RequestBody ProjectRequestDTO request) {
+        return projectService.createProject(request);
     }
 }
