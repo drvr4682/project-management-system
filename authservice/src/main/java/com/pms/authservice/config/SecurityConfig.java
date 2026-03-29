@@ -1,4 +1,4 @@
-package com.pms.authservice.security;
+package com.pms.authservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.entity.Role;
 import com.pms.authservice.service.AuthService;
+import com.pms.authservice.security.*;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,12 @@ class AuthControllerTest {
 
     @MockBean
     private AuthService authService;
+
+    @MockBean
+    private JwtUtil jwtUtil;
+
+    @MockBean
+    private CustomUserDetailsService userDetailsService;
 
     @Test
     void shouldAllowRegisterWithoutAuth() throws Exception {
