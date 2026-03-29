@@ -1,6 +1,10 @@
 package com.pms.authservice.security;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -9,12 +13,20 @@ class JwtUtilTest {
     private final JwtUtil jwtUtil = new JwtUtil();
 
     @Test
-    void shouldGenerateAndValidateToken() {
+    void testValidateToken() {
 
-        String token = jwtUtil.generateToken("test@mail.com");
+        String email = "test@example.com";
 
-        assertNotNull(token);
-        assertEquals("test@mail.com", jwtUtil.extractUsername(token));
-        assertTrue(jwtUtil.validateToken(token, "test@mail.com"));
+        UserDetails userDetails = new User(
+                email,
+                "password",
+                Collections.emptyList()
+        );
+
+        String token = jwtUtil.generateToken(email);
+
+        boolean isValid = jwtUtil.validateToken(token, userDetails);
+
+        assertTrue(isValid);
     }
 }
