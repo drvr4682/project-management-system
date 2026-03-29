@@ -36,24 +36,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String jwt = null;
         String username = null;
 
-        log.info("JWT FILTER TRIGGERED");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwt = authHeader.substring(7);
-            log.info("JWT Token: {}", jwt);
-
             username = jwtUtil.extractUsername(jwt);
-            log.info("Extracted Username: {}", username);
         }
 
-        // Validate and set authentication
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
             if (jwtUtil.validateToken(jwt, userDetails)) {
-
-                log.info("JWT VALIDATION SUCCESS for user: {}", username);
 
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
