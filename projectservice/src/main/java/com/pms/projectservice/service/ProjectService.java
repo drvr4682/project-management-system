@@ -18,19 +18,39 @@ public class ProjectService {
 
     public ProjectResponseDTO createProject(ProjectRequestDTO request) {
 
+        String currentUser = "TEMP_USER"; // placeholder (JWT later)
+
         Project project = Project.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .owner("TEMP_USER") // will be replaced by JWT later
+                .owner(currentUser)
                 .build();
 
         Project saved = projectRepository.save(project);
 
+        return mapToResponse(saved);
+    }
+
+    public ProjectResponseDTO getProjectById(Long id) {
+
+        String currentUser = "TEMP_USER";
+
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (!project.getOwner().equals(currentUser)) {
+            throw new RuntimeException("Access denied");
+        }
+
+        return mapToResponse(project);
+    }
+
+    private ProjectResponseDTO mapToResponse(Project project) {
         return ProjectResponseDTO.builder()
-                .id(saved.getId())
-                .name(saved.getName())
-                .description(saved.getDescription())
-                .owner(saved.getOwner())
+                .id(project.getId())
+                .name(project.getName())
+                .description(project.getDescription())
+                .owner(project.getOwner())
                 .build();
     }
 }

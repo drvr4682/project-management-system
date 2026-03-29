@@ -28,4 +28,10 @@ public class GlobalExceptionHandler {
     public String handleException(Exception ex) {
         return ex.getMessage();
     }
+
+    @ExceptionHandler(RuntimeException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleRuntime(RuntimeException ex) {
+        return ex.getMessage();
+    }
 }

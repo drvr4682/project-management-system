@@ -22,4 +22,9 @@ public class ProjectController {
     public ProjectResponseDTO createProject(@Valid @RequestBody ProjectRequestDTO request) {
         return projectService.createProject(request);
     }
+
+    @GetMapping("/{id}")
+    public ProjectResponseDTO getProject(@PathVariable Long id) {
+        return projectService.getProjectById(id);
+    }
 }
