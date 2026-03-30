@@ -1,6 +1,7 @@
 package com.pms.projectservice;
 
 import com.pms.projectservice.security.JwtFilter;
+import com.pms.projectservice.security.JwtUtil;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -17,9 +18,9 @@ public class ProjectServiceApplication {
 
     @Bean
     @Profile("!test")
-    public FilterRegistrationBean<JwtFilter> jwtFilter(JwtFilter filter) {
+    public FilterRegistrationBean<JwtFilter> jwtFilter(JwtUtil jwtUtil) {
         FilterRegistrationBean<JwtFilter> registration = new FilterRegistrationBean<>();
-        registration.setFilter(filter);
+        registration.setFilter(new JwtFilter(jwtUtil));
         registration.addUrlPatterns("/api/*");
         return registration;
     }

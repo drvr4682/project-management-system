@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Profile;
 
 import java.io.IOException;
 
-@Component
 @Profile("!test")
 public class JwtFilter implements Filter {
 
