@@ -77,4 +77,23 @@ public class ProjectService {
                 .owner(project.getOwner())
                 .build();
     }
+
+    public ProjectResponseDTO updateProject(Long id, ProjectRequestDTO request) {
+
+        String currentUser = getCurrentUser();
+
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (!project.getOwner().equals(currentUser)) {
+            throw new RuntimeException("Access denied");
+        }
+
+        project.setName(request.getName());
+        project.setDescription(request.getDescription());
+
+        Project updated = projectRepository.save(project);
+
+        return mapToResponse(updated);
+    }
 }

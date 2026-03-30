@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -73,6 +74,63 @@ class ProjectControllerTest {
         Long id = objectMapper.readTree(response).get("id").asLong();
 
         mockMvc.perform(get("/api/v1/projects/" + id))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void updateProject_shouldReturnUpdatedProject() throws Exception {
+
+        ProjectRequestDTO request = ProjectRequestDTO.builder()
+                .name("Initial")
+                .description("Initial Desc")
+                .build();
+
+        String response = mockMvc.perform(post("/api/v1/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Long id = objectMapper.readTree(response).get("id").asLong();
+
+        ProjectRequestDTO update = ProjectRequestDTO.builder()
+                .name("Updated")
+                .description("Updated Desc")
+                .build();
+
+        mockMvc.perform(put("/api/v1/projects/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(update)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void updateProject_shouldFail_whenNotOwner() throws Exception {
+
+        // create project
+        ProjectRequestDTO request = ProjectRequestDTO.builder()
+                .name("Project")
+                .description("Desc")
+                .build();
+
+        String response = mockMvc.perform(post("/api/v1/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Long id = objectMapper.readTree(response).get("id").asLong();
+
+        ProjectRequestDTO update = ProjectRequestDTO.builder()
+                .name("Hack")
+                .description("Hack Desc")
+                .build();
+
+        mockMvc.perform(put("/api/v1/projects/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(update)))
                 .andExpect(status().isOk());
     }
 }

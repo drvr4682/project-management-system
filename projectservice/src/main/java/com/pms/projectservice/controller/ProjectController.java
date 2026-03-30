@@ -27,4 +27,12 @@ public class ProjectController {
     public ProjectResponseDTO getProject(@PathVariable Long id) {
         return projectService.getProjectById(id);
     }
+
+    @PutMapping("/{id}")
+    public ProjectResponseDTO updateProject(
+            @PathVariable Long id,
+            @Valid @RequestBody ProjectRequestDTO request
+    ) {
+        return projectService.updateProject(id, request);
+    }
 }
