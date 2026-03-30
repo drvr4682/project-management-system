@@ -20,7 +20,12 @@ public class ProjectService {
 
     private String getCurrentUser() {
         String user = currentUser.get();
-        return (user != null) ? user : "TEST_USER";
+
+        if (user == null) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        return user;
     }
 
     public ProjectResponseDTO createProject(ProjectRequestDTO request) {
@@ -44,7 +49,7 @@ public class ProjectService {
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
         if (!project.getOwner().equals(currentUser)) {
-            throw new RuntimeException("Access denied");
+            throw new RuntimeException("Unauthorized");
         }
 
         return mapToResponse(project);

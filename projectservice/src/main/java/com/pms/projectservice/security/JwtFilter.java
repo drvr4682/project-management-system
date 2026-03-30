@@ -2,6 +2,7 @@ package com.pms.projectservice.security;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 
 import org.springframework.context.annotation.Profile;
@@ -34,7 +35,9 @@ public class JwtFilter implements Filter {
                 String username = jwtUtil.extractUsername(token);
                 currentUser.set(username);
             } catch (Exception e) {
-                throw new RuntimeException("Invalid JWT");
+                ((HttpServletResponse) response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Invalid JWT");
+                return;
             }
         }
 
