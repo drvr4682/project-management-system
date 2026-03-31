@@ -35,4 +35,10 @@ public class ProjectController {
     ) {
         return projectService.updateProject(id, request);
     }
+
+    @DeleteMapping("/{id}")
+    public String deleteProject(@PathVariable Long id) {
+        projectService.deleteProject(id);
+        return "Project deleted successfully";
+    }
 }

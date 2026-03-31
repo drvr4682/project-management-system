@@ -96,4 +96,18 @@ public class ProjectService {
 
         return mapToResponse(updated);
     }
+
+    public void deleteProject(Long id) {
+
+        String currentUser = getCurrentUser();
+
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (!project.getOwner().equals(currentUser)) {
+            throw new RuntimeException("Access denied");
+        }
+
+        projectRepository.delete(project);
+    }
 }

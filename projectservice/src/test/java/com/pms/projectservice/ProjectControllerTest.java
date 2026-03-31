@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -132,5 +133,33 @@ class ProjectControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(update)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void deleteProject_shouldDeleteSuccessfully() throws Exception {
+
+        ProjectRequestDTO request = ProjectRequestDTO.builder()
+                .name("Delete Test")
+                .description("To be deleted")
+                .build();
+
+        String response = mockMvc.perform(post("/api/v1/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Long id = objectMapper.readTree(response).get("id").asLong();
+
+        mockMvc.perform(delete("/api/v1/projects/" + id))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void deleteProject_shouldFail_whenProjectNotFound() throws Exception {
+
+        mockMvc.perform(delete("/api/v1/projects/999"))
+                .andExpect(status().isBadRequest());
     }
 }
