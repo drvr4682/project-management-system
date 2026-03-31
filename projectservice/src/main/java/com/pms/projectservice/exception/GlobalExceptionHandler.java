@@ -52,4 +52,11 @@ public class GlobalExceptionHandler {
         log.error("Unexpected error: ", ex);
         return "Internal server error";
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleBadRequest(IllegalArgumentException ex) {
+        log.warn("Bad request: {}", ex.getMessage());
+        return ex.getMessage();
+    }
 }

@@ -4,6 +4,7 @@ import com.pms.projectservice.dto.*;
 import com.pms.projectservice.entity.Project;
 import com.pms.projectservice.repository.ProjectRepository;
 import com.pms.projectservice.exception.*;
+import com.pms.projectservice.entity.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,10 +55,10 @@ public class ProjectService {
         ProjectStatus status;
         try {
             status = request.getStatus() != null
-                    ? ProjectStatus.valueOf(request.getStatus())
+                    ? ProjectStatus.valueOf(request.getStatus().toUpperCase())
                     : ProjectStatus.ACTIVE;
         } catch (Exception e) {
-            throw new RuntimeException("Invalid status value");
+            throw new IllegalArgumentException("Invalid status value");
         }
 
         Project project = Project.builder()
