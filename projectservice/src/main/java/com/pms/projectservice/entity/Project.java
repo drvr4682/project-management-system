@@ -24,7 +24,7 @@ public class Project {
     private String description;
 
     @Column(nullable = false)
-    private String ownerId; // renamed from owner
+    private String ownerId;
 
     @Enumerated(EnumType.STRING)
     private ProjectStatus status;

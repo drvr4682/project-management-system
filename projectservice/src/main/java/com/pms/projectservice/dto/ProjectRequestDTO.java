@@ -17,4 +17,6 @@ public class ProjectRequestDTO {
 
     @Size(max = 500, message = "Description must be less than 500 characters")
     private String description;
+
+    private String status;
 }

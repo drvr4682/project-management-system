@@ -47,13 +47,24 @@ public class ProjectService {
 
     public ProjectResponseDTO createProject(ProjectRequestDTO request) {
 
-        String currentUserName = getCurrentUser();
+        String currentUser = getCurrentUser();
 
         log.info("Creating project for user: {}", currentUser);
+
+        ProjectStatus status;
+        try {
+            status = request.getStatus() != null
+                    ? ProjectStatus.valueOf(request.getStatus())
+                    : ProjectStatus.ACTIVE;
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid status value");
+        }
+
         Project project = Project.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .ownerId(currentUserName)
+                .ownerId(currentUser)
+                .status(status)
                 .build();
 
         Project saved = projectRepository.save(project);
