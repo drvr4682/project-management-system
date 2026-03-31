@@ -3,6 +3,7 @@ package com.pms.projectservice.service;
 import com.pms.projectservice.dto.*;
 import com.pms.projectservice.entity.Project;
 import com.pms.projectservice.repository.ProjectRepository;
+import com.pms.projectservice.exception.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.core.env.Environment;
@@ -36,7 +37,7 @@ public class ProjectService {
             if (isTest) {
                 return "TEST_USER";
             }
-            throw new RuntimeException("Unauthorized");
+            throw new UnauthorizedException("Unauthorized");
         }
 
         return user;
@@ -60,10 +61,10 @@ public class ProjectService {
         String currentUser = getCurrentUser();
 
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         if (!project.getOwner().equals(currentUser)) {
-            throw new RuntimeException("Unauthorized");
+            throw new UnauthorizedException("Unauthorized");
         }
 
         return mapToResponse(project);
@@ -83,10 +84,10 @@ public class ProjectService {
         String currentUser = getCurrentUser();
 
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         if (!project.getOwner().equals(currentUser)) {
-            throw new RuntimeException("Access denied");
+            throw new AccessDeniedException("Access denied");
         }
 
         project.setName(request.getName());
@@ -102,10 +103,10 @@ public class ProjectService {
         String currentUser = getCurrentUser();
 
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         if (!project.getOwner().equals(currentUser)) {
-            throw new RuntimeException("Access denied");
+            throw new AccessDeniedException("Access denied");
         }
 
         projectRepository.delete(project);

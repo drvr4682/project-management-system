@@ -160,6 +160,6 @@ class ProjectControllerTest {
     void deleteProject_shouldFail_whenProjectNotFound() throws Exception {
 
         mockMvc.perform(delete("/api/v1/projects/999"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
     }
 }
