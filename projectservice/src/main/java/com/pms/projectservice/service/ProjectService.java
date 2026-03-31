@@ -5,11 +5,13 @@ import com.pms.projectservice.entity.Project;
 import com.pms.projectservice.repository.ProjectRepository;
 import com.pms.projectservice.exception.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.core.env.Environment;
 
 import static com.pms.projectservice.security.JwtFilter.currentUser;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProjectService {
@@ -47,24 +49,35 @@ public class ProjectService {
 
         String currentUserName = getCurrentUser();
 
+        log.info("Creating project for user: {}", currentUser);
         Project project = Project.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .owner(currentUserName)
                 .build();
 
-        return mapToResponse(projectRepository.save(project));
+        Project saved = projectRepository.save(project);
+
+        log.info("Project created with ID: {}", saved.getId());
+
+        return mapToResponse(saved);
     }
 
     public ProjectResponseDTO getProjectById(Long id) {
 
         String currentUser = getCurrentUser();
 
+        log.info("Fetching project ID: {} by user: {}", id, currentUser);
+
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+                .orElseThrow(() -> {
+                    log.error("Project not found: {}", id);
+                    return new ResourceNotFoundException("Project not found");
+                });
 
         if (!project.getOwner().equals(currentUser)) {
-            throw new UnauthorizedException("Unauthorized");
+            log.warn("Access denied for user: {} on project ID: {}", currentUser, id);
+            throw new AccessDeniedException("Access denied");
         }
 
         return mapToResponse(project);
@@ -83,10 +96,16 @@ public class ProjectService {
 
         String currentUser = getCurrentUser();
 
+        log.info("Updating project ID: {} by user: {}", id, currentUser);
+
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+                .orElseThrow(() -> {
+                    log.error("Project not found: {}", id);
+                    return new ResourceNotFoundException("Project not found");
+                });
 
         if (!project.getOwner().equals(currentUser)) {
+            log.warn("Unauthorized update attempt by user: {} on project ID: {}", currentUser, id);
             throw new AccessDeniedException("Access denied");
         }
 
@@ -95,6 +114,8 @@ public class ProjectService {
 
         Project updated = projectRepository.save(project);
 
+        log.info("Project updated successfully: {}", id);
+
         return mapToResponse(updated);
     }
 
@@ -102,13 +123,21 @@ public class ProjectService {
 
         String currentUser = getCurrentUser();
 
+        log.info("Deleting project ID: {} by user: {}", id, currentUser);
+
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+                .orElseThrow(() -> {
+                    log.error("Project not found: {}", id);
+                    return new ResourceNotFoundException("Project not found");
+                });
 
         if (!project.getOwner().equals(currentUser)) {
+            log.warn("Unauthorized delete attempt by user: {} on project ID: {}", currentUser, id);
             throw new AccessDeniedException("Access denied");
         }
 
         projectRepository.delete(project);
+
+        log.info("Project deleted successfully: {}", id);
     }
 }
