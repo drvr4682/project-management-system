@@ -53,7 +53,7 @@ public class ProjectService {
         Project project = Project.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .owner(currentUserName)
+                .ownerId(currentUserName)
                 .build();
 
         Project saved = projectRepository.save(project);
@@ -75,7 +75,7 @@ public class ProjectService {
                     return new ResourceNotFoundException("Project not found");
                 });
 
-        if (!project.getOwner().equals(currentUser)) {
+        if (!project.getOwnerId().equals(currentUser)) {
             log.warn("Access denied for user: {} on project ID: {}", currentUser, id);
             throw new AccessDeniedException("Access denied");
         }
@@ -88,7 +88,7 @@ public class ProjectService {
                 .id(project.getId())
                 .name(project.getName())
                 .description(project.getDescription())
-                .owner(project.getOwner())
+                .owner(project.getOwnerId())
                 .build();
     }
 
@@ -104,7 +104,7 @@ public class ProjectService {
                     return new ResourceNotFoundException("Project not found");
                 });
 
-        if (!project.getOwner().equals(currentUser)) {
+        if (!project.getOwnerId().equals(currentUser)) {
             log.warn("Unauthorized update attempt by user: {} on project ID: {}", currentUser, id);
             throw new AccessDeniedException("Access denied");
         }
@@ -131,7 +131,7 @@ public class ProjectService {
                     return new ResourceNotFoundException("Project not found");
                 });
 
-        if (!project.getOwner().equals(currentUser)) {
+        if (!project.getOwnerId().equals(currentUser)) {
             log.warn("Unauthorized delete attempt by user: {} on project ID: {}", currentUser, id);
             throw new AccessDeniedException("Access denied");
         }
