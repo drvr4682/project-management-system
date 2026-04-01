@@ -102,10 +102,7 @@ public class ProjectService {
                     return new ResourceNotFoundException("Project not found");
                 });
 
-        if (!project.getOwnerId().equals(currentUser)) {
-            log.warn("Access denied for user: {} on project ID: {}", currentUser, id);
-            throw new AccessDeniedException("Access denied");
-        }
+        getProjectMember(id, currentUser);
 
         return mapToResponse(project);
     }
@@ -131,9 +128,10 @@ public class ProjectService {
                     return new ResourceNotFoundException("Project not found");
                 });
 
-        if (!project.getOwnerId().equals(currentUser)) {
-            log.warn("Unauthorized update attempt by user: {} on project ID: {}", currentUser, id);
-            throw new AccessDeniedException("Access denied");
+        ProjectMember member = getProjectMember(id, currentUser);
+
+        if (member.getRole() != ProjectRole.ADMIN) {
+            throw new AccessDeniedException("Only ADMIN can update project");
         }
 
         project.setName(request.getName());
@@ -158,13 +156,22 @@ public class ProjectService {
                     return new ResourceNotFoundException("Project not found");
                 });
 
-        if (!project.getOwnerId().equals(currentUser)) {
-            log.warn("Unauthorized delete attempt by user: {} on project ID: {}", currentUser, id);
-            throw new AccessDeniedException("Access denied");
+        ProjectMember member = getProjectMember(id, currentUser);
+
+        if (member.getRole() != ProjectRole.ADMIN) {
+            throw new AccessDeniedException("Only ADMIN can delete project");
         }
 
         projectRepository.delete(project);
 
         log.info("Project deleted successfully: {}", id);
+    }
+
+    private ProjectMember getProjectMember(Long projectId, String userId) {
+        return projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
+                .orElseThrow(() -> {
+                    log.warn("User {} is not a member of project {}", userId, projectId);
+                    return new AccessDeniedException("Access denied");
+                });
     }
 }
