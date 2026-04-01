@@ -3,6 +3,7 @@ package com.pms.projectservice.service;
 import com.pms.projectservice.dto.*;
 import com.pms.projectservice.entity.Project;
 import com.pms.projectservice.repository.ProjectRepository;
+import com.pms.projectservice.repository.ProjectMemberRepository;
 import com.pms.projectservice.exception.*;
 import com.pms.projectservice.entity.*;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final Environment environment;
+    private final ProjectMemberRepository projectMemberRepository;
 
     public String healthCheck() {
         return "Project Service is running";
@@ -52,6 +54,7 @@ public class ProjectService {
 
         log.info("Creating project for user: {}", currentUser);
 
+        // Status handling
         ProjectStatus status;
         try {
             status = request.getStatus() != null
@@ -61,6 +64,7 @@ public class ProjectService {
             throw new IllegalArgumentException("Invalid status value");
         }
 
+        // Create project
         Project project = Project.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -71,6 +75,17 @@ public class ProjectService {
         Project saved = projectRepository.save(project);
 
         log.info("Project created with ID: {}", saved.getId());
+
+        // ✅ ADD THIS BLOCK (CRITICAL)
+        ProjectMember member = ProjectMember.builder()
+                .projectId(saved.getId())
+                .userId(currentUser)
+                .role(ProjectRole.ADMIN)
+                .build();
+
+        projectMemberRepository.save(member);
+
+        log.info("Owner added as ADMIN in project_members");
 
         return mapToResponse(saved);
     }
