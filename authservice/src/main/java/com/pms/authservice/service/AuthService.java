@@ -8,4 +8,5 @@ import com.pms.authservice.dto.LoginResponse;
 public interface AuthService {
     RegisterResponse register(RegisterRequest request);
     LoginResponse login(LoginRequest request);
+    boolean userExists(String email);
 }

@@ -27,4 +27,16 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
+
+    @GetMapping("/users/{email}")
+    public ResponseEntity<String> checkUser(@PathVariable String email) {
+
+        boolean exists = authService.userExists(email);
+
+        if (exists) {
+            return ResponseEntity.ok("User exists");
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

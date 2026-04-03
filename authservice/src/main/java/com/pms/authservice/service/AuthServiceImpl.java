@@ -71,4 +71,9 @@ public class AuthServiceImpl implements AuthService {
                 .role(user.getRole().name())
                 .build();
     }
+
+    @Override
+    public boolean userExists(String email) {
+        return userRepository.findByEmail(email).isPresent();
+    }
 }
