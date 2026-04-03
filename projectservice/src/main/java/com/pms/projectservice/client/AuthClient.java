@@ -2,6 +2,8 @@ package com.pms.projectservice.client;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import lombok.RequiredArgsConstructor;
@@ -21,8 +23,13 @@ public class AuthClient {
 
             return response.getStatusCode().is2xxSuccessful();
 
+        } catch (HttpClientErrorException.NotFound e) {
+            return false; // user not found
+
+        } catch (ResourceAccessException e) {
+            throw new RuntimeException("Auth service unavailable");
         } catch (Exception e) {
-            return false;
+            throw new RuntimeException("Error calling auth service");
         }
     }
 }
