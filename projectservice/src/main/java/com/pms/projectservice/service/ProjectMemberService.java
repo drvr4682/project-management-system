@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.pms.projectservice.client.AuthClient;
+import com.pms.projectservice.client.AuthFeignClient;
 import com.pms.projectservice.dto.AddMemberRequestDTO;
 import com.pms.projectservice.dto.ProjectMemberResponseDTO;
 import com.pms.projectservice.entity.ProjectMember;
@@ -26,7 +27,7 @@ public class ProjectMemberService {
 
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectService projectService;
-    private final AuthClient authClient;
+    private final AuthFeignClient authFeignClient;
 
     public String addMember(Long projectId, AddMemberRequestDTO request) {
 
@@ -59,9 +60,10 @@ public class ProjectMemberService {
             throw new IllegalArgumentException("Invalid role");
         }
 
-        // ✅ Validate user exists in authservice
-        if (!authClient.userExists(request.getUserId())) {
-            throw new IllegalArgumentException("User does not exist");
+        try {
+            authFeignClient.checkUser(request.getUserId());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("User does not exist or auth service unavailable");
         }
 
         ProjectMember member = ProjectMember.builder()
