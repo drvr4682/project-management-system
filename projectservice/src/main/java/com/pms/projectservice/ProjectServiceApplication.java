@@ -8,6 +8,7 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 
 import org.springframework.context.annotation.Profile;
+import org.springframework.web.client.RestTemplate;
 
 @SpringBootApplication
 public class ProjectServiceApplication {
@@ -23,5 +24,10 @@ public class ProjectServiceApplication {
         registration.setFilter(new JwtFilter(jwtUtil));
         registration.addUrlPatterns("/api/*");
         return registration;
+    }
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 }
