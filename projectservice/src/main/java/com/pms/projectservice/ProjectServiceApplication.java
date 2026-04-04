@@ -20,15 +20,6 @@ public class ProjectServiceApplication {
     }
 
     @Bean
-    @Profile("!test")
-    public FilterRegistrationBean<JwtFilter> jwtFilter(JwtUtil jwtUtil) {
-        FilterRegistrationBean<JwtFilter> registration = new FilterRegistrationBean<>();
-        registration.setFilter(new JwtFilter(jwtUtil));
-        registration.addUrlPatterns("/api/*");
-        return registration;
-    }
-
-    @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
     }
