@@ -29,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ProjectMemberService {
 
     private final ProjectMemberRepository projectMemberRepository;
-    private final ProjectService projectService;
     private final AuthFeignClient authFeignClient;
 
     public String addMember(Long projectId, AddMemberRequestDTO request) {
