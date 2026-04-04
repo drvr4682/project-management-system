@@ -23,6 +23,7 @@ public class JwtFilter implements Filter {
 
     public static final ThreadLocal<String> currentUser = new ThreadLocal<>();
     public static final ThreadLocal<String> currentRole = new ThreadLocal<>();
+    public static final ThreadLocal<String> currentToken = new ThreadLocal<>();
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -40,6 +41,7 @@ public class JwtFilter implements Filter {
                 
                 currentUser.set(email);
                 currentRole.set(role);
+                currentToken.set(token);
 
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
@@ -59,6 +61,7 @@ public class JwtFilter implements Filter {
         } finally {
             currentUser.remove();
             currentRole.remove();
+            currentToken.remove();
             SecurityContextHolder.clearContext();
         }
     }
