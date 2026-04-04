@@ -2,11 +2,12 @@ package com.pms.projectservice.service;
 
 import static com.pms.projectservice.security.JwtFilter.currentUser;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.pms.projectservice.client.AuthClient;
 import com.pms.projectservice.client.AuthFeignClient;
 import com.pms.projectservice.dto.AddMemberRequestDTO;
 import com.pms.projectservice.dto.ProjectMemberResponseDTO;
@@ -17,6 +18,8 @@ import com.pms.projectservice.exception.ResourceNotFoundException;
 import com.pms.projectservice.exception.UnauthorizedException;
 import com.pms.projectservice.repository.ProjectMemberRepository;
 
+import feign.FeignException;
+import feign.RetryableException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,7 +40,6 @@ public class ProjectMemberService {
             throw new UnauthorizedException("Unauthorized");
         }
 
-        // ✅ Check ADMIN access
         ProjectMember existing = projectMemberRepository
                 .findByProjectIdAndUserId(projectId, user)
                 .orElseThrow(() -> new AccessDeniedException("Access denied"));
@@ -46,13 +48,11 @@ public class ProjectMemberService {
             throw new AccessDeniedException("Only ADMIN can add members");
         }
 
-        // ✅ Prevent duplicate
         projectMemberRepository.findByProjectIdAndUserId(projectId, request.getUserId())
                 .ifPresent(m -> {
                     throw new IllegalArgumentException("User already a member");
                 });
 
-        // ✅ Role parsing
         ProjectRole role;
         try {
             role = ProjectRole.valueOf(request.getRole().toUpperCase());
@@ -61,9 +61,17 @@ public class ProjectMemberService {
         }
 
         try {
-            authFeignClient.checkUser(request.getUserId());
-        } catch (Exception e) {
-            throw new IllegalArgumentException("User does not exist or auth service unavailable");
+            String encodedEmail = URLEncoder.encode(request.getUserId(), StandardCharsets.UTF_8);
+
+            authFeignClient.checkUser(encodedEmail);
+        } catch (FeignException.NotFound e) {
+            throw new IllegalArgumentException("User does not exist");
+
+        } catch (RetryableException e) {
+            throw new RuntimeException("Auth service unavailable");
+
+        } catch (FeignException e) {
+            throw new RuntimeException("Error calling auth service");
         }
 
         ProjectMember member = ProjectMember.builder()
@@ -125,5 +133,19 @@ public class ProjectMemberService {
         projectMemberRepository.delete(member);
 
         return "Member removed successfully";
+    }
+
+    public ProjectMember validateMember(Long projectId, String userId) {
+        return projectMemberRepository
+                .findByProjectIdAndUserId(projectId, userId)
+                .orElseThrow(() -> new RuntimeException("Access denied: Not a project member"));
+    }
+
+    public void validateAdmin(Long projectId, String userId) {
+        ProjectMember member = validateMember(projectId, userId);
+
+        if (!member.getRole().name().equals("ADMIN")) {
+            throw new RuntimeException("Access denied: Admin only");
+        }
     }
 }

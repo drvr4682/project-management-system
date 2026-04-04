@@ -21,6 +21,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final Environment environment;
     private final ProjectMemberRepository projectMemberRepository;
+    private final ProjectMemberService projectMemberService;
 
     public String healthCheck() {
         return "Project Service is running";
@@ -102,7 +103,7 @@ public class ProjectService {
                     return new ResourceNotFoundException("Project not found");
                 });
 
-        getProjectMember(id, currentUser);
+        projectMemberService.validateMember(id, currentUser);
 
         return mapToResponse(project);
     }
@@ -128,11 +129,7 @@ public class ProjectService {
                     return new ResourceNotFoundException("Project not found");
                 });
 
-        ProjectMember member = getProjectMember(id, currentUser);
-
-        if (member.getRole() != ProjectRole.ADMIN) {
-            throw new AccessDeniedException("Only ADMIN can update project");
-        }
+        projectMemberService.validateAdmin(id, currentUser);
 
         project.setName(request.getName());
         project.setDescription(request.getDescription());
@@ -156,22 +153,10 @@ public class ProjectService {
                     return new ResourceNotFoundException("Project not found");
                 });
 
-        ProjectMember member = getProjectMember(id, currentUser);
-
-        if (member.getRole() != ProjectRole.ADMIN) {
-            throw new AccessDeniedException("Only ADMIN can delete project");
-        }
+        projectMemberService.validateAdmin(id, currentUser);
 
         projectRepository.delete(project);
 
         log.info("Project deleted successfully: {}", id);
-    }
-
-    private ProjectMember getProjectMember(Long projectId, String userId) {
-        return projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
-                .orElseThrow(() -> {
-                    log.warn("User {} is not a member of project {}", userId, projectId);
-                    return new AccessDeniedException("Access denied");
-                });
     }
 }
