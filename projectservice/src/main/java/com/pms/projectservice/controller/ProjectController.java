@@ -5,6 +5,7 @@ import com.pms.projectservice.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,5 +43,14 @@ public class ProjectController {
     @PostMapping
     public ResponseEntity<ProjectResponseDTO> createProject(@Valid @RequestBody ProjectRequestDTO request) {
         return ResponseEntity.ok(projectService.createProject(request));
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<ProjectRequestDTO>> getProjects(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+            
+        return ResponseEntity.ok(projectService.getProjects(status, page, size));
     }
 }

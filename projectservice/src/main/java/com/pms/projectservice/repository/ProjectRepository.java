@@ -1,7 +1,13 @@
 package com.pms.projectservice.repository;
 
 import com.pms.projectservice.entity.Project;
+import com.pms.projectservice.entity.ProjectStatus;
+
+import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties.Pageable;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ProjectRepository extends JpaRepository<Project, Long> {
+
+    Page<Project> findByStatus(ProjectStatus status, Pageable pageable);
 }

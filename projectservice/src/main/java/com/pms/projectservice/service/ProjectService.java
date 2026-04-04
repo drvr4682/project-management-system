@@ -10,6 +10,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.core.env.Environment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import static com.pms.projectservice.security.JwtFilter.currentUser;
 
@@ -161,5 +164,29 @@ public class ProjectService {
         projectRepository.delete(project);
 
         log.info("Project deleted successfully: {}", id);
+    }
+
+    public Page<ProjectResponseDTO> getProjects(String status, int page, int size) {
+        
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Project> projectPage;
+
+        if(status != null) {
+            ProjectStatus projectStatus;
+
+            try {
+                projectStatus = ProjectStatus.valueOf(status.toUpperCase());
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid status value");
+            }
+
+            projectPage = projectRepository.findByStatus(projectStatus, pageable);
+
+        } else {
+            projectPage = projectRepository.findAll(pageable);
+        }
+
+        return projectPage.map(this::mapToResponse);
     }
 }
