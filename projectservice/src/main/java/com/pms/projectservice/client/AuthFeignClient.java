@@ -12,5 +12,5 @@ import org.springframework.web.bind.annotation.PathVariable;
 public interface AuthFeignClient {
     
     @GetMapping("api/v1/auth/users/{email}")
-    void checkUser(@PathVariable String email);
+    Boolean checkUser(@PathVariable String email);
 }

@@ -1,5 +1,7 @@
 package com.pms.projectservice.client;
 
+import com.pms.projectservice.exception.*;
+
 import org.springframework.stereotype.Component;
 
 import lombok.extern.slf4j.Slf4j;
@@ -9,9 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 public class AuthFeignFallback implements AuthFeignClient {
     
     @Override
-    public void checkUser(String email) {
+    public Boolean checkUser(String email) {
         log.error("Auth service is DOWN or unreachable for email: {}", email);
 
-        throw new IllegalArgumentException("Auth service unavailable");
+        throw new ServiceUnavailableException("Auth service is down");
     }
 }
