@@ -9,10 +9,12 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.List;
 
+@Component
 @Profile("!test")
 @RequiredArgsConstructor
 public class JwtFilter implements Filter {
@@ -34,7 +36,7 @@ public class JwtFilter implements Filter {
                 String token = header.substring(7);
 
                 String email = jwtUtil.extractUsername(token);
-                String role = jwtUtil.extractUsername(token);
+                String role = jwtUtil.extractRole(token);
                 
                 currentUser.set(email);
                 currentRole.set(role);
