@@ -46,7 +46,7 @@ public class ProjectController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<ProjectRequestDTO>> getProjects(
+    public ResponseEntity<Page<ProjectResponseDTO>> getProjects(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size) {
