@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/v1/projects")
@@ -21,11 +22,13 @@ public class ProjectController {
         return projectService.healthCheck();
     }
 
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @GetMapping("/{id}")
     public ProjectResponseDTO getProject(@PathVariable Long id) {
         return projectService.getProjectById(id);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ProjectResponseDTO updateProject(
             @PathVariable Long id,
@@ -34,12 +37,14 @@ public class ProjectController {
         return projectService.updateProject(id, request);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public String deleteProject(@PathVariable Long id) {
         projectService.deleteProject(id);
         return "Project deleted successfully";
     }
 
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @PostMapping
     public ResponseEntity<ProjectResponseDTO> createProject(@Valid @RequestBody ProjectRequestDTO request) {
         return ResponseEntity.ok(projectService.createProject(request));

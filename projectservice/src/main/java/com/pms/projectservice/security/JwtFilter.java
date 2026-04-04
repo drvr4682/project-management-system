@@ -3,21 +3,24 @@ package com.pms.projectservice.security;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.IOException;
+import java.util.List;
 
 @Profile("!test")
+@RequiredArgsConstructor
 public class JwtFilter implements Filter {
 
     private final JwtUtil jwtUtil;
 
-    public JwtFilter(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
-    }
-
     public static final ThreadLocal<String> currentUser = new ThreadLocal<>();
+    public static final ThreadLocal<String> currentRole = new ThreadLocal<>();
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -26,21 +29,35 @@ public class JwtFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
 
         String header = req.getHeader("Authorization");
+        try {
+            if (header != null && header.startsWith("Bearer ")) {
+                String token = header.substring(7);
 
-        if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
+                String email = jwtUtil.extractUsername(token);
+                String role = jwtUtil.extractUsername(token);
+                
+                currentUser.set(email);
+                currentRole.set(role);
 
-            try {
-                String username = jwtUtil.extractUsername(token);
-                currentUser.set(username);
-            } catch (Exception e) {
-                ((HttpServletResponse) response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid JWT");
-                return;
+                UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(
+                                email,
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                        );
+
+                SecurityContextHolder.getContext().setAuthentication(auth);
             }
-        }
 
-        chain.doFilter(request, response);
-        currentUser.remove();
+            chain.doFilter(request, response);
+
+        } catch (Exception e) {
+            ((HttpServletResponse) response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Invalid JWT");
+        } finally {
+            currentUser.remove();
+            currentRole.remove();
+            SecurityContextHolder.clearContext();
+        }
     }
 }

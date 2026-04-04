@@ -21,6 +21,10 @@ public class JwtUtil {
         return getClaims(token).getSubject();
     }
 
+    public String extractRole(String token) {
+        return getClaims(token).get("role", String.class);
+    }
+
     private Claims getClaims(String token) {
         Key key = Keys.hmacShaKeyFor(secret.getBytes());
 
