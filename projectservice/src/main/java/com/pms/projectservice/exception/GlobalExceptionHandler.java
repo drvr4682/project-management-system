@@ -1,41 +1,52 @@
 package com.pms.projectservice.exception;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.*;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public String handleNotFound(ResourceNotFoundException ex) {
+    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
         log.error("Resource not found: {}", ex.getMessage());
-        return ex.getMessage();
+
+        return new ResponseEntity<>(
+                buildResponse(HttpStatus.NOT_FOUND, ex.getMessage()),
+                HttpStatus.NOT_FOUND
+        );
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public String handleUnauthorized(UnauthorizedException ex) {
-        log.warn("Unauthorized access: {}", ex.getMessage());
-        return ex.getMessage();
+    public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException ex) {
+        log.warn("Unauthorized: {}", ex.getMessage());
+
+        return new ResponseEntity<>(
+                buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage()),
+                HttpStatus.UNAUTHORIZED
+        );
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    @ResponseStatus(HttpStatus.FORBIDDEN)
-    public String handleAccessDenied(AccessDeniedException ex) {
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
         log.warn("Access denied: {}", ex.getMessage());
-        return ex.getMessage();
+
+        return new ResponseEntity<>(
+                buildResponse(HttpStatus.FORBIDDEN, ex.getMessage()),
+                HttpStatus.FORBIDDEN
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, String> handleValidation(MethodArgumentNotValidException ex) {
+    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
 
         Map<String, String> errors = new HashMap<>();
 
@@ -43,20 +54,39 @@ public class GlobalExceptionHandler {
                 errors.put(error.getField(), error.getDefaultMessage())
         );
 
-        return errors;
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("errors", errors);
+        response.put("timestamp", System.currentTimeMillis());
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public String handleBadRequest(IllegalArgumentException ex) {
+    public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex) {
         log.warn("Bad request: {}", ex.getMessage());
-        return ex.getMessage();
+
+        return new ResponseEntity<>(
+                buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage()),
+                HttpStatus.BAD_REQUEST
+        );
     }
 
     @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public String handleGeneric(Exception ex) {
+    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
         log.error("Unexpected error: ", ex);
-        return "Internal server error";
+
+        return new ResponseEntity<>(
+                buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Something went wrong"),
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
+    }
+
+    private ErrorResponse buildResponse(HttpStatus status, String message) {
+        return ErrorResponse.builder()
+                .status(status.value())
+                .message(message)
+                .timestamp(System.currentTimeMillis())
+                .build();
     }
 }

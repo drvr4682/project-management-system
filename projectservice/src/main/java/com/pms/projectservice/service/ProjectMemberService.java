@@ -67,10 +67,10 @@ public class ProjectMemberService {
             throw new IllegalArgumentException("User does not exist");
 
         } catch (RetryableException e) {
-            throw new RuntimeException("Auth service unavailable");
+            throw new IllegalArgumentException("Auth service unavailable");
 
         } catch (FeignException e) {
-            throw new RuntimeException("Error calling auth service");
+            throw new IllegalArgumentException("Error calling auth service");
         }
 
         ProjectMember member = ProjectMember.builder()
@@ -137,14 +137,14 @@ public class ProjectMemberService {
     public ProjectMember validateMember(Long projectId, String userId) {
         return projectMemberRepository
                 .findByProjectIdAndUserId(projectId, userId)
-                .orElseThrow(() -> new RuntimeException("Access denied: Not a project member"));
+                .orElseThrow(() -> new AccessDeniedException("Access denied: Not a project member"));
     }
 
     public void validateAdmin(Long projectId, String userId) {
         ProjectMember member = validateMember(projectId, userId);
 
         if (!member.getRole().name().equals("ADMIN")) {
-            throw new RuntimeException("Access denied: Admin only");
+            throw new AccessDeniedException("Access denied: Admin only");
         }
     }
 }
