@@ -2,6 +2,7 @@ package com.pms.projectservice.controller;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,11 +25,11 @@ public class ProjectMemberController {
     private final ProjectMemberService projectMemberService;
 
     @PostMapping("/{projectId}/members")
-    public String addMember(
+    public ResponseEntity<String> addMember(
             @PathVariable Long projectId,
             @RequestBody AddMemberRequestDTO request) {
 
-        return projectMemberService.addMember(projectId, request);
+        return ResponseEntity.ok(projectMemberService.addMember(projectId, request));
     } 
 
     @GetMapping("/{projectId}/members")

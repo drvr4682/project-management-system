@@ -1,16 +1,21 @@
 package com.pms.projectservice.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class ProjectResponseDTO {
 
     private Long id;
     private String name;
     private String description;
     private String owner;
+    private String status;
+    private Long createAt;
+    private Long updateAt;
 }

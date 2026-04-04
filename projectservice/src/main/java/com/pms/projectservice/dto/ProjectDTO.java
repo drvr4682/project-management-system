@@ -1,12 +1,8 @@
 package com.pms.projectservice.dto;
 
-import lombok.*;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Data
 public class ProjectDTO {
 
     private String name;

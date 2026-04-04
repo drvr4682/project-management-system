@@ -114,6 +114,9 @@ public class ProjectService {
                 .name(project.getName())
                 .description(project.getDescription())
                 .owner(project.getOwnerId())
+                .status(project.getStatus().name())
+                .createAt(project.getCreatedAt() != null ? project.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : null)
+                .updateAt(project.getUpdatedAt() != null ? project.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : null)
                 .build();
     }
 
