@@ -1,7 +1,6 @@
 package com.pms.projectservice.service;
 
 import com.pms.projectservice.dto.*;
-import com.pms.projectservice.entity.Project;
 import com.pms.projectservice.repository.ProjectRepository;
 import com.pms.projectservice.repository.ProjectMemberRepository;
 import com.pms.projectservice.exception.*;
@@ -13,6 +12,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import static com.pms.projectservice.security.JwtFilter.currentUser;
 
@@ -166,23 +166,45 @@ public class ProjectService {
         log.info("Project deleted successfully: {}", id);
     }
 
-    public Page<ProjectResponseDTO> getProjects(String status, int page, int size) {
+    public Page<ProjectResponseDTO> getProjects(
+            String status, 
+            String search,
+            int page,
+            int size,
+            String sortBy,
+            String direction) {
         
-        Pageable pageable = PageRequest.of(page, size);
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+
+        Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<Project> projectPage;
 
-        if(status != null) {
-            ProjectStatus projectStatus;
+        ProjectStatus projectStatus = null;
 
+        if(status != null) {
             try {
                 projectStatus = ProjectStatus.valueOf(status.toUpperCase());
             } catch (Exception e) {
                 throw new IllegalArgumentException("Invalid status value");
             }
+        }
 
-            projectPage = projectRepository.findByStatus(projectStatus, pageable);
+        if (status != null && search != null) {
+            projectPage = projectRepository
+                    .findByStatusAndNameContainingIgnoreCase(projectStatus, search, pageable);
 
+        } else if (status != null) {
+            projectPage = projectRepository
+                    .findByStatus(projectStatus, pageable);
+
+        } else if (search != null) {
+            projectPage = projectRepository
+                    .findByNameContainingIgnoreCase(search, pageable);
+                    
         } else {
             projectPage = projectRepository.findAll(pageable);
         }

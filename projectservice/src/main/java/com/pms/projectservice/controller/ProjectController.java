@@ -48,9 +48,14 @@ public class ProjectController {
     @GetMapping
     public ResponseEntity<Page<ProjectResponseDTO>> getProjects(
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size) {
-            
-        return ResponseEntity.ok(projectService.getProjects(status, page, size));
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
+
+        return ResponseEntity.ok(
+                projectService.getProjects(status, search, page, size, sortBy, direction)
+        );
     }
 }
