@@ -114,7 +114,7 @@ public class ProjectService {
         ProjectMember member = getProjectMember(id, user);
 
         if (!member.getRole().name().equals("ADMIN")) {
-            throw new RuntimeException("Only ADMIN can update project");
+            throw new AccessDeniedException("Only ADMIN can update project");
         }
 
         project.setName(request.getName());
@@ -133,7 +133,7 @@ public class ProjectService {
         ProjectMember member = getProjectMember(id, user);
 
         if (!member.getRole().name().equals("ADMIN")) {
-            throw new RuntimeException("Only ADMIN can delete project");
+            throw new AccessDeniedException("Only ADMIN can delete project");
         }
 
         projectRepository.delete(project);
@@ -188,6 +188,6 @@ public class ProjectService {
     private ProjectMember getProjectMember(Long projectId, String userId) {
         return projectMemberRepository
                 .findByProjectIdAndUserId(projectId, userId)
-                .orElseThrow(() -> new RuntimeException("User not part of project"));
+                .orElseThrow(() -> new AccessDeniedException("User not part of project"));
     }
 }
