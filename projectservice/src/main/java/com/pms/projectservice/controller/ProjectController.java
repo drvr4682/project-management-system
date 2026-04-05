@@ -28,7 +28,7 @@ public class ProjectController {
         return projectService.getProjectById(id);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @PutMapping("/{id}")
     public ProjectResponseDTO updateProject(
             @PathVariable Long id,

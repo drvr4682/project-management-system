@@ -23,6 +23,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final ProjectAccessService projectAccessService;
 
     public String healthCheck() {
         return "Project Service is running";
@@ -111,11 +112,7 @@ public class ProjectService {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        ProjectMember member = getProjectMember(id, user);
-
-        if (!member.getRole().name().equals("ADMIN")) {
-            throw new AccessDeniedException("Only ADMIN can update project");
-        }
+        projectAccessService.validateAdmin(id, user);
 
         project.setName(request.getName());
         project.setDescription(request.getDescription());
@@ -130,11 +127,7 @@ public class ProjectService {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        ProjectMember member = getProjectMember(id, user);
-
-        if (!member.getRole().name().equals("ADMIN")) {
-            throw new AccessDeniedException("Only ADMIN can delete project");
-        }
+        projectAccessService.validateAdmin(id, user);
 
         projectRepository.delete(project);
     }

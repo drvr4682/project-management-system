@@ -29,6 +29,7 @@ public class ProjectMemberService {
 
     private final ProjectMemberRepository projectMemberRepository;
     private final AuthFeignClient authFeignClient;
+    private final ProjectAccessService projectAccessService;
 
     public String addMember(Long projectId, AddMemberRequestDTO request) {
 
@@ -38,13 +39,7 @@ public class ProjectMemberService {
             throw new UnauthorizedException("Unauthorized");
         }
 
-        ProjectMember existing = projectMemberRepository
-                .findByProjectIdAndUserId(projectId, user)
-                .orElseThrow(() -> new AccessDeniedException("Access denied"));
-
-        if (existing.getRole() != ProjectRole.ADMIN) {
-            throw new AccessDeniedException("Only ADMIN can add members");
-        }
+        projectAccessService.validateAdmin(projectId, user);
 
         projectMemberRepository.findByProjectIdAndUserId(projectId, request.getUserId())
                 .ifPresent(m -> {
