@@ -6,6 +6,9 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 
 import org.springframework.stereotype.Component;
+
+import com.pms.authservice.exception.InvalidJwtException;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -52,7 +55,7 @@ public class JwtUtil {
         Object role = extractAllClaims(token).get("role");
 
         if (role == null) {
-            throw new RuntimeException("Role not found in JWT");
+            throw new InvalidJwtException("Role not found in JWT");
         }
 
         return role.toString();

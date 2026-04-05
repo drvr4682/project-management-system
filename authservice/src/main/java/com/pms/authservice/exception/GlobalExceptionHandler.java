@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.core.AuthenticationException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -13,25 +15,36 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<?> handleUserExists(UserAlreadyExistsException ex) {
+    private Map<String, Object> buildResponse(String message, int status) {
         Map<String, Object> error = new HashMap<>();
         error.put("timestamp", LocalDateTime.now());
-        error.put("message", ex.getMessage());
-        error.put("status", HttpStatus.BAD_REQUEST.value());
+        error.put("message", message);
+        error.put("status", status);
+        return error;
+    }
 
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<?> handleUserExists(UserAlreadyExistsException ex) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 400),
+                HttpStatus.BAD_REQUEST
+        );
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<?> handleInvalidCredentials(InvalidCredentialsException ex) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 401),
+                HttpStatus.UNAUTHORIZED
+        );
+    }
 
-        Map<String, Object> error = new HashMap<>();
-        error.put("timestamp", LocalDateTime.now());
-        error.put("message", ex.getMessage());
-        error.put("status", 401);
-
-        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+    @ExceptionHandler(InvalidJwtException.class)
+    public ResponseEntity<?> handleInvalidJwt(InvalidJwtException ex) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 401),
+                HttpStatus.UNAUTHORIZED
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -47,23 +60,43 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<?> handleBadCredentials(BadCredentialsException ex) {
+        return new ResponseEntity<>(
+                buildResponse("Invalid username or password", 401),
+                HttpStatus.UNAUTHORIZED
+        );
+    }
 
-        Map<String, Object> error = new HashMap<>();
-        error.put("timestamp", LocalDateTime.now());
-        error.put("status", HttpStatus.UNAUTHORIZED.value());
-        error.put("error", "Invalid username or password");
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<?> handleUserNotFound(UserNotFoundException ex) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 404),
+                HttpStatus.NOT_FOUND
+        );
+    }
 
-        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+    // ✅ FIX: Handle Access Denied properly
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<?> handleAccessDenied(AuthorizationDeniedException ex) {
+        return new ResponseEntity<>(
+                buildResponse("Access Denied", 403),
+                HttpStatus.FORBIDDEN
+        );
+    }
+
+    // ✅ FIX: Handle authentication failures
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<?> handleAuthentication(AuthenticationException ex) {
+        return new ResponseEntity<>(
+                buildResponse("Unauthorized", 401),
+                HttpStatus.UNAUTHORIZED
+        );
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGenericException(Exception ex) {
-
-        Map<String, Object> error = new HashMap<>();
-        error.put("timestamp", LocalDateTime.now());
-        error.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        error.put("error", ex.getMessage());
-
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 500),
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
     }
 }
