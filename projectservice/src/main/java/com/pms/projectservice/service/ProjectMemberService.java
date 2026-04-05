@@ -1,7 +1,5 @@
 package com.pms.projectservice.service;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -11,11 +9,11 @@ import com.pms.projectservice.dto.AddMemberRequestDTO;
 import com.pms.projectservice.dto.ProjectMemberResponseDTO;
 import com.pms.projectservice.entity.ProjectMember;
 import com.pms.projectservice.entity.ProjectRole;
-import com.pms.projectservice.exception.AccessDeniedException;
 import com.pms.projectservice.exception.ResourceNotFoundException;
 import com.pms.projectservice.exception.UnauthorizedException;
 import com.pms.projectservice.repository.ProjectMemberRepository;
 import com.pms.projectservice.security.SecurityUtils;
+import com.pms.projectservice.util.AuditLogger;
 
 import feign.FeignException;
 import feign.RetryableException;
@@ -30,16 +28,17 @@ public class ProjectMemberService {
     private final ProjectMemberRepository projectMemberRepository;
     private final AuthFeignClient authFeignClient;
     private final ProjectAccessService projectAccessService;
+    private final AuditLogger auditLogger;
 
     public String addMember(Long projectId, AddMemberRequestDTO request) {
 
-        String user = SecurityUtils.getCurrentUser();
+        String currentUser = SecurityUtils.getCurrentUser();
 
-        if (user == null) {
+        if (currentUser == null) {
             throw new UnauthorizedException("Unauthorized");
         }
 
-        projectAccessService.validateAdmin(projectId, user);
+        projectAccessService.validateAdmin(projectId, currentUser);
 
         projectMemberRepository.findByProjectIdAndUserId(projectId, request.getUserId())
                 .ifPresent(m -> {
@@ -54,9 +53,8 @@ public class ProjectMemberService {
         }
 
         try {
-            String encodedEmail = URLEncoder.encode(request.getUserId(), StandardCharsets.UTF_8);
 
-            String response = authFeignClient.checkUser(encodedEmail);
+            String response = authFeignClient.checkUser(request.getUserId());
 
             if(!"User exists".equalsIgnoreCase(response)) {
                 throw new IllegalArgumentException("User does not exist");
@@ -80,6 +78,8 @@ public class ProjectMemberService {
 
         projectMemberRepository.save(member);
 
+        auditLogger.log(currentUser, "ADD_MEMBER", projectId, request.getUserId());
+
         log.info("User {} added to project {} as {}", request.getUserId(), projectId, role);
 
         return "Member added successfully";
@@ -87,19 +87,16 @@ public class ProjectMemberService {
 
     public List<ProjectMemberResponseDTO> getMembers(Long projectId) {
 
-        String user = SecurityUtils.getCurrentUser();
+        String currentUser = SecurityUtils.getCurrentUser();
 
-        if (user == null) {
+        if (currentUser == null) {
             throw new UnauthorizedException("Unauthorized");
         }
 
-        // Must be a member
-        projectMemberRepository.findByProjectIdAndUserId(projectId, user)
-                .orElseThrow(() -> new AccessDeniedException("Access denied"));
+        projectAccessService.validateMember(projectId, currentUser);
 
-        return projectMemberRepository.findAll()
+        return projectMemberRepository.findByProjectId(projectId)
                 .stream()
-                .filter(m -> m.getProjectId().equals(projectId))
                 .map(m -> ProjectMemberResponseDTO.builder()
                         .userId(m.getUserId())
                         .role(m.getRole().name())
@@ -109,20 +106,13 @@ public class ProjectMemberService {
 
     public String removeMember(Long projectId, String userId) {
 
-        String current = SecurityUtils.getCurrentUser();
+        String currentUser = SecurityUtils.getCurrentUser();
 
-        if (current == null) {
+        if (currentUser == null) {
             throw new UnauthorizedException("Unauthorized");
         }
 
-        // Check ADMIN
-        ProjectMember admin = projectMemberRepository
-                .findByProjectIdAndUserId(projectId, current)
-                .orElseThrow(() -> new AccessDeniedException("Access denied"));
-
-        if (admin.getRole() != ProjectRole.ADMIN) {
-            throw new AccessDeniedException("Only ADMIN can remove members");
-        }
+        projectAccessService.validateAdmin(projectId, currentUser);
 
         ProjectMember member = projectMemberRepository
                 .findByProjectIdAndUserId(projectId, userId)
@@ -130,20 +120,8 @@ public class ProjectMemberService {
 
         projectMemberRepository.delete(member);
 
+        auditLogger.log(currentUser, "REMOVE_MEMBER", projectId, userId);
+
         return "Member removed successfully";
-    }
-
-    public ProjectMember validateMember(Long projectId, String userId) {
-        return projectMemberRepository
-                .findByProjectIdAndUserId(projectId, userId)
-                .orElseThrow(() -> new AccessDeniedException("Access denied: Not a project member"));
-    }
-
-    public void validateAdmin(Long projectId, String userId) {
-        ProjectMember member = validateMember(projectId, userId);
-
-        if (!member.getRole().name().equals("ADMIN")) {
-            throw new AccessDeniedException("Access denied: Admin only");
-        }
     }
 }

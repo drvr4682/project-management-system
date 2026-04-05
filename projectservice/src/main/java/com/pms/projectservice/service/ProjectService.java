@@ -3,6 +3,7 @@ package com.pms.projectservice.service;
 import com.pms.projectservice.dto.*;
 import com.pms.projectservice.repository.ProjectRepository;
 import com.pms.projectservice.security.SecurityUtils;
+import com.pms.projectservice.util.AuditLogger;
 import com.pms.projectservice.repository.ProjectMemberRepository;
 import com.pms.projectservice.exception.*;
 import com.pms.projectservice.entity.*;
@@ -24,6 +25,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectAccessService projectAccessService;
+    private final AuditLogger auditLogger;
 
     public String healthCheck() {
         return "Project Service is running";
@@ -76,6 +78,8 @@ public class ProjectService {
 
         projectMemberRepository.save(member);
 
+        auditLogger.log(currentUser, "CREATE_PROJECT", saved.getId(), null);
+
         log.info("Owner added as ADMIN in project_members");
 
         return mapToResponse(saved);
@@ -88,8 +92,8 @@ public class ProjectService {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        getProjectMember(id, user); // just check membership
-
+        projectAccessService.validateMember(id, user);
+        
         return mapToResponse(project);
     }
 
@@ -117,6 +121,8 @@ public class ProjectService {
         project.setName(request.getName());
         project.setDescription(request.getDescription());
 
+        auditLogger.log(user, "UPDATE_PROJECT", id, null);
+
         return mapToResponse(projectRepository.save(project));
     }
 
@@ -130,6 +136,8 @@ public class ProjectService {
         projectAccessService.validateAdmin(id, user);
 
         projectRepository.delete(project);
+
+        auditLogger.log(user, "DELETE_PROJECT", id, null);
     }
 
     public Page<ProjectResponseDTO> getProjects(
@@ -176,11 +184,5 @@ public class ProjectService {
         }
 
         return projectPage.map(this::mapToResponse);
-    }
-
-    private ProjectMember getProjectMember(Long projectId, String userId) {
-        return projectMemberRepository
-                .findByProjectIdAndUserId(projectId, userId)
-                .orElseThrow(() -> new AccessDeniedException("User not part of project"));
     }
 }
