@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
-import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,9 +22,7 @@ import org.springframework.data.domain.Sort;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
-    private final Environment environment;
     private final ProjectMemberRepository projectMemberRepository;
-    private final ProjectMemberService projectMemberService;
 
     public String healthCheck() {
         return "Project Service is running";
@@ -34,18 +31,7 @@ public class ProjectService {
     private String getCurrentUser() {
         String user = SecurityUtils.getCurrentUser();
 
-        boolean isTest = false;
-        for (String profile : environment.getActiveProfiles()) {
-            if (profile.equals("test")) {
-                isTest = true;
-                break;
-            }
-        }
-
         if (user == null) {
-            if (isTest) {
-                return "TEST_USER";
-            }
             throw new UnauthorizedException("Unauthorized");
         }
 
