@@ -3,8 +3,7 @@ package com.pms.projectservice.config;
 import feign.RequestInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import static com.pms.projectservice.security.JwtFilter.currentToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Configuration
 public class FeignConfig {
@@ -12,10 +11,10 @@ public class FeignConfig {
     @Bean
     public RequestInterceptor requestInterceptor() {
         return template -> {
-            String token = currentToken.get();
-            
-            if (token != null) {
-                template.header("Authorization", "Bearer " + token);
+            Object credentials = SecurityContextHolder.getContext().getAuthentication().getCredentials();
+
+            if (credentials != null) {
+                template.header("Authorization", "Bearer " + credentials.toString());
             }
         };
     }

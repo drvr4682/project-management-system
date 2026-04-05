@@ -1,7 +1,5 @@
 package com.pms.projectservice.service;
 
-import static com.pms.projectservice.security.JwtFilter.currentUser;
-
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -17,6 +15,7 @@ import com.pms.projectservice.exception.AccessDeniedException;
 import com.pms.projectservice.exception.ResourceNotFoundException;
 import com.pms.projectservice.exception.UnauthorizedException;
 import com.pms.projectservice.repository.ProjectMemberRepository;
+import com.pms.projectservice.security.SecurityUtils;
 
 import feign.FeignException;
 import feign.RetryableException;
@@ -33,7 +32,7 @@ public class ProjectMemberService {
 
     public String addMember(Long projectId, AddMemberRequestDTO request) {
 
-        String user = currentUser.get();
+        String user = SecurityUtils.getCurrentUser();
 
         if (user == null) {
             throw new UnauthorizedException("Unauthorized");
@@ -88,7 +87,7 @@ public class ProjectMemberService {
 
     public List<ProjectMemberResponseDTO> getMembers(Long projectId) {
 
-        String user = currentUser.get();
+        String user = SecurityUtils.getCurrentUser();
 
         if (user == null) {
             throw new UnauthorizedException("Unauthorized");
@@ -110,7 +109,7 @@ public class ProjectMemberService {
 
     public String removeMember(Long projectId, String userId) {
 
-        String current = currentUser.get();
+        String current = SecurityUtils.getCurrentUser();
 
         if (current == null) {
             throw new UnauthorizedException("Unauthorized");

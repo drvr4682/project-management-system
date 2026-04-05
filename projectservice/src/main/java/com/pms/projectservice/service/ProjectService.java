@@ -2,19 +2,20 @@ package com.pms.projectservice.service;
 
 import com.pms.projectservice.dto.*;
 import com.pms.projectservice.repository.ProjectRepository;
+import com.pms.projectservice.security.SecurityUtils;
 import com.pms.projectservice.repository.ProjectMemberRepository;
 import com.pms.projectservice.exception.*;
 import com.pms.projectservice.entity.*;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-
-import static com.pms.projectservice.security.JwtFilter.currentUser;
 
 @Slf4j
 @Service
@@ -31,9 +32,8 @@ public class ProjectService {
     }
 
     private String getCurrentUser() {
-        String user = currentUser.get();
+        String user = SecurityUtils.getCurrentUser();
 
-        // allow fallback ONLY in test profile
         boolean isTest = false;
         for (String profile : environment.getActiveProfiles()) {
             if (profile.equals("test")) {
@@ -99,7 +99,7 @@ public class ProjectService {
         String user = getCurrentUser();
 
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         getProjectMember(id, user); // just check membership
 
@@ -142,7 +142,7 @@ public class ProjectService {
         String user = getCurrentUser();
 
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         ProjectMember member = getProjectMember(id, user);
 
