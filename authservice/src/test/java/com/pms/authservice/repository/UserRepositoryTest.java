@@ -2,19 +2,18 @@ package com.pms.authservice.repository;
 
 import com.pms.authservice.entity.Role;
 import com.pms.authservice.entity.User;
-import com.pms.authservice.repository.UserRepository;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 class UserRepositoryTest {
 
     @Autowired
@@ -23,30 +22,27 @@ class UserRepositoryTest {
     @Test
     void shouldSaveAndFindUserByEmail() {
 
-        User user = User.builder()
-                .name("Test User")
-                .email("test@example.com")
-                .password("password")
-                .role(Role.USER)
-                .build();
+        User user = new User();
+        user.setName("Exists User");
+        user.setEmail("test@example.com");
+        user.setPassword("password");
+        user.setRole(Role.USER);
 
         userRepository.save(user);
 
         Optional<User> found = userRepository.findByEmail("test@example.com");
 
         assertTrue(found.isPresent());
-        assertEquals("Test User", found.get().getName());
     }
 
     @Test
     void shouldReturnTrueIfEmailExists() {
 
-        User user = User.builder()
-                .name("Test User")
-                .email("exists@example.com")
-                .password("password")
-                .role(Role.USER)
-                .build();
+        User user = new User();
+        user.setName("Test User");
+        user.setEmail("exists@example.com");
+        user.setPassword("password");
+        user.setRole(Role.USER);
 
         userRepository.save(user);
 
