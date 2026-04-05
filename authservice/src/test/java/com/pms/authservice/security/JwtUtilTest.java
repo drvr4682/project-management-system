@@ -1,32 +1,30 @@
 package com.pms.authservice.security;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-
-import java.util.Collections;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
 class JwtUtilTest {
 
-    private final JwtUtil jwtUtil = new JwtUtil();
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @Test
     void testValidateToken() {
 
         String email = "test@example.com";
 
-        UserDetails userDetails = new User(
-                email,
-                "password",
-                Collections.emptyList()
-        );
+        String token = jwtUtil.generateToken(email, "USER");
 
-        String token = jwtUtil.generateToken(email);
+        assertNotNull(token);
 
-        boolean isValid = jwtUtil.validateToken(token, userDetails);
+        String extractedEmail = jwtUtil.extractUsername(token);
+        String extractedRole = jwtUtil.extractRole(token);
 
-        assertTrue(isValid);
+        assertEquals(email, extractedEmail);
+        assertEquals("USER", extractedRole);
     }
 }

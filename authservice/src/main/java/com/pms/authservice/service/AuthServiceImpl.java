@@ -7,7 +7,6 @@ import com.pms.authservice.dto.LoginResponse;
 import com.pms.authservice.security.JwtUtil;
 import com.pms.authservice.entity.User;
 import com.pms.authservice.exception.UserAlreadyExistsException;
-import com.pms.authservice.exception.InvalidCredentialsException;
 import com.pms.authservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -63,7 +62,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String token = jwtUtil.generateToken(user.getEmail());
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
 
         return LoginResponse.builder()
                 .token(token)

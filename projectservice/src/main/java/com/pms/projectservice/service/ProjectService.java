@@ -96,17 +96,12 @@ public class ProjectService {
 
     public ProjectResponseDTO getProjectById(Long id) {
 
-        String currentUser = getCurrentUser();
-
-        log.info("Fetching project ID: {} by user: {}", id, currentUser);
+        String user = getCurrentUser();
 
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.error("Project not found: {}", id);
-                    return new ResourceNotFoundException("Project not found");
-                });
+                .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        projectMemberService.validateMember(id, currentUser);
+        getProjectMember(id, user); // just check membership
 
         return mapToResponse(project);
     }
@@ -125,45 +120,37 @@ public class ProjectService {
 
     public ProjectResponseDTO updateProject(Long id, ProjectRequestDTO request) {
 
-        String currentUser = getCurrentUser();
-
-        log.info("Updating project ID: {} by user: {}", id, currentUser);
+        String user = getCurrentUser();
 
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.error("Project not found: {}", id);
-                    return new ResourceNotFoundException("Project not found");
-                });
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        projectMemberService.validateAdmin(id, currentUser);
+        ProjectMember member = getProjectMember(id, user);
+
+        if (!member.getRole().name().equals("ADMIN")) {
+            throw new RuntimeException("Only ADMIN can update project");
+        }
 
         project.setName(request.getName());
         project.setDescription(request.getDescription());
 
-        Project updated = projectRepository.save(project);
-
-        log.info("Project updated successfully: {}", id);
-
-        return mapToResponse(updated);
+        return mapToResponse(projectRepository.save(project));
     }
 
     public void deleteProject(Long id) {
 
-        String currentUser = getCurrentUser();
-
-        log.info("Deleting project ID: {} by user: {}", id, currentUser);
+        String user = getCurrentUser();
 
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.error("Project not found: {}", id);
-                    return new ResourceNotFoundException("Project not found");
-                });
+                .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        projectMemberService.validateAdmin(id, currentUser);
+        ProjectMember member = getProjectMember(id, user);
+
+        if (!member.getRole().name().equals("ADMIN")) {
+            throw new RuntimeException("Only ADMIN can delete project");
+        }
 
         projectRepository.delete(project);
-
-        log.info("Project deleted successfully: {}", id);
     }
 
     public Page<ProjectResponseDTO> getProjects(
@@ -210,5 +197,11 @@ public class ProjectService {
         }
 
         return projectPage.map(this::mapToResponse);
+    }
+
+    private ProjectMember getProjectMember(Long projectId, String userId) {
+        return projectMemberRepository
+                .findByProjectIdAndUserId(projectId, userId)
+                .orElseThrow(() -> new RuntimeException("User not part of project"));
     }
 }

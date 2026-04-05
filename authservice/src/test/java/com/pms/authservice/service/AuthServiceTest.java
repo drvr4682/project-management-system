@@ -9,6 +9,7 @@ import com.pms.authservice.security.JwtUtil;
 import com.pms.authservice.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.mockito.internal.creation.bytebuddy.access.MockAccess;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.authentication.AuthenticationManager;
 
@@ -79,12 +80,13 @@ class AuthServiceTest {
         Mockito.when(authenticationManager.authenticate(Mockito.any()))
                 .thenReturn(null);
 
-        Mockito.when(jwtUtil.generateToken(Mockito.any()))
+        Mockito.when(jwtUtil.generateToken(Mockito.anyString(), Mockito.anyString()))
                 .thenReturn("dummy-token");
 
         LoginResponse response = authService.login(request);
 
         assertNotNull(response);
+        assertEquals("USER", response.getRole());
         assertEquals("dummy-token", response.getToken());
     }
 }
