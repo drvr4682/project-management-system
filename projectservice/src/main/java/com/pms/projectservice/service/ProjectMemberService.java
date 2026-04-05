@@ -61,7 +61,12 @@ public class ProjectMemberService {
         try {
             String encodedEmail = URLEncoder.encode(request.getUserId(), StandardCharsets.UTF_8);
 
-            authFeignClient.checkUser(encodedEmail);
+            String response = authFeignClient.checkUser(encodedEmail);
+
+            if(!"User exists".equalsIgnoreCase(response)) {
+                throw new IllegalArgumentException("User does not exist");
+            }
+            
         } catch (FeignException.NotFound e) {
             throw new IllegalArgumentException("User does not exist");
 
