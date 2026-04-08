@@ -107,7 +107,7 @@ class ProjectControllerTest {
     }
 
     @Test
-    void updateProject_shouldFail_whenNotOwner() throws Exception {
+    void updateProject_shouldSucced_forAdminMember() throws Exception {
 
         // create project
         ProjectRequestDTO request = ProjectRequestDTO.builder()
