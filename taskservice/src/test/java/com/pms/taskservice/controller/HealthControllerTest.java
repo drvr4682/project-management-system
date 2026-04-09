@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(HealthController.class)
-@AutoConfigureMockMvc(addFilters = false) // 🔥 THIS IS THE REAL FIX
+@AutoConfigureMockMvc(addFilters = false)
 class HealthControllerTest {
 
     @Autowired
