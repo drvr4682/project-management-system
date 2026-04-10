@@ -5,6 +5,10 @@ import com.pms.taskservice.client.ProjectFeignClient;
 import com.pms.taskservice.dto.*;
 import com.pms.taskservice.entity.*;
 import com.pms.taskservice.repository.TaskRepository;
+import com.pms.taskservice.exception.AccessDeniedException;
+import com.pms.taskservice.exception.ServiceUnavailableException;
+import com.pms.taskservice.exception.ResourceNotFoundException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -54,10 +58,10 @@ public class TaskServiceImpl implements TaskService {
             throw new IllegalArgumentException("Project not found");
 
         } catch (FeignException.Forbidden e) {
-            throw new RuntimeException("Access denied to project");
+            throw new AccessDeniedException("Access denied to project");
 
         } catch (RetryableException e) {
-            throw new RuntimeException("Project service unavailable");
+            throw new ServiceUnavailableException("Project service unavailable");
 
         } catch (FeignException e) {
             throw new RuntimeException("Error calling project service");
@@ -82,9 +86,13 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public List<TaskResponseDTO> getTasksByProject(Long projectId) {
 
-        // validate access
-        projectFeignClient.getProject(projectId);
-
+        try {
+            projectFeignClient.getProject(projectId);
+        } catch (FeignException.Forbidden e) {
+            throw new AccessDeniedException("Access denied to project");
+        } catch (FeignException.NotFound e) {
+            throw new IllegalArgumentException("Project not found");
+        }
         return taskRepository.findByProjectId(projectId)
                 .stream()
                 .map(this::mapToDTO)
@@ -95,11 +103,15 @@ public class TaskServiceImpl implements TaskService {
     public TaskResponseDTO updateStatus(Long taskId, UpdateTaskStatusDTO request) {
 
         Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        // validate access
-        projectFeignClient.getProject(task.getProjectId());
-
+        try {
+            projectFeignClient.getProject(taskId);
+        } catch (FeignException.Forbidden e) {
+            throw new AccessDeniedException("Access denied to project");
+        } catch (FeignException.NotFound e) {
+            throw new IllegalArgumentException("Project not found");
+        }
         TaskStatus status;
         try {
             status = TaskStatus.valueOf(request.getStatus().toUpperCase());
