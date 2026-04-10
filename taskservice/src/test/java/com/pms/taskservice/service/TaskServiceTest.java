@@ -1,9 +1,14 @@
 package com.pms.taskservice.service;
 
-import com.pms.taskservice.dto.*;
+import com.pms.taskservice.dto.TaskRequestDTO;
+import com.pms.taskservice.dto.TaskResponseDTO;
+import com.pms.taskservice.dto.UpdateTaskStatusDTO;
 import com.pms.taskservice.entity.Task;
 import com.pms.taskservice.entity.TaskStatus;
 import com.pms.taskservice.repository.TaskRepository;
+import com.pms.taskservice.client.AuthFeignClient;
+import com.pms.taskservice.client.ProjectFeignClient;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -14,7 +19,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class TaskServiceTest {
 
     private final TaskRepository taskRepository = Mockito.mock(TaskRepository.class);
-    private final TaskService taskService = new TaskServiceImpl(taskRepository);
+    private final AuthFeignClient authFeignClient = Mockito.mock(AuthFeignClient.class);
+    private final ProjectFeignClient projectFeignClient = Mockito.mock(ProjectFeignClient.class);
+
+    private final TaskService taskService = new TaskServiceImpl(taskRepository, authFeignClient, projectFeignClient);
 
     @Test
     void shouldCreateTask() {
@@ -34,6 +42,12 @@ class TaskServiceTest {
 
         Mockito.when(taskRepository.save(Mockito.any(Task.class)))
                 .thenReturn(saved);
+
+        Mockito.when(authFeignClient.checkUser(Mockito.anyString()))
+                .thenReturn("User exists");
+
+        Mockito.when(projectFeignClient.getProject(Mockito.anyLong()))
+                .thenReturn(new Object());
 
         TaskResponseDTO response = taskService.createTask(request);
 
