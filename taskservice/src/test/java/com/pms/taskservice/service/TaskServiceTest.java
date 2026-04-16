@@ -6,23 +6,58 @@ import com.pms.taskservice.dto.UpdateTaskStatusDTO;
 import com.pms.taskservice.entity.Task;
 import com.pms.taskservice.entity.TaskStatus;
 import com.pms.taskservice.repository.TaskRepository;
+import com.pms.taskservice.service.TaskService;
+import com.pms.taskservice.service.TaskServiceImpl;
 import com.pms.taskservice.client.AuthFeignClient;
 import com.pms.taskservice.client.ProjectFeignClient;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.mockito.Mockito;
 
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TaskServiceTest {
 
-    private final TaskRepository taskRepository = Mockito.mock(TaskRepository.class);
-    private final AuthFeignClient authFeignClient = Mockito.mock(AuthFeignClient.class);
-    private final ProjectFeignClient projectFeignClient = Mockito.mock(ProjectFeignClient.class);
+    private TaskRepository taskRepository;
+    private AuthFeignClient authFeignClient;
+    private ProjectFeignClient projectFeignClient;
 
-    private final TaskService taskService = new TaskServiceImpl(taskRepository, authFeignClient, projectFeignClient);
+    private TaskService taskService;
+
+    // SETUP
+    @BeforeEach
+    void setup() {
+
+        taskRepository = Mockito.mock(TaskRepository.class);
+        authFeignClient = Mockito.mock(AuthFeignClient.class);
+        projectFeignClient = Mockito.mock(ProjectFeignClient.class);
+
+        taskService = new TaskServiceImpl(taskRepository, authFeignClient, projectFeignClient);
+
+        // MOCK SECURITY CONTEXT (CRITICAL FIX)
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(
+                        "testuser@test.com",
+                        null,
+                        List.of()
+                );
+
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    // CLEANUP
+    @AfterEach
+    void cleanup() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void shouldCreateTask() {
@@ -53,6 +88,7 @@ class TaskServiceTest {
 
         assertNotNull(response);
         assertEquals("Test Task", response.getTitle());
+        assertEquals("TODO", response.getStatus());
     }
 
     @Test
@@ -72,11 +108,15 @@ class TaskServiceTest {
         Mockito.when(taskRepository.save(Mockito.any(Task.class)))
                 .thenReturn(task);
 
+        Mockito.when(projectFeignClient.getProject(Mockito.anyLong()))
+                .thenReturn(new Object());
+
         UpdateTaskStatusDTO dto = new UpdateTaskStatusDTO();
         dto.setStatus("DONE");
 
         TaskResponseDTO response = taskService.updateStatus(1L, dto);
 
+        assertNotNull(response);
         assertEquals("DONE", response.getStatus());
     }
 }
