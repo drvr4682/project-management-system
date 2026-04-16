@@ -10,4 +10,9 @@ public class ProjectFeignFallback implements ProjectFeignClient {
     public Object getProject(Long projectId) {
         throw new RuntimeException("Project service unavailable");
     }
+
+    @Override
+    public void validateAdmin(Long projectId) {
+        throw new RuntimeException("Project service unavailable");
+    }
 }

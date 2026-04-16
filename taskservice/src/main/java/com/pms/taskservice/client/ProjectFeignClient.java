@@ -12,4 +12,7 @@ public interface ProjectFeignClient {
 
     @GetMapping("/api/v1/projects/{projectId}")
     Object getProject(@PathVariable Long projectId);
+
+    @GetMapping("/api/v1/projects/{projectId}/validate-admin")
+    void validateAdmin(@PathVariable Long projectId);
 }

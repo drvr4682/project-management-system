@@ -71,6 +71,12 @@ public class TaskServiceImpl implements TaskService {
             throw new IllegalArgumentException("Project not found");
         }
 
+        try {
+            projectFeignClient.validateAdmin(request.getProjectId());
+        } catch (FeignException.Forbidden e) {
+            throw new AccessDeniedException("Only project ADMIN can assign tasks");
+        }
+
         Task saved = taskRepository.save(Task.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())

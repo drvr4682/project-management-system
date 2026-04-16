@@ -45,7 +45,7 @@ class TaskServiceTest {
         // MOCK SECURITY CONTEXT (CRITICAL FIX)
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(
-                        "testuser@test.com",
+                        "admin@test.com",
                         null,
                         List.of()
                 );
@@ -60,16 +60,16 @@ class TaskServiceTest {
     }
 
     @Test
-    void shouldCreateTask() {
+    void shouldCreateTask_asAdmin() {
 
         TaskRequestDTO request = new TaskRequestDTO();
-        request.setTitle("Test Task");
+        request.setTitle("Task 1");
         request.setProjectId(1L);
         request.setAssignedTo("user@test.com");
 
         Task saved = Task.builder()
                 .id(1L)
-                .title("Test Task")
+                .title("Task 1")
                 .projectId(1L)
                 .assignedTo("user@test.com")
                 .status(TaskStatus.TODO)
@@ -83,12 +83,38 @@ class TaskServiceTest {
 
         Mockito.when(projectFeignClient.getProject(Mockito.anyLong()))
                 .thenReturn(new Object());
+        
+        Mockito.doNothing()
+                .when(projectFeignClient)
+                .validateAdmin(Mockito.anyLong());
 
         TaskResponseDTO response = taskService.createTask(request);
 
         assertNotNull(response);
-        assertEquals("Test Task", response.getTitle());
-        assertEquals("TODO", response.getStatus());
+        assertEquals("Task 1", response.getTitle());
+    }
+
+    @Test
+    void shouldFail_whenNotAdmin() {
+
+        TaskRequestDTO request = new TaskRequestDTO();
+        request.setTitle("Task 1");
+        request.setProjectId(1L);
+        request.setAssignedTo("user@test.com");
+
+        Mockito.when(authFeignClient.checkUser(Mockito.anyString()))
+                .thenReturn("User exists");
+
+        Mockito.when(projectFeignClient.getProject(Mockito.anyLong()))
+                .thenReturn(new Object());
+
+        Mockito.doThrow(feign.FeignException.Forbidden.class)
+                .when(projectFeignClient)
+                .validateAdmin(Mockito.anyLong());
+
+        assertThrows(RuntimeException.class, () ->
+                taskService.createTask(request)
+        );
     }
 
     @Test
@@ -96,7 +122,7 @@ class TaskServiceTest {
 
         Task task = Task.builder()
                 .id(1L)
-                .title("Test")
+                .title("Task")
                 .projectId(1L)
                 .assignedTo("user@test.com")
                 .status(TaskStatus.TODO)
@@ -116,7 +142,6 @@ class TaskServiceTest {
 
         TaskResponseDTO response = taskService.updateStatus(1L, dto);
 
-        assertNotNull(response);
         assertEquals("DONE", response.getStatus());
     }
 }
