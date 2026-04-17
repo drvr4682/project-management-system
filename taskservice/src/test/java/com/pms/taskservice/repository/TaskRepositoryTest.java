@@ -2,6 +2,9 @@ package com.pms.taskservice.repository;
 
 import com.pms.taskservice.entity.Task;
 import com.pms.taskservice.entity.TaskStatus;
+import com.pms.taskservice.repository.TaskRepository;
+
+import org.springframework.data.domain.Page;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.*;
@@ -30,7 +33,12 @@ class TaskRepositoryTest {
 
         taskRepository.save(task);
 
-        List<Task> tasks = taskRepository.findByProjectId(1L);
+        var page = taskRepository.findByProjectId(
+                        1L,
+                        org.springframework.data.domain.PageRequest.of(0, 10)
+                );
+
+        List<Task> tasks = page.getContent();
 
         assertFalse(tasks.isEmpty());
         assertEquals("Test Task", tasks.get(0).getTitle());
@@ -65,7 +73,13 @@ class TaskRepositoryTest {
 
         taskRepository.save(task);
 
-        List<Task> tasks = taskRepository.findByProjectIdAndStatus(3L, TaskStatus.DONE);
+        var page = taskRepository.findByProjectIdAndStatus(
+                        3L,
+                        TaskStatus.DONE,
+                        org.springframework.data.domain.PageRequest.of(0, 10)
+                );
+
+        List<Task> tasks = page.getContent();
 
         assertEquals(1, tasks.size());
     }
