@@ -14,6 +14,11 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 import feign.FeignException;
 import feign.RetryableException;
 
@@ -92,7 +97,13 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<TaskResponseDTO> getTasksByProject(Long projectId) {
+    public Page<TaskResponseDTO> getTasksByProject(
+                    Long projectId,
+                    int page,
+                    int size,
+                    String status,
+                    String sortBy,
+                    String direction) {
 
         String user = org.springframework.security.core.context.SecurityContextHolder
                 .getContext().getAuthentication().getName();
@@ -107,12 +118,33 @@ public class TaskServiceImpl implements TaskService {
             throw new AccessDeniedException("Access denied to project");
         }
 
-        List<Task> tasks = taskRepository.findByProjectId(projectId);
+        Sort sort = 
+            direction.equalsIgnoreCase("desc") ?
+                    Sort.by(sortBy).descending() :
+                    Sort.by(sortBy).ascending();
 
-        log.info("ACTION=FETCH_TASKS_SUCCESS | USER={} | PROJECT={} | COUNT={}",
-                user, projectId, tasks.size());
+        Pageable pageable = 
+                PageRequest.of(page, size, sort);
+        
+        Page<Task> taskPage;
 
-        return tasks.stream().map(this::mapToDTO).toList();
+        if (status != null && !status.isBlank()) {
+            TaskStatus taskStatus;
+            try {
+                taskStatus = TaskStatus.valueOf(status.toUpperCase());
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid status value");
+            }
+
+            taskPage = taskRepository.findByProjectIdAndStatus(projectId, taskStatus, pageable);
+
+        } else {
+            taskPage = taskRepository.findByProjectId(projectId, pageable);
+        }
+
+        log.info("ACTION=FETCH_TASKS_SUCCESS | COUNT={}", taskPage.getTotalElements());
+
+        return taskPage.map(this::mapToDTO);
     }
 
     @Override

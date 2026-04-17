@@ -144,4 +144,29 @@ class TaskServiceTest {
 
         assertEquals("DONE", response.getStatus());
     }
+
+    @Test
+    void shouldFetchTasksWithPagination() {
+
+        Mockito.when(projectFeignClient.getProject(Mockito.anyLong()))
+                .thenReturn(new Object());
+
+        org.springframework.data.domain.Page<Task> page =
+                new org.springframework.data.domain.PageImpl<>(List.of(
+                        Task.builder()
+                                .id(1L)
+                                .title("Task 1")
+                                .projectId(1L)
+                                .assignedTo("user@test.com")
+                                .status(TaskStatus.TODO)
+                                .build()
+                ));
+
+        Mockito.when(taskRepository.findByProjectId(Mockito.anyLong(), Mockito.any()))
+                .thenReturn(page);
+
+        var result = taskService.getTasksByProject(1L, 0, 5, null, "createdAt", "desc");
+
+        assertEquals(1, result.getTotalElements());
+    }
 }
