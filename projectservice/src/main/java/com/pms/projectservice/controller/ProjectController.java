@@ -1,14 +1,24 @@
 package com.pms.projectservice.controller;
 
-import com.pms.projectservice.dto.*;
-import com.pms.projectservice.service.ProjectService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.pms.projectservice.dto.ProjectRequestDTO;
+import com.pms.projectservice.dto.ProjectResponseDTO;
+import com.pms.projectservice.service.ProjectService;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/projects")
@@ -62,5 +72,12 @@ public class ProjectController {
         return ResponseEntity.ok(
                 projectService.getProjects(status, search, page, size, sortBy, direction)
         );
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/{projectId}/validate-admin")
+    public ResponseEntity<Void> validateAdmin(@PathVariable Long projectId) {
+        projectService.validateAdmin(projectId);
+        return ResponseEntity.ok().build();
     }
 }

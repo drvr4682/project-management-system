@@ -185,4 +185,20 @@ public class ProjectService {
 
         return projectPage.map(this::mapToResponse);
     }
+
+    public void validateAdmin(Long projectId) {
+
+        String user = SecurityUtils.getCurrentUser();
+
+        if (user == null) {
+            throw new UnauthorizedException("Unauthorized");
+        }
+
+        // check project exists
+        projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        // RBAC check
+        projectAccessService.validateAdmin(projectId, user);
+    }
 }

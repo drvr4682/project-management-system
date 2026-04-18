@@ -6,10 +6,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.pms</groupId>
-    <artifactId>projectservice</artifactId>
+    <artifactId>taskservice</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>projectservice</name>
-    <description>Project Service</description>
+    <name>taskservice</name>
+    <description>Task Service</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
