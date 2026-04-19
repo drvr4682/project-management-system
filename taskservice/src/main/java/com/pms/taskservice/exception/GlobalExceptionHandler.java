@@ -47,22 +47,8 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // RUNTIME (BUSINESS) → 403 / 404 (TEMP → we refine later)
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<?> handleRuntime(RuntimeException ex) {
-
-        return new ResponseEntity<>(
-                Map.of(
-                        "timestamp", LocalDateTime.now(),
-                        "status", 500,
-                        "message", ex.getMessage()
-                ),
-                HttpStatus.INTERNAL_SERVER_ERROR
-        );
-    }
-
-    @ExceptionHandler(com.pms.taskservice.exception.ResourceNotFoundException.class)
-    public ResponseEntity<?> handleNotFound(com.pms.taskservice.exception.ResourceNotFoundException ex) {
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<?> handleNotFound(ResourceNotFoundException ex) {
 
         return new ResponseEntity<>(
                 Map.of(
@@ -74,8 +60,8 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(com.pms.taskservice.exception.AccessDeniedException.class)
-    public ResponseEntity<?> handleAccessDenied(com.pms.taskservice.exception.AccessDeniedException ex) {
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<?> handleAccessDenied(AccessDeniedException ex) {
 
         return new ResponseEntity<>(
                 Map.of(
@@ -87,8 +73,8 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(com.pms.taskservice.exception.ServiceUnavailableException.class)
-    public ResponseEntity<?> handleServiceUnavailable(com.pms.taskservice.exception.ServiceUnavailableException ex) {
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<?> handleServiceUnavailable(ServiceUnavailableException ex) {
 
         return new ResponseEntity<>(
                 Map.of(

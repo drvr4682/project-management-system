@@ -23,7 +23,6 @@ import feign.FeignException;
 import feign.RetryableException;
 
 import java.time.ZoneId;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -74,12 +73,16 @@ public class TaskServiceImpl implements TaskService {
             log.warn("ACTION=CREATE_TASK_FAILED | REASON=PROJECT_NOT_FOUND | PROJECT={}",
                     request.getProjectId());
             throw new IllegalArgumentException("Project not found");
-        }
+        } catch (RetryableException e) {
+            throw new ServiceUnavailableException("Project service unavailable");
+        } 
 
         try {
             projectFeignClient.validateAdmin(request.getProjectId());
         } catch (FeignException.Forbidden e) {
             throw new AccessDeniedException("Only project ADMIN can assign tasks");
+        } catch (RetryableException e) {
+            throw new ServiceUnavailableException("Project service unavailable");
         }
 
         Task saved = taskRepository.save(Task.builder()
@@ -116,6 +119,8 @@ public class TaskServiceImpl implements TaskService {
             log.warn("ACTION=FETCH_TASKS_FAILED | REASON=ACCESS_DENIED | USER={} | PROJECT={}",
                     user, projectId);
             throw new AccessDeniedException("Access denied to project");
+        } catch (RetryableException e) {
+            throw new ServiceUnavailableException("Project service unavailable");
         }
 
         Sort sort = 
@@ -165,6 +170,8 @@ public class TaskServiceImpl implements TaskService {
             log.warn("ACTION=UPDATE_TASK_FAILED | REASON=ACCESS_DENIED | USER={} | PROJECT={}",
                     user, task.getProjectId());
             throw new AccessDeniedException("Access denied to project");
+        } catch (RetryableException e) {
+            throw new ServiceUnavailableException("Project service unavailable");
         }
 
         TaskStatus status;

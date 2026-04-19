@@ -105,8 +105,13 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ServiceUnavailableException.class)
-    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
-    public String handleServiceDown(ServiceUnavailableException ex) {
-        return ex.getMessage();
+    public ResponseEntity<ErrorResponse> handleServiceUnavailable(ServiceUnavailableException ex) {
+
+        log.error("Service unavailable: {}", ex.getMessage());
+
+        return new ResponseEntity<>(
+                buildResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage()),
+                HttpStatus.SERVICE_UNAVAILABLE
+        );
     }
 }

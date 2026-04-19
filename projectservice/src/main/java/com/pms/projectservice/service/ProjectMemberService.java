@@ -10,6 +10,7 @@ import com.pms.projectservice.dto.ProjectMemberResponseDTO;
 import com.pms.projectservice.entity.ProjectMember;
 import com.pms.projectservice.entity.ProjectRole;
 import com.pms.projectservice.exception.ResourceNotFoundException;
+import com.pms.projectservice.exception.ServiceUnavailableException;
 import com.pms.projectservice.exception.UnauthorizedException;
 import com.pms.projectservice.repository.ProjectMemberRepository;
 import com.pms.projectservice.security.SecurityUtils;
@@ -64,10 +65,10 @@ public class ProjectMemberService {
             throw new IllegalArgumentException("User does not exist");
 
         } catch (RetryableException e) {
-            throw new IllegalArgumentException("Auth service unavailable");
+            throw new ServiceUnavailableException("Auth service unavailable");
 
         } catch (FeignException e) {
-            throw new IllegalArgumentException("Error calling auth service");
+            throw new ServiceUnavailableException("Auth service error");
         }
 
         ProjectMember member = ProjectMember.builder()
