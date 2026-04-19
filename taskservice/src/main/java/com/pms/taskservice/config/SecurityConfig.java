@@ -1,5 +1,7 @@
 package com.pms.taskservice.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pms.taskservice.exception.ErrorResponse;
 import com.pms.taskservice.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -37,12 +40,28 @@ public class SecurityConfig {
                 .authenticationEntryPoint((req, res, ex2) -> {
                     res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     res.setContentType("application/json");
-                    res.getWriter().write("{\"error\":\"Unauthorized\"}");
+                    
+                    ErrorResponse error = ErrorResponse.builder()
+                            .status(HttpServletResponse.SC_UNAUTHORIZED)
+                            .message("Unauthorized")
+                            .timestamp(System.currentTimeMillis())
+                            .path(req.getRequestURI())
+                            .build();
+
+                    res.getWriter().write(objectMapper.writeValueAsString(error));
                 })
                 .accessDeniedHandler((req, res, ex2) -> {
                     res.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     res.setContentType("application/json");
-                    res.getWriter().write("{\"error\":\"Access Denied\"}");
+                        
+                    ErrorResponse error = ErrorResponse.builder()
+                            .status(HttpServletResponse.SC_FORBIDDEN)
+                            .message("Access Denied")
+                            .timestamp(System.currentTimeMillis())
+                            .path(req.getRequestURI())
+                            .build();
+
+                    res.getWriter().write(objectMapper.writeValueAsString(error));
                 })
             )
 

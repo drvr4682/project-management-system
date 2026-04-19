@@ -1,7 +1,11 @@
 package com.pms.authservice.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pms.authservice.exception.ErrorResponse;
 import com.pms.authservice.security.JwtAuthenticationFilter;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+
 import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
@@ -23,6 +28,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -46,7 +52,28 @@ public class SecurityConfig {
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json");
-                    response.getWriter().write("{\"error\": \"Unauthorized\"}");
+
+                    ErrorResponse error = ErrorResponse.builder()
+                            .status(HttpServletResponse.SC_UNAUTHORIZED)
+                            .message("Unauthorized")
+                            .timestamp(System.currentTimeMillis())
+                            .path(request.getRequestURI())
+                            .build();
+
+                    response.getWriter().write(objectMapper.writeValueAsString(error));
+                })
+                .accessDeniedHandler((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+
+                    ErrorResponse error = ErrorResponse.builder()
+                            .status(HttpServletResponse.SC_FORBIDDEN)
+                            .message("Access Denied")
+                            .timestamp(System.currentTimeMillis())
+                            .path(request.getRequestURI())
+                            .build();
+
+                    response.getWriter().write(objectMapper.writeValueAsString(error));
                 })
             );
 

@@ -27,7 +27,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<?> handleUserExists(UserAlreadyExistsException ex,
+    public ResponseEntity<ErrorResponse> handleUserExists(UserAlreadyExistsException ex,
                                                 HttpServletRequest request) {
         return new ResponseEntity<>(
                 buildResponse(ex.getMessage(), 400, request.getRequestURI()),
@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
-    public ResponseEntity<?> handleInvalidCredentials(InvalidCredentialsException ex,
+    public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex,
                                                         HttpServletRequest request) {
         return new ResponseEntity<>(
                 buildResponse(ex.getMessage(), 401, request.getRequestURI()),
@@ -45,7 +45,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidJwtException.class)
-    public ResponseEntity<?> handleInvalidJwt(InvalidJwtException ex,
+    public ResponseEntity<ErrorResponse> handleInvalidJwt(InvalidJwtException ex,
                                                 HttpServletRequest request) {
         return new ResponseEntity<>(
                 buildResponse(ex.getMessage(), 401, request.getRequestURI()),
@@ -75,7 +75,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<?> handleBadCredentials(BadCredentialsException ex,
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex,
                                                     HttpServletRequest request) {
         return new ResponseEntity<>(
                 buildResponse("Invalid username or password", 401, request.getRequestURI()),
@@ -84,7 +84,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<?> handleUserNotFound(UserNotFoundException ex,
+    public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex,
                                                     HttpServletRequest request) {
         return new ResponseEntity<>(
                 buildResponse(ex.getMessage(), 404, request.getRequestURI()),
@@ -93,7 +93,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AuthorizationDeniedException.class)
-    public ResponseEntity<?> handleAccessDenied(AuthorizationDeniedException ex,
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AuthorizationDeniedException ex,
                                                     HttpServletRequest request) {
         return new ResponseEntity<>(
                 buildResponse("Access Denied", 403, request.getRequestURI()),
@@ -102,7 +102,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<?> handleAuthentication(AuthenticationException ex,
+    public ResponseEntity<ErrorResponse> handleAuthentication(AuthenticationException ex,
                                                     HttpServletRequest request) {
         return new ResponseEntity<>(
                 buildResponse("Unauthorized", 401, request.getRequestURI()),
@@ -111,7 +111,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGenericException(Exception ex,
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex,
                                                     HttpServletRequest request) {
         return new ResponseEntity<>(
                 buildResponse("Something went wrong", 500, request.getRequestURI()),
