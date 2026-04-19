@@ -3,7 +3,6 @@ package com.pms.taskservice.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.taskservice.dto.TaskRequestDTO;
 import com.pms.taskservice.service.TaskService;
-import com.pms.taskservice.security.JwtAuthenticationFilter;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -29,9 +28,6 @@ class TaskControllerTest {
 
     @MockBean
     private TaskService taskService;
-
-    @MockBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
     void shouldCreateTask() throws Exception {
