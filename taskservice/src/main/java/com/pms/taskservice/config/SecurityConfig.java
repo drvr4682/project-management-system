@@ -2,7 +2,9 @@ package com.pms.taskservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.taskservice.exception.ErrorResponse;
+import com.pms.taskservice.security.GatewayAuthenticationFilter;
 import com.pms.taskservice.security.JwtAuthenticationFilter;
+
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
@@ -22,6 +24,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final GatewayAuthenticationFilter gatewayAuthenticationFilter;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Bean
@@ -40,7 +43,7 @@ public class SecurityConfig {
                 .authenticationEntryPoint((req, res, ex2) -> {
                     res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     res.setContentType("application/json");
-                    
+
                     ErrorResponse error = ErrorResponse.builder()
                             .status(HttpServletResponse.SC_UNAUTHORIZED)
                             .message("Unauthorized")
@@ -53,7 +56,7 @@ public class SecurityConfig {
                 .accessDeniedHandler((req, res, ex2) -> {
                     res.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     res.setContentType("application/json");
-                        
+
                     ErrorResponse error = ErrorResponse.builder()
                             .status(HttpServletResponse.SC_FORBIDDEN)
                             .message("Access Denied")
@@ -70,7 +73,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
 
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(gatewayAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(jwtAuthenticationFilter, GatewayAuthenticationFilter.class);
 
         return http.build();
     }
