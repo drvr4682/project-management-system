@@ -6,8 +6,6 @@ import com.pms.taskservice.dto.UpdateTaskStatusDTO;
 import com.pms.taskservice.entity.Task;
 import com.pms.taskservice.entity.TaskStatus;
 import com.pms.taskservice.repository.TaskRepository;
-import com.pms.taskservice.service.TaskService;
-import com.pms.taskservice.service.TaskServiceImpl;
 import com.pms.taskservice.client.AuthFeignClient;
 import com.pms.taskservice.client.ProjectFeignClient;
 

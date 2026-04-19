@@ -1,14 +1,12 @@
-package com.pms.projectservice.exception;
+package com.pms.taskservice.exception;
 
 import java.util.Map;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
 @Data
 @Builder
-@AllArgsConstructor
 public class ErrorResponse {
     private int status;
     private String message;

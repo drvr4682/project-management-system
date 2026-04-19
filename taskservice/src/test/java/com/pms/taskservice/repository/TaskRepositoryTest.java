@@ -2,9 +2,7 @@ package com.pms.taskservice.repository;
 
 import com.pms.taskservice.entity.Task;
 import com.pms.taskservice.entity.TaskStatus;
-import com.pms.taskservice.repository.TaskRepository;
 
-import org.springframework.data.domain.Page;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.*;
