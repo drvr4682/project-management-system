@@ -25,8 +25,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         String path = exchange.getRequest().getURI().getPath();
 
-        // Skip auth endpoints
-        if (path.contains("/api/v1/auth")) {
+        if (isPublicEndpoint(path)) {
             return chain.filter(exchange);
         }
 
@@ -42,7 +41,6 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             String email = jwtUtil.extractUsername(token);
             String role = jwtUtil.extractRole(token);
 
-            // Forward user info in headers (CRITICAL DESIGN)
             ServerWebExchange mutatedExchange = exchange.mutate()
                     .request(r -> r
                             .header("X-User-Email", email)
@@ -57,6 +55,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         }
     }
 
+    private boolean isPublicEndpoint(String path) {
+        return path.startsWith("/api/v1/auth")
+                || path.equals("/api/v1/projects/health")
+                || path.equals("/api/v1/tasks/health");
+    }
+
     private Mono<Void> onError(ServerWebExchange exchange, String message, HttpStatus status) {
         exchange.getResponse().setStatusCode(status);
         exchange.getResponse().getHeaders().add("Content-Type", "application/json");
@@ -69,8 +73,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         try {
             byte[] bytes = objectMapper.writeValueAsBytes(error);
-            return exchange.getResponse().writeWith(Mono.just(exchange.getResponse()
-                    .bufferFactory().wrap(bytes)));
+            return exchange.getResponse().writeWith(
+                    Mono.just(exchange.getResponse().bufferFactory().wrap(bytes))
+            );
         } catch (Exception e) {
             return Mono.error(e);
         }
