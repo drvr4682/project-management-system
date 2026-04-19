@@ -9,7 +9,6 @@ import com.pms.authservice.security.JwtUtil;
 import com.pms.authservice.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.mockito.internal.creation.bytebuddy.access.MockAccess;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.authentication.AuthenticationManager;
 

@@ -15,6 +15,9 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pms.taskservice.exception.ErrorResponse;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -24,6 +27,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -60,7 +64,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("Invalid JWT");
+            response.setContentType("application/json");
+
+            ErrorResponse error = ErrorResponse.builder()
+                    .status(HttpServletResponse.SC_UNAUTHORIZED)
+                    .message("Invalid JWT")
+                    .timestamp(System.currentTimeMillis())
+                    .path(request.getRequestURI())
+                    .build();
+
+            response.getWriter().write(objectMapper.writeValueAsString(error));
+
             return;
         }
 
