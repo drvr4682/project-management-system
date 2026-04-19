@@ -3,7 +3,6 @@ package com.pms.taskservice.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.taskservice.exception.ErrorResponse;
 import com.pms.taskservice.security.GatewayAuthenticationFilter;
-import com.pms.taskservice.security.JwtAuthenticationFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +22,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final GatewayAuthenticationFilter gatewayAuthenticationFilter;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -73,8 +71,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
 
-            .addFilterBefore(gatewayAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(jwtAuthenticationFilter, GatewayAuthenticationFilter.class);
+            .addFilterBefore(gatewayAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
