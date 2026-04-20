@@ -3,6 +3,8 @@ package com.pms.projectservice.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.projectservice.exception.ErrorResponse;
 import com.pms.projectservice.security.GatewayAuthenticationFilter;
+import com.pms.projectservice.security.LoggingFilter;
+
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
@@ -23,6 +25,7 @@ public class SecurityConfig {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final GatewayAuthenticationFilter gatewayAuthenticationFilter;
+    private final LoggingFilter loggingFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -71,8 +74,9 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
 
-            .addFilterBefore(gatewayAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-            
+            .addFilterBefore(loggingFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(gatewayAuthenticationFilter, LoggingFilter.class);
+
         return http.build();
     }
 }
