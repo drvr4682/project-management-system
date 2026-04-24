@@ -3,7 +3,6 @@ package com.pms.projectservice.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.projectservice.exception.ErrorResponse;
 import com.pms.projectservice.security.GatewayAuthenticationFilter;
-import com.pms.projectservice.security.LoggingFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +22,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
     private final GatewayAuthenticationFilter gatewayAuthenticationFilter;
-    private final LoggingFilter loggingFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -37,45 +35,37 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-
             .exceptionHandling(ex -> ex
-                .authenticationEntryPoint((req, res, ex2) -> {
+                .authenticationEntryPoint((req, res, e) -> {
                     res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     res.setContentType("application/json");
-
                     ErrorResponse error = ErrorResponse.builder()
                             .status(HttpServletResponse.SC_UNAUTHORIZED)
                             .message("Unauthorized")
                             .timestamp(System.currentTimeMillis())
                             .path(req.getRequestURI())
                             .build();
-
                     res.getWriter().write(objectMapper.writeValueAsString(error));
                 })
-                
-                .accessDeniedHandler((req, res, ex2) -> {
+                .accessDeniedHandler((req, res, e) -> {
                     res.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     res.setContentType("application/json");
-                    
-                        ErrorResponse error = ErrorResponse.builder()
-                                .status(HttpServletResponse.SC_FORBIDDEN)
-                                .message("Access Denied")
-                                .timestamp(System.currentTimeMillis())
-                                .path(req.getRequestURI())
-                                .build();
-
-                        res.getWriter().write(objectMapper.writeValueAsString(error));
+                    ErrorResponse error = ErrorResponse.builder()
+                            .status(HttpServletResponse.SC_FORBIDDEN)
+                            .message("Access Denied")
+                            .timestamp(System.currentTimeMillis())
+                            .path(req.getRequestURI())
+                            .build();
+                    res.getWriter().write(objectMapper.writeValueAsString(error));
                 })
             )
-
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/projects/health").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/api/v1/projects/**").hasAnyRole("USER", "ADMIN")
                 .anyRequest().authenticated()
             )
-
-            .addFilterBefore(loggingFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(gatewayAuthenticationFilter, LoggingFilter.class);
+            .addFilterBefore(gatewayAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

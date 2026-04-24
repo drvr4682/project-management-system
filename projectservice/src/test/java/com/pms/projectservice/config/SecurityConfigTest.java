@@ -2,12 +2,13 @@ package com.pms.projectservice.config;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
-public class SecurityConfigTest {
-    
+@ActiveProfiles("test")
+class SecurityConfigTest {
+
     @Test
     void contextLoads() {
-        // Ensures security config loads correctly
     }
 }

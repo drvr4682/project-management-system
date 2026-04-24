@@ -5,30 +5,37 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import lombok.extern.slf4j.Slf4j;
+
 import org.slf4j.MDC;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.UUID;
 
-@Component
+@Slf4j
 public class LoggingFilter extends OncePerRequestFilter {
 
-    private static final String CORRELATION_ID = "X-Correlation-Id";
+    private static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
-
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
         try {
-            String correlationId = request.getHeader(CORRELATION_ID);
+            String correlationId = request.getHeader(CORRELATION_ID_HEADER);
 
-            if (correlationId != null) {
-                MDC.put(CORRELATION_ID, correlationId);
+            if (correlationId == null || correlationId.isBlank()) {
+                correlationId = UUID.randomUUID().toString();
             }
+
+            MDC.put(CORRELATION_ID_HEADER, correlationId);
+
+            // Fix: first arg is header NAME
+            response.setHeader(CORRELATION_ID_HEADER, correlationId);
+
+            log.debug("Request: {} {}", request.getMethod(), request.getRequestURI());
 
             filterChain.doFilter(request, response);
 

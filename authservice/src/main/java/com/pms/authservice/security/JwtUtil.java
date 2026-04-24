@@ -1,21 +1,24 @@
 package com.pms.authservice.security;
 
+import com.pms.authservice.exception.InvalidJwtException;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+
 import jakarta.annotation.PostConstruct;
 
-import org.springframework.stereotype.Component;
-
-import com.pms.authservice.exception.InvalidJwtException;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @Component
 public class JwtUtil {
 
@@ -30,10 +33,10 @@ public class JwtUtil {
     @PostConstruct
     public void init() {
         this.key = Keys.hmacShaKeyFor(secret.getBytes());
+        log.info("JwtUtil initialized");
     }
 
     public String generateToken(String email, String role) {
-
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role);
 
@@ -52,17 +55,16 @@ public class JwtUtil {
 
     public String extractRole(String token) {
         Object role = extractAllClaims(token).get("role");
-
         if (role == null) {
             throw new InvalidJwtException("Role not found in JWT");
         }
-
         return role.toString();
     }
 
+    // Used for validation where needed
     public boolean validateToken(String token, String email) {
         final String username = extractUsername(token);
-        return (username.equals(email) && !isTokenExpired(token));
+        return username.equals(email) && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {

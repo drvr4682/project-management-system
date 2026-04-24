@@ -2,25 +2,28 @@ package com.pms.taskservice.service;
 
 import com.pms.taskservice.client.AuthFeignClient;
 import com.pms.taskservice.client.ProjectFeignClient;
-import com.pms.taskservice.dto.*;
-import com.pms.taskservice.entity.*;
-import com.pms.taskservice.repository.TaskRepository;
+import com.pms.taskservice.dto.TaskRequestDTO;
+import com.pms.taskservice.dto.TaskResponseDTO;
+import com.pms.taskservice.dto.UpdateTaskStatusDTO;
+import com.pms.taskservice.entity.Task;
+import com.pms.taskservice.entity.TaskStatus;
 import com.pms.taskservice.exception.AccessDeniedException;
-import com.pms.taskservice.exception.ServiceUnavailableException;
 import com.pms.taskservice.exception.ResourceNotFoundException;
+import com.pms.taskservice.exception.ServiceUnavailableException;
+import com.pms.taskservice.repository.TaskRepository;
+
+import feign.FeignException;
+import feign.RetryableException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-
-import feign.FeignException;
-import feign.RetryableException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
 
 import java.time.ZoneId;
 
@@ -33,50 +36,42 @@ public class TaskServiceImpl implements TaskService {
     private final AuthFeignClient authFeignClient;
     private final ProjectFeignClient projectFeignClient;
 
+    // Extracted helper — no more inline SecurityContextHolder calls
+    private String getCurrentUser() {
+        return SecurityContextHolder.getContext().getAuthentication().getName();
+    }
+
     @Override
     public TaskResponseDTO createTask(TaskRequestDTO request) {
 
-        String user = org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName();
-
+        String user = getCurrentUser();
         log.info("ACTION=CREATE_TASK_REQUEST | USER={} | PROJECT={} | ASSIGNED_TO={}",
                 user, request.getProjectId(), request.getAssignedTo());
 
-        // user validation
+        // Validate assignee exists in auth service
         try {
             String response = authFeignClient.checkUser(request.getAssignedTo());
-
             if (!"User exists".equalsIgnoreCase(response)) {
-                log.warn("ACTION=CREATE_TASK_FAILED | REASON=INVALID_USER | USER={}", request.getAssignedTo());
-                throw new IllegalArgumentException("User does not exist");
+                throw new IllegalArgumentException("User does not exist: " + request.getAssignedTo());
             }
-
         } catch (FeignException.NotFound e) {
-            log.warn("ACTION=CREATE_TASK_FAILED | REASON=USER_NOT_FOUND | USER={}", request.getAssignedTo());
-            throw new IllegalArgumentException("User does not exist");
-
+            throw new IllegalArgumentException("User does not exist: " + request.getAssignedTo());
         } catch (RetryableException e) {
-            log.error("ACTION=CREATE_TASK_FAILED | REASON=AUTH_SERVICE_DOWN");
             throw new ServiceUnavailableException("Auth service unavailable");
         }
 
-        // project validation
+        // Validate project exists and user has access
         try {
             projectFeignClient.getProject(request.getProjectId());
-
         } catch (FeignException.Forbidden e) {
-            log.warn("ACTION=CREATE_TASK_FAILED | REASON=ACCESS_DENIED | USER={} | PROJECT={}",
-                    user, request.getProjectId());
-            throw new AccessDeniedException("Access denied to project");
-
+            throw new AccessDeniedException("Access denied to project: " + request.getProjectId());
         } catch (FeignException.NotFound e) {
-            log.warn("ACTION=CREATE_TASK_FAILED | REASON=PROJECT_NOT_FOUND | PROJECT={}",
-                    request.getProjectId());
-            throw new IllegalArgumentException("Project not found");
+            throw new IllegalArgumentException("Project not found: " + request.getProjectId());
         } catch (RetryableException e) {
             throw new ServiceUnavailableException("Project service unavailable");
-        } 
+        }
 
+        // Validate user is a project admin before assigning tasks
         try {
             projectFeignClient.validateAdmin(request.getProjectId());
         } catch (FeignException.Forbidden e) {
@@ -93,44 +88,32 @@ public class TaskServiceImpl implements TaskService {
                 .status(TaskStatus.TODO)
                 .build());
 
-        log.info("ACTION=CREATE_TASK_SUCCESS | USER={} | PROJECT={} | TASK_ID={}",
+        log.info("ACTION=CREATE_TASK_SUCCESS | USER={} | PROJECT={} | TASK={}",
                 user, saved.getProjectId(), saved.getId());
 
         return mapToDTO(saved);
     }
 
     @Override
-    public Page<TaskResponseDTO> getTasksByProject(
-                    Long projectId,
-                    int page,
-                    int size,
-                    String status,
-                    String sortBy,
-                    String direction) {
+    public Page<TaskResponseDTO> getTasksByProject(Long projectId, int page, int size,
+                                                    String status, String sortBy, String direction) {
 
-        String user = org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName();
-
+        String user = getCurrentUser();
         log.info("ACTION=FETCH_TASKS | USER={} | PROJECT={}", user, projectId);
 
         try {
             projectFeignClient.getProject(projectId);
         } catch (FeignException.Forbidden e) {
-            log.warn("ACTION=FETCH_TASKS_FAILED | REASON=ACCESS_DENIED | USER={} | PROJECT={}",
-                    user, projectId);
-            throw new AccessDeniedException("Access denied to project");
+            throw new AccessDeniedException("Access denied to project: " + projectId);
         } catch (RetryableException e) {
             throw new ServiceUnavailableException("Project service unavailable");
         }
 
-        Sort sort = 
-            direction.equalsIgnoreCase("desc") ?
-                    Sort.by(sortBy).descending() :
-                    Sort.by(sortBy).ascending();
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
 
-        Pageable pageable = 
-                PageRequest.of(page, size, sort);
-        
+        Pageable pageable = PageRequest.of(page, size, sort);
         Page<Task> taskPage;
 
         if (status != null && !status.isBlank()) {
@@ -138,38 +121,31 @@ public class TaskServiceImpl implements TaskService {
             try {
                 taskStatus = TaskStatus.valueOf(status.toUpperCase());
             } catch (Exception e) {
-                throw new IllegalArgumentException("Invalid status value");
+                throw new IllegalArgumentException("Invalid status value: " + status);
             }
-
             taskPage = taskRepository.findByProjectIdAndStatus(projectId, taskStatus, pageable);
-
         } else {
             taskPage = taskRepository.findByProjectId(projectId, pageable);
         }
 
         log.info("ACTION=FETCH_TASKS_SUCCESS | COUNT={}", taskPage.getTotalElements());
-
         return taskPage.map(this::mapToDTO);
     }
 
     @Override
     public TaskResponseDTO updateStatus(Long taskId, UpdateTaskStatusDTO request) {
 
-        String user = org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName();
-
+        String user = getCurrentUser();
         log.info("ACTION=UPDATE_TASK_STATUS | USER={} | TASK={} | STATUS={}",
                 user, taskId, request.getStatus());
 
         Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + taskId));
 
         try {
             projectFeignClient.getProject(task.getProjectId());
         } catch (FeignException.Forbidden e) {
-            log.warn("ACTION=UPDATE_TASK_FAILED | REASON=ACCESS_DENIED | USER={} | PROJECT={}",
-                    user, task.getProjectId());
-            throw new AccessDeniedException("Access denied to project");
+            throw new AccessDeniedException("Access denied to project: " + task.getProjectId());
         } catch (RetryableException e) {
             throw new ServiceUnavailableException("Project service unavailable");
         }
@@ -178,16 +154,13 @@ public class TaskServiceImpl implements TaskService {
         try {
             status = TaskStatus.valueOf(request.getStatus().toUpperCase());
         } catch (Exception e) {
-            log.warn("ACTION=UPDATE_TASK_FAILED | REASON=INVALID_STATUS | INPUT={}", request.getStatus());
-            throw new IllegalArgumentException("Invalid status value");
+            throw new IllegalArgumentException("Invalid status value: " + request.getStatus());
         }
 
         task.setStatus(status);
         Task updated = taskRepository.save(task);
 
-        log.info("ACTION=UPDATE_TASK_SUCCESS | USER={} | TASK={} | STATUS={}",
-                user, taskId, status);
-
+        log.info("ACTION=UPDATE_TASK_SUCCESS | USER={} | TASK={} | STATUS={}", user, taskId, status);
         return mapToDTO(updated);
     }
 
@@ -199,10 +172,12 @@ public class TaskServiceImpl implements TaskService {
                 .projectId(task.getProjectId())
                 .assignedTo(task.getAssignedTo())
                 .status(task.getStatus().name())
-                .createdAt(task.getCreatedAt() != null ?
-                        task.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() : null)
-                .updatedAt(task.getUpdatedAt() != null ?
-                        task.getUpdatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() : null)
+                .createdAt(task.getCreatedAt() != null
+                        ? task.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        : null)
+                .updatedAt(task.getUpdatedAt() != null
+                        ? task.getUpdatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        : null)
                 .build();
     }
 }

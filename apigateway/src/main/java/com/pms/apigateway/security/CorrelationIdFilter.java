@@ -1,7 +1,9 @@
 package com.pms.apigateway.security;
 
-import org.springframework.cloud.gateway.filter.GlobalFilter;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -11,34 +13,43 @@ import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
+@Slf4j
 @Component
 public class CorrelationIdFilter implements GlobalFilter, Ordered {
 
-    private static final String HEADER_NAME = "X-Correlation-Id";
+    private static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
-        String correlationId = exchange.getRequest().getHeaders().getFirst(HEADER_NAME);
+        String correlationId = exchange.getRequest().getHeaders().getFirst(CORRELATION_ID_HEADER);
 
-        if (correlationId == null) {
+        if (correlationId == null || correlationId.isBlank()) {
             correlationId = UUID.randomUUID().toString();
+            log.debug("Generated new Correlation ID: {}", correlationId);
+        } else {
+            log.debug("Propagating existing Correlation ID: {}", correlationId);
         }
+
+        final String finalCorrelationId = correlationId;
 
         ServerHttpRequest mutatedRequest = exchange.getRequest()
                 .mutate()
-                .header(HEADER_NAME, correlationId)
+                .header(CORRELATION_ID_HEADER, finalCorrelationId)
                 .build();
 
         ServerWebExchange mutatedExchange = exchange.mutate()
                 .request(mutatedRequest)
+                .response(exchange.getResponse())
                 .build();
+                
+        mutatedExchange.getResponse().getHeaders().add(CORRELATION_ID_HEADER, finalCorrelationId);
 
         return chain.filter(mutatedExchange);
     }
 
     @Override
     public int getOrder() {
-        return -2; // runs before JWT filter
+        return -2;
     }
 }

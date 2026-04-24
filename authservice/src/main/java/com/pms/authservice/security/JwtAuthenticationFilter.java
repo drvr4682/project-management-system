@@ -1,5 +1,8 @@
 package com.pms.authservice.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pms.authservice.exception.ErrorResponse;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,9 +18,6 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pms.authservice.exception.ErrorResponse;
-
 import java.io.IOException;
 import java.util.List;
 
@@ -27,7 +27,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -49,28 +49,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String role = jwtUtil.extractRole(jwt);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 username,
                                 null,
                                 List.of(new SimpleGrantedAuthority("ROLE_" + role))
                         );
-
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+                log.debug("Authenticated user: {}, role: {}", username, role);
             }
 
         } catch (Exception e) {
+            log.warn("Invalid JWT token: {}", e.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
 
             ErrorResponse error = ErrorResponse.builder()
                     .status(HttpServletResponse.SC_UNAUTHORIZED)
-                    .message("Invalid JWT")
+                    .message("Invalid or expired JWT")
                     .timestamp(System.currentTimeMillis())
                     .path(request.getRequestURI())
                     .build();

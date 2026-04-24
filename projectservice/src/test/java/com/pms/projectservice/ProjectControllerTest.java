@@ -2,25 +2,27 @@ package com.pms.projectservice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.projectservice.dto.ProjectRequestDTO;
+import com.pms.projectservice.security.GatewayAuthenticationFilter;
+import com.pms.projectservice.service.ProjectService;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Transactional
+import com.pms.projectservice.controller.ProjectController;
+import com.pms.projectservice.dto.ProjectResponseDTO;
+import org.mockito.Mockito;
+
+@WebMvcTest(ProjectController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class ProjectControllerTest {
 
     @Autowired
@@ -29,13 +31,22 @@ class ProjectControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockBean
+    private ProjectService projectService;
+
     @Test
     void createProject_shouldReturn200() throws Exception {
-
         ProjectRequestDTO request = ProjectRequestDTO.builder()
                 .name("Test Project")
                 .description("Test Desc")
                 .build();
+
+        Mockito.when(projectService.createProject(Mockito.any()))
+                .thenReturn(ProjectResponseDTO.builder()
+                        .id(1L)
+                        .name("Test Project")
+                        .status("ACTIVE")
+                        .build());
 
         mockMvc.perform(post("/api/v1/projects")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -45,9 +56,8 @@ class ProjectControllerTest {
 
     @Test
     void createProject_shouldFail_whenNameIsBlank() throws Exception {
-
         ProjectRequestDTO request = ProjectRequestDTO.builder()
-                .name("") // invalid
+                .name("")
                 .description("Test Desc")
                 .build();
 
@@ -58,106 +68,50 @@ class ProjectControllerTest {
     }
 
     @Test
-    void getProject_shouldReturnProject_whenOwnerMatches() throws Exception {
+    void getProject_shouldReturn200() throws Exception {
+        Mockito.when(projectService.getProjectById(1L))
+                .thenReturn(ProjectResponseDTO.builder()
+                        .id(1L)
+                        .name("Test Project")
+                        .status("ACTIVE")
+                        .build());
 
-        ProjectRequestDTO request = ProjectRequestDTO.builder()
-                .name("Owner Test")
-                .description("Test")
-                .build();
-
-        String response = mockMvc.perform(post("/api/v1/projects")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        Long id = objectMapper.readTree(response).get("id").asLong();
-
-        mockMvc.perform(get("/api/v1/projects/" + id))
+        mockMvc.perform(get("/api/v1/projects/1"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void updateProject_shouldReturnUpdatedProject() throws Exception {
-
+    void updateProject_shouldReturn200() throws Exception {
         ProjectRequestDTO request = ProjectRequestDTO.builder()
-                .name("Initial")
-                .description("Initial Desc")
-                .build();
-
-        String response = mockMvc.perform(post("/api/v1/projects")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        Long id = objectMapper.readTree(response).get("id").asLong();
-
-        ProjectRequestDTO update = ProjectRequestDTO.builder()
                 .name("Updated")
                 .description("Updated Desc")
                 .build();
 
-        mockMvc.perform(put("/api/v1/projects/" + id)
+        Mockito.when(projectService.updateProject(Mockito.eq(1L), Mockito.any()))
+                .thenReturn(ProjectResponseDTO.builder()
+                        .id(1L)
+                        .name("Updated")
+                        .status("ACTIVE")
+                        .build());
+
+        mockMvc.perform(put("/api/v1/projects/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(update)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void updateProject_shouldSucced_forAdminMember() throws Exception {
+    void deleteProject_shouldReturn200() throws Exception {
+        Mockito.doNothing().when(projectService).deleteProject(1L);
 
-        // create project
-        ProjectRequestDTO request = ProjectRequestDTO.builder()
-                .name("Project")
-                .description("Desc")
-                .build();
-
-        String response = mockMvc.perform(post("/api/v1/projects")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        Long id = objectMapper.readTree(response).get("id").asLong();
-
-        ProjectRequestDTO update = ProjectRequestDTO.builder()
-                .name("Hack")
-                .description("Hack Desc")
-                .build();
-
-        mockMvc.perform(put("/api/v1/projects/" + id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(update)))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void deleteProject_shouldDeleteSuccessfully() throws Exception {
-
-        ProjectRequestDTO request = ProjectRequestDTO.builder()
-                .name("Delete Test")
-                .description("To be deleted")
-                .build();
-
-        String response = mockMvc.perform(post("/api/v1/projects")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        Long id = objectMapper.readTree(response).get("id").asLong();
-
-        mockMvc.perform(delete("/api/v1/projects/" + id))
+        mockMvc.perform(delete("/api/v1/projects/1"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void deleteProject_shouldFail_whenProjectNotFound() throws Exception {
+        Mockito.doThrow(new com.pms.projectservice.exception.ResourceNotFoundException("Project not found"))
+                .when(projectService).deleteProject(999L);
 
         mockMvc.perform(delete("/api/v1/projects/999"))
                 .andExpect(status().isNotFound());

@@ -1,4 +1,4 @@
-package com.pms.projectservice.security;
+package com.pms.authservice.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -32,7 +32,7 @@ public class LoggingFilter extends OncePerRequestFilter {
 
             MDC.put(CORRELATION_ID_HEADER, correlationId);
 
-            // Fix: header NAME is the first argument
+            // Fix: first arg is the header NAME, not the value
             response.setHeader(CORRELATION_ID_HEADER, correlationId);
 
             log.debug("Request: {} {}", request.getMethod(), request.getRequestURI());

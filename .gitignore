@@ -1,6 +1,7 @@
 # Maven
 target/
-*.log
+*.jar
+*.class
 
 # IDE
 .idea/
@@ -12,6 +13,11 @@ target/
 
 # Env
 .env
+*.env
+!.env.example
 
-application-dev.properties
+#Logs
+*.log
+logs/
+
 application-test.properties
