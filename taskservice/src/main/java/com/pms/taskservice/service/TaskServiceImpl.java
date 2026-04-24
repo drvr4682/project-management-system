@@ -2,9 +2,11 @@ package com.pms.taskservice.service;
 
 import com.pms.taskservice.client.AuthFeignClient;
 import com.pms.taskservice.client.ProjectFeignClient;
+import com.pms.taskservice.dto.ProjectResponseDTO;
 import com.pms.taskservice.dto.TaskRequestDTO;
 import com.pms.taskservice.dto.TaskResponseDTO;
 import com.pms.taskservice.dto.UpdateTaskStatusDTO;
+import com.pms.taskservice.dto.UserExistsResponse;
 import com.pms.taskservice.entity.Task;
 import com.pms.taskservice.entity.TaskStatus;
 import com.pms.taskservice.exception.AccessDeniedException;
@@ -14,6 +16,8 @@ import com.pms.taskservice.repository.TaskRepository;
 
 import feign.FeignException;
 import feign.RetryableException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,49 +40,19 @@ public class TaskServiceImpl implements TaskService {
     private final AuthFeignClient authFeignClient;
     private final ProjectFeignClient projectFeignClient;
 
-    // Extracted helper — no more inline SecurityContextHolder calls
     private String getCurrentUser() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
     @Override
     public TaskResponseDTO createTask(TaskRequestDTO request) {
-
         String user = getCurrentUser();
         log.info("ACTION=CREATE_TASK_REQUEST | USER={} | PROJECT={} | ASSIGNED_TO={}",
                 user, request.getProjectId(), request.getAssignedTo());
 
-        // Validate assignee exists in auth service
-        try {
-            String response = authFeignClient.checkUser(request.getAssignedTo());
-            if (!"User exists".equalsIgnoreCase(response)) {
-                throw new IllegalArgumentException("User does not exist: " + request.getAssignedTo());
-            }
-        } catch (FeignException.NotFound e) {
-            throw new IllegalArgumentException("User does not exist: " + request.getAssignedTo());
-        } catch (RetryableException e) {
-            throw new ServiceUnavailableException("Auth service unavailable");
-        }
-
-        // Validate project exists and user has access
-        try {
-            projectFeignClient.getProject(request.getProjectId());
-        } catch (FeignException.Forbidden e) {
-            throw new AccessDeniedException("Access denied to project: " + request.getProjectId());
-        } catch (FeignException.NotFound e) {
-            throw new IllegalArgumentException("Project not found: " + request.getProjectId());
-        } catch (RetryableException e) {
-            throw new ServiceUnavailableException("Project service unavailable");
-        }
-
-        // Validate user is a project admin before assigning tasks
-        try {
-            projectFeignClient.validateAdmin(request.getProjectId());
-        } catch (FeignException.Forbidden e) {
-            throw new AccessDeniedException("Only project ADMIN can assign tasks");
-        } catch (RetryableException e) {
-            throw new ServiceUnavailableException("Project service unavailable");
-        }
+        validateUser(request.getAssignedTo());
+        validateProjectAccess(request.getProjectId());
+        validateProjectAdmin(request.getProjectId());
 
         Task saved = taskRepository.save(Task.builder()
                 .title(request.getTitle())
@@ -90,24 +64,70 @@ public class TaskServiceImpl implements TaskService {
 
         log.info("ACTION=CREATE_TASK_SUCCESS | USER={} | PROJECT={} | TASK={}",
                 user, saved.getProjectId(), saved.getId());
-
         return mapToDTO(saved);
+    }
+
+    // ── Resilience-wrapped helper methods ─────────────────────────────────────
+
+    @CircuitBreaker(name = "auth-service", fallbackMethod = "userValidationFallback")
+    @Retry(name = "auth-service")
+    public void validateUser(String email) {
+        try {
+            UserExistsResponse response = authFeignClient.checkUser(email);
+            if (!response.isExists()) {
+                throw new IllegalArgumentException("User does not exist: " + email);
+            }
+        } catch (FeignException.NotFound e) {
+            throw new IllegalArgumentException("User does not exist: " + email);
+        }
+    }
+
+    // Called automatically when circuit is OPEN or all retries exhausted
+    public void userValidationFallback(String email, Throwable t) {
+        log.error("Auth service circuit OPEN or retries exhausted for email: {}. Cause: {}", email, t.getMessage());
+        throw new ServiceUnavailableException("Auth service is currently unavailable. Please try again later.");
+    }
+
+    @CircuitBreaker(name = "project-service", fallbackMethod = "projectAccessFallback")
+    @Retry(name = "project-service")
+    public void validateProjectAccess(Long projectId) {
+        try {
+            ProjectResponseDTO project = projectFeignClient.getProject(projectId);
+            log.debug("Project validated: {} ({})", project.getName(), project.getStatus());
+        } catch (FeignException.Forbidden e) {
+            throw new AccessDeniedException("Access denied to project: " + projectId);
+        } catch (FeignException.NotFound e) {
+            throw new IllegalArgumentException("Project not found: " + projectId);
+        }
+    }
+
+    public void projectAccessFallback(Long projectId, Throwable t) {
+        log.error("Project service circuit OPEN for project: {}. Cause: {}", projectId, t.getMessage());
+        throw new ServiceUnavailableException("Project service is currently unavailable. Please try again later.");
+    }
+
+    @CircuitBreaker(name = "project-service", fallbackMethod = "projectAdminFallback")
+    @Retry(name = "project-service")
+    public void validateProjectAdmin(Long projectId) {
+        try {
+            projectFeignClient.validateAdmin(projectId);
+        } catch (FeignException.Forbidden e) {
+            throw new AccessDeniedException("Only project ADMIN can assign tasks");
+        }
+    }
+
+    public void projectAdminFallback(Long projectId, Throwable t) {
+        log.error("Project service circuit OPEN for admin check: {}. Cause: {}", projectId, t.getMessage());
+        throw new ServiceUnavailableException("Project service is currently unavailable. Please try again later.");
     }
 
     @Override
     public Page<TaskResponseDTO> getTasksByProject(Long projectId, int page, int size,
                                                     String status, String sortBy, String direction) {
-
         String user = getCurrentUser();
         log.info("ACTION=FETCH_TASKS | USER={} | PROJECT={}", user, projectId);
 
-        try {
-            projectFeignClient.getProject(projectId);
-        } catch (FeignException.Forbidden e) {
-            throw new AccessDeniedException("Access denied to project: " + projectId);
-        } catch (RetryableException e) {
-            throw new ServiceUnavailableException("Project service unavailable");
-        }
+        validateProjectAccess(projectId);
 
         Sort sort = direction.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()
@@ -134,7 +154,6 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public TaskResponseDTO updateStatus(Long taskId, UpdateTaskStatusDTO request) {
-
         String user = getCurrentUser();
         log.info("ACTION=UPDATE_TASK_STATUS | USER={} | TASK={} | STATUS={}",
                 user, taskId, request.getStatus());
@@ -142,25 +161,19 @@ public class TaskServiceImpl implements TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + taskId));
 
-        try {
-            projectFeignClient.getProject(task.getProjectId());
-        } catch (FeignException.Forbidden e) {
-            throw new AccessDeniedException("Access denied to project: " + task.getProjectId());
-        } catch (RetryableException e) {
-            throw new ServiceUnavailableException("Project service unavailable");
-        }
+        validateProjectAccess(task.getProjectId());
 
-        TaskStatus status;
+        TaskStatus taskStatus;
         try {
-            status = TaskStatus.valueOf(request.getStatus().toUpperCase());
+            taskStatus = TaskStatus.valueOf(request.getStatus().toUpperCase());
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid status value: " + request.getStatus());
         }
 
-        task.setStatus(status);
+        task.setStatus(taskStatus);
         Task updated = taskRepository.save(task);
 
-        log.info("ACTION=UPDATE_TASK_SUCCESS | USER={} | TASK={} | STATUS={}", user, taskId, status);
+        log.info("ACTION=UPDATE_TASK_SUCCESS | USER={} | TASK={} | STATUS={}", user, taskId, taskStatus);
         return mapToDTO(updated);
     }
 

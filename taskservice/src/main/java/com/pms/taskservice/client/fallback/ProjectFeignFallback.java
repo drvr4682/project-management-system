@@ -1,6 +1,7 @@
 package com.pms.taskservice.client.fallback;
 
 import com.pms.taskservice.client.ProjectFeignClient;
+import com.pms.taskservice.dto.ProjectResponseDTO;
 import com.pms.taskservice.exception.ServiceUnavailableException;
 
 import org.springframework.stereotype.Component;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Component;
 public class ProjectFeignFallback implements ProjectFeignClient {
 
     @Override
-    public Object getProject(Long projectId) {
+    public ProjectResponseDTO getProject(Long projectId) {
         throw new ServiceUnavailableException("Project service unavailable");
     }
 

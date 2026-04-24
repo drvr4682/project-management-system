@@ -4,6 +4,7 @@ import com.pms.authservice.dto.LoginRequest;
 import com.pms.authservice.dto.LoginResponse;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
+import com.pms.authservice.dto.UserExistsResponse;
 import com.pms.authservice.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -34,10 +35,10 @@ public class AuthController {
     }
 
     @GetMapping("/users/{email}")
-    public ResponseEntity<String> checkUser(@PathVariable String email) {
+    public ResponseEntity<UserExistsResponse> checkUser(@PathVariable String email) {
         boolean exists = authService.userExists(email);
         if (exists) {
-            return ResponseEntity.ok("User exists");
+            return ResponseEntity.ok(UserExistsResponse.found(email));
         } else {
             return ResponseEntity.notFound().build();
         }

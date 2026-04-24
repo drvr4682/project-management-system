@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.pms.projectservice.client.AuthFeignClient;
 import com.pms.projectservice.dto.AddMemberRequestDTO;
 import com.pms.projectservice.dto.ProjectMemberResponseDTO;
+import com.pms.projectservice.dto.UserExistsResponse;
 import com.pms.projectservice.entity.ProjectMember;
 import com.pms.projectservice.entity.ProjectRole;
 import com.pms.projectservice.exception.ResourceNotFoundException;
@@ -18,6 +19,8 @@ import com.pms.projectservice.util.AuditLogger;
 
 import feign.FeignException;
 import feign.RetryableException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,32 +46,27 @@ public class ProjectMemberService {
 
         projectMemberRepository.findByProjectIdAndUserId(projectId, request.getUserId())
                 .ifPresent(m -> {
-                    throw new IllegalArgumentException("User already a member");
+                    throw new IllegalArgumentException("User already a member"); 
                 });
 
         ProjectRole role;
         try {
             role = ProjectRole.valueOf(request.getRole().toUpperCase());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid role");
+            throw new IllegalArgumentException("Invalid role: " + request.getRole());
         }
 
         try {
-
-            String response = authFeignClient.checkUser(request.getUserId());
-
-            if(!"User exists".equalsIgnoreCase(response)) {
-                throw new IllegalArgumentException("User does not exist");
+            UserExistsResponse response = authFeignClient.checkUser(request.getUserId());
+            if (!response.isExists()) {
+                throw new IllegalArgumentException("User does not exist: " + request.getUserId());
             }
-            
         } catch (FeignException.NotFound e) {
-            throw new IllegalArgumentException("User does not exist");
-
+            throw new IllegalArgumentException("User does not exist: " + request.getUserId());
         } catch (RetryableException e) {
             throw new ServiceUnavailableException("Auth service unavailable");
-
         } catch (FeignException e) {
-            throw new ServiceUnavailableException("Auth service error");
+            throw new ServiceUnavailableException("Auth service error: " + e.status());
         }
 
         ProjectMember member = ProjectMember.builder()
@@ -78,18 +76,35 @@ public class ProjectMemberService {
                 .build();
 
         projectMemberRepository.save(member);
-
         auditLogger.log(currentUser, "ADD_MEMBER", projectId, request.getUserId());
-
         log.info("User {} added to project {} as {}", request.getUserId(), projectId, role);
 
         return "Member added successfully";
     }
 
+    // Add to pom.xml first (same Resilience4j deps as task service)
+    // Then update ProjectMemberService
+
+    @CircuitBreaker(name = "auth-service", fallbackMethod = "userValidationFallback")
+    @Retry(name = "auth-service")
+    public void validateUserExists(String email) {
+        try {
+            UserExistsResponse response = authFeignClient.checkUser(email);
+            if (!response.isExists()) {
+                throw new IllegalArgumentException("User does not exist: " + email);
+            }
+        } catch (FeignException.NotFound e) {
+            throw new IllegalArgumentException("User does not exist: " + email);
+        }
+    }
+
+    public void userValidationFallback(String email, Throwable t) {
+        log.error("Auth service unavailable during member add for email: {}. Cause: {}", email, t.getMessage());
+        throw new ServiceUnavailableException("Auth service is currently unavailable.");
+    }
+
     public List<ProjectMemberResponseDTO> getMembers(Long projectId) {
-
         String currentUser = SecurityUtils.getCurrentUser();
-
         if (currentUser == null) {
             throw new UnauthorizedException("Unauthorized");
         }
