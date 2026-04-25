@@ -1,12 +1,12 @@
 package com.pms.taskservice.service;
 
-import com.pms.taskservice.client.AuthFeignClient;
-import com.pms.taskservice.client.ProjectFeignClient;
-import com.pms.taskservice.dto.ProjectResponseDTO;
+import com.pms.common.client.AuthFeignClient;
+import com.pms.common.client.ProjectFeignClient;
+import com.pms.common.dto.ProjectSummaryDTO;
+import com.pms.common.dto.UserExistsResponse;
 import com.pms.taskservice.dto.TaskRequestDTO;
 import com.pms.taskservice.dto.TaskResponseDTO;
 import com.pms.taskservice.dto.UpdateTaskStatusDTO;
-import com.pms.taskservice.dto.UserExistsResponse;
 import com.pms.taskservice.entity.Task;
 import com.pms.taskservice.entity.TaskStatus;
 import com.pms.taskservice.exception.AccessDeniedException;
@@ -15,10 +15,8 @@ import com.pms.taskservice.exception.ServiceUnavailableException;
 import com.pms.taskservice.repository.TaskRepository;
 
 import feign.FeignException;
-import feign.RetryableException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -47,7 +45,7 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public TaskResponseDTO createTask(TaskRequestDTO request) {
         String user = getCurrentUser();
-        log.info("ACTION=CREATE_TASK_REQUEST | USER={} | PROJECT={} | ASSIGNED_TO={}",
+        log.info("ACTION=CREATE_TASK | USER={} | PROJECT={} | ASSIGNED_TO={}",
                 user, request.getProjectId(), request.getAssignedTo());
 
         validateUser(request.getAssignedTo());
@@ -67,8 +65,6 @@ public class TaskServiceImpl implements TaskService {
         return mapToDTO(saved);
     }
 
-    // ── Resilience-wrapped helper methods ─────────────────────────────────────
-
     @CircuitBreaker(name = "auth-service", fallbackMethod = "userValidationFallback")
     @Retry(name = "auth-service")
     public void validateUser(String email) {
@@ -82,18 +78,20 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    // Called automatically when circuit is OPEN or all retries exhausted
     public void userValidationFallback(String email, Throwable t) {
-        log.error("Auth service circuit OPEN or retries exhausted for email: {}. Cause: {}", email, t.getMessage());
-        throw new ServiceUnavailableException("Auth service is currently unavailable. Please try again later.");
+        log.error("Auth circuit OPEN — email: {}, cause: {}", email, t.getMessage());
+        throw new ServiceUnavailableException("Auth service is currently unavailable");
     }
 
     @CircuitBreaker(name = "project-service", fallbackMethod = "projectAccessFallback")
     @Retry(name = "project-service")
     public void validateProjectAccess(Long projectId) {
         try {
-            ProjectResponseDTO project = projectFeignClient.getProject(projectId);
-            log.debug("Project validated: {} ({})", project.getName(), project.getStatus());
+            ProjectSummaryDTO project = projectFeignClient.getProject(projectId);
+            if (project == null) {
+                throw new ServiceUnavailableException("Project service unavailable");
+            }
+            log.debug("Project validated: {} status={}", project.getName(), project.getStatus());
         } catch (FeignException.Forbidden e) {
             throw new AccessDeniedException("Access denied to project: " + projectId);
         } catch (FeignException.NotFound e) {
@@ -102,8 +100,8 @@ public class TaskServiceImpl implements TaskService {
     }
 
     public void projectAccessFallback(Long projectId, Throwable t) {
-        log.error("Project service circuit OPEN for project: {}. Cause: {}", projectId, t.getMessage());
-        throw new ServiceUnavailableException("Project service is currently unavailable. Please try again later.");
+        log.error("Project circuit OPEN — projectId: {}, cause: {}", projectId, t.getMessage());
+        throw new ServiceUnavailableException("Project service is currently unavailable");
     }
 
     @CircuitBreaker(name = "project-service", fallbackMethod = "projectAdminFallback")
@@ -117,8 +115,8 @@ public class TaskServiceImpl implements TaskService {
     }
 
     public void projectAdminFallback(Long projectId, Throwable t) {
-        log.error("Project service circuit OPEN for admin check: {}. Cause: {}", projectId, t.getMessage());
-        throw new ServiceUnavailableException("Project service is currently unavailable. Please try again later.");
+        log.error("Project circuit OPEN (admin check) — projectId: {}, cause: {}", projectId, t.getMessage());
+        throw new ServiceUnavailableException("Project service is currently unavailable");
     }
 
     @Override

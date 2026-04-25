@@ -35,6 +35,12 @@
   </dependencyManagement>
 
     <dependencies>
+        <!-- Common module — shared DTOs and Feign clients -->
+        <dependency>
+            <groupId>com.pms</groupId>
+            <artifactId>common</artifactId>
+            <version>1.0.0</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

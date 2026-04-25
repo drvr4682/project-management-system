@@ -4,8 +4,8 @@ import com.pms.authservice.dto.LoginRequest;
 import com.pms.authservice.dto.LoginResponse;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
-import com.pms.authservice.dto.UserExistsResponse;
 import com.pms.authservice.service.AuthService;
+import com.pms.common.dto.UserExistsResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,13 +34,16 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
+    /**
+     * Internal endpoint — called by Project/Task services via Feign.
+     * Returns UserExistsResponse from common so the contract is shared.
+     */
     @GetMapping("/users/{email}")
     public ResponseEntity<UserExistsResponse> checkUser(@PathVariable String email) {
         boolean exists = authService.userExists(email);
         if (exists) {
             return ResponseEntity.ok(UserExistsResponse.found(email));
-        } else {
-            return ResponseEntity.notFound().build();
         }
+        return ResponseEntity.notFound().build();
     }
 }

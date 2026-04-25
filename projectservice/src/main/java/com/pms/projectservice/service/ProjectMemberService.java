@@ -1,13 +1,9 @@
 package com.pms.projectservice.service;
 
-import java.util.List;
-
-import org.springframework.stereotype.Service;
-
-import com.pms.projectservice.client.AuthFeignClient;
+import com.pms.common.client.AuthFeignClient;
+import com.pms.common.dto.UserExistsResponse;
 import com.pms.projectservice.dto.AddMemberRequestDTO;
 import com.pms.projectservice.dto.ProjectMemberResponseDTO;
-import com.pms.projectservice.dto.UserExistsResponse;
 import com.pms.projectservice.entity.ProjectMember;
 import com.pms.projectservice.entity.ProjectRole;
 import com.pms.projectservice.exception.ResourceNotFoundException;
@@ -18,11 +14,14 @@ import com.pms.projectservice.security.SecurityUtils;
 import com.pms.projectservice.util.AuditLogger;
 
 import feign.FeignException;
-import feign.RetryableException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Slf4j
 @Service
@@ -37,17 +36,12 @@ public class ProjectMemberService {
     public String addMember(Long projectId, AddMemberRequestDTO request) {
 
         String currentUser = SecurityUtils.getCurrentUser();
-
-        if (currentUser == null) {
-            throw new UnauthorizedException("Unauthorized");
-        }
+        if (currentUser == null) throw new UnauthorizedException("Unauthorized");
 
         projectAccessService.validateAdmin(projectId, currentUser);
 
         projectMemberRepository.findByProjectIdAndUserId(projectId, request.getUserId())
-                .ifPresent(m -> {
-                    throw new IllegalArgumentException("User already a member"); 
-                });
+                .ifPresent(m -> { throw new IllegalArgumentException("User already a member"); });
 
         ProjectRole role;
         try {
@@ -56,18 +50,8 @@ public class ProjectMemberService {
             throw new IllegalArgumentException("Invalid role: " + request.getRole());
         }
 
-        try {
-            UserExistsResponse response = authFeignClient.checkUser(request.getUserId());
-            if (!response.isExists()) {
-                throw new IllegalArgumentException("User does not exist: " + request.getUserId());
-            }
-        } catch (FeignException.NotFound e) {
-            throw new IllegalArgumentException("User does not exist: " + request.getUserId());
-        } catch (RetryableException e) {
-            throw new ServiceUnavailableException("Auth service unavailable");
-        } catch (FeignException e) {
-            throw new ServiceUnavailableException("Auth service error: " + e.status());
-        }
+        // Delegate to resilience-wrapped method
+        validateUserExists(request.getUserId());
 
         ProjectMember member = ProjectMember.builder()
                 .projectId(projectId)
@@ -81,9 +65,6 @@ public class ProjectMemberService {
 
         return "Member added successfully";
     }
-
-    // Add to pom.xml first (same Resilience4j deps as task service)
-    // Then update ProjectMemberService
 
     @CircuitBreaker(name = "auth-service", fallbackMethod = "userValidationFallback")
     @Retry(name = "auth-service")
@@ -99,15 +80,13 @@ public class ProjectMemberService {
     }
 
     public void userValidationFallback(String email, Throwable t) {
-        log.error("Auth service unavailable during member add for email: {}. Cause: {}", email, t.getMessage());
-        throw new ServiceUnavailableException("Auth service is currently unavailable.");
+        log.error("Auth circuit OPEN — email: {}, cause: {}", email, t.getMessage());
+        throw new ServiceUnavailableException("Auth service is currently unavailable");
     }
 
     public List<ProjectMemberResponseDTO> getMembers(Long projectId) {
         String currentUser = SecurityUtils.getCurrentUser();
-        if (currentUser == null) {
-            throw new UnauthorizedException("Unauthorized");
-        }
+        if (currentUser == null) throw new UnauthorizedException("Unauthorized");
 
         projectAccessService.validateMember(projectId, currentUser);
 
@@ -121,12 +100,8 @@ public class ProjectMemberService {
     }
 
     public String removeMember(Long projectId, String userId) {
-
         String currentUser = SecurityUtils.getCurrentUser();
-
-        if (currentUser == null) {
-            throw new UnauthorizedException("Unauthorized");
-        }
+        if (currentUser == null) throw new UnauthorizedException("Unauthorized");
 
         projectAccessService.validateAdmin(projectId, currentUser);
 
@@ -135,7 +110,6 @@ public class ProjectMemberService {
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
 
         projectMemberRepository.delete(member);
-
         auditLogger.log(currentUser, "REMOVE_MEMBER", projectId, userId);
 
         return "Member removed successfully";

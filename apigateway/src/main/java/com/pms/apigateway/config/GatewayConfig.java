@@ -13,6 +13,15 @@ import reactor.core.publisher.Mono;
 @Configuration
 public class GatewayConfig {
 
+    @Value("${services.auth.url}")
+    private String authServiceUrl;
+
+    @Value("${services.project.url}")
+    private String projectServiceUrl;
+
+    @Value("${services.task.url}")
+    private String taskServiceUrl;
+
     @Value("${rate.limit.replenish-rate:10}")
     private int replenishRate;
 
@@ -23,10 +32,10 @@ public class GatewayConfig {
     public RouteLocator routes(RouteLocatorBuilder builder) {
         return builder.routes()
 
-                // Auth Service — public, no rate limit on auth endpoints
+                // Auth Service — no rate limit on auth endpoints
                 .route("auth-service", r -> r
                         .path("/api/v1/auth/**")
-                        .uri("http://localhost:8081"))
+                        .uri(authServiceUrl))
 
                 // Project Service — rate limited
                 .route("project-service", r -> r
@@ -37,7 +46,7 @@ public class GatewayConfig {
                                     c.setKeyResolver(ipKeyResolver());
                                 })
                         )
-                        .uri("http://localhost:8082"))
+                        .uri(projectServiceUrl))
 
                 // Task Service — rate limited
                 .route("task-service", r -> r
@@ -48,7 +57,7 @@ public class GatewayConfig {
                                     c.setKeyResolver(ipKeyResolver());
                                 })
                         )
-                        .uri("http://localhost:8083"))
+                        .uri(taskServiceUrl))
 
                 .build();
     }
@@ -58,7 +67,6 @@ public class GatewayConfig {
         return new RedisRateLimiter(replenishRate, burstCapacity);
     }
 
-    // Rate limit by IP address
     @Bean
     public KeyResolver ipKeyResolver() {
         return exchange -> Mono.justOrEmpty(
