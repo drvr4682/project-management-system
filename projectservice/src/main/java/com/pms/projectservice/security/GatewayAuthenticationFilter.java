@@ -37,18 +37,27 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
         String receivedSecret = request.getHeader("X-Internal-Secret");
         boolean isInternalCall = internalSecret.equals(receivedSecret);
 
-        if (email != null && role != null
-                && isInternalCall
-                && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (email != null && role != null) {
 
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(
-                            email,
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
-                    );
-            SecurityContextHolder.getContext().setAuthentication(auth);
-            log.debug("Gateway-authenticated user: {}, role: {}", email, role);
+            if (!isInternalCall) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                        "Invalid internal secret");
+                return;
+            }
+
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(
+                                email,
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                        );
+
+                SecurityContextHolder.getContext().setAuthentication(auth);
+
+                log.debug("Gateway-authenticated user: {}, role: {}", email, role);
+            }
         }
 
         filterChain.doFilter(request, response);
