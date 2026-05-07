@@ -17,8 +17,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.HtmlUtils;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 
 @Slf4j
@@ -61,18 +63,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
         } catch (Exception e) {
-            log.warn("Invalid JWT token: {}", e.getMessage());
+            log.warn("Invalid JWT token: {}", e.getMessage(), e);
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
+            response.setContentType("application/json;charset=UTF-8");
+            response.setCharacterEncoding("UTF-8");
 
             ErrorResponse error = ErrorResponse.builder()
                     .status(HttpServletResponse.SC_UNAUTHORIZED)
                     .message("Invalid or expired JWT")
                     .timestamp(System.currentTimeMillis())
-                    .path(request.getRequestURI())
+                    .path(HtmlUtils.htmlEscape(request.getRequestURI()))
                     .build();
 
-            response.getWriter().write(objectMapper.writeValueAsString(error));
+            String body = objectMapper.writeValueAsString(error);
+            PrintWriter writer = response.getWriter();
+            writer.write(body);
+            writer.flush();
 
             return;
         }

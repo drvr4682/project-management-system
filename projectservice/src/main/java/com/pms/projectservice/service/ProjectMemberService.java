@@ -20,8 +20,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -33,39 +35,67 @@ public class ProjectMemberService {
     private final ProjectAccessService projectAccessService;
     private final AuditLogger auditLogger;
 
+    /**
+     * addMember is @Transactional on the DB work only.
+     *
+     * IMPORTANT: validateUserExists() is NOT inside this transaction
+     * because it makes a Feign (HTTP) call. Keeping HTTP calls outside
+     * DB transactions prevents long-held connections and connection pool exhaustion.
+     *
+     * Flow:
+     *   1. validateUserExists() — HTTP call, outside transaction
+     *   2. save(member) + auditLogger — inside @Transactional below
+     *
+     * We split the method into: addMember (orchestrates) → persistMember (transactional DB work).
+     */
     public String addMember(Long projectId, AddMemberRequestDTO request) {
-
         String currentUser = SecurityUtils.getCurrentUser();
         if (currentUser == null) throw new UnauthorizedException("Unauthorized");
 
+        // Access check — reads the DB, not inside a long transaction
         projectAccessService.validateAdmin(projectId, currentUser);
 
+        // Duplicate check
         projectMemberRepository.findByProjectIdAndUserId(projectId, request.getUserId())
                 .ifPresent(m -> { throw new IllegalArgumentException("User already a member"); });
 
         ProjectRole role;
         try {
-            role = ProjectRole.valueOf(request.getRole().toUpperCase());
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid role: " + request.getRole());
+            role = ProjectRole.valueOf(request.getRole().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid role: " + request.getRole(), e);
         }
 
-        // Delegate to resilience-wrapped method
+        // HTTP call — deliberately OUTSIDE the DB transaction
         validateUserExists(request.getUserId());
 
-        ProjectMember member = ProjectMember.builder()
-                .projectId(projectId)
-                .userId(request.getUserId())
-                .role(role)
-                .build();
-
-        projectMemberRepository.save(member);
-        auditLogger.log(currentUser, "ADD_MEMBER", projectId, request.getUserId());
-        log.info("User {} added to project {} as {}", request.getUserId(), projectId, role);
+        // DB write — in its own short transaction
+        persistMember(projectId, request.getUserId(), role, currentUser);
 
         return "Member added successfully";
     }
 
+    /**
+     * All DB writes for addMember happen here, in a single short transaction.
+     * If the save fails, nothing is committed.
+     */
+    @Transactional
+    protected void persistMember(Long projectId, String userId, ProjectRole role, String currentUser) {
+        ProjectMember member = ProjectMember.builder()
+                .projectId(projectId)
+                .userId(userId)
+                .role(role)
+                .build();
+
+        projectMemberRepository.save(member);
+        auditLogger.log(currentUser, "ADD_MEMBER", projectId, userId);
+        log.info("User {} added to project {} as {}", userId, projectId, role);
+    }
+
+    /**
+     * Resilience-wrapped HTTP call — no @Transactional here.
+     * Circuit breaker and retry operate on the HTTP call, not a DB transaction.
+     */
     @CircuitBreaker(name = "auth-service", fallbackMethod = "userValidationFallback")
     @Retry(name = "auth-service")
     public void validateUserExists(String email) {
@@ -75,7 +105,7 @@ public class ProjectMemberService {
                 throw new IllegalArgumentException("User does not exist: " + email);
             }
         } catch (FeignException.NotFound e) {
-            throw new IllegalArgumentException("User does not exist: " + email);
+            throw new IllegalArgumentException("User does not exist: " + email, e);
         }
     }
 
@@ -84,6 +114,7 @@ public class ProjectMemberService {
         throw new ServiceUnavailableException("Auth service is currently unavailable");
     }
 
+    @Transactional(readOnly = true)
     public List<ProjectMemberResponseDTO> getMembers(Long projectId) {
         String currentUser = SecurityUtils.getCurrentUser();
         if (currentUser == null) throw new UnauthorizedException("Unauthorized");
@@ -99,6 +130,7 @@ public class ProjectMemberService {
                 .toList();
     }
 
+    @Transactional
     public String removeMember(Long projectId, String userId) {
         String currentUser = SecurityUtils.getCurrentUser();
         if (currentUser == null) throw new UnauthorizedException("Unauthorized");

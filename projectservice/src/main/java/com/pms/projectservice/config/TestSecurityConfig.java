@@ -13,7 +13,7 @@ public class TestSecurityConfig {
     @Bean
     public SecurityFilterChain testSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/**"))
             .authorizeHttpRequests(auth -> auth
                 .anyRequest().permitAll()
             );

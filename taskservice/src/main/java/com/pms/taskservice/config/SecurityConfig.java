@@ -15,6 +15,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.util.HtmlUtils;
+
+import java.io.PrintWriter;
 
 @Configuration
 @Profile("!test")
@@ -29,7 +32,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/api/v1/tasks/health", "/actuator/**")
+            )
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable())
             .sessionManagement(session ->
@@ -38,25 +43,33 @@ public class SecurityConfig {
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((req, res, e) -> {
                     res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    res.setContentType("application/json");
+                    res.setContentType("application/json;charset=UTF-8");
+                    res.setCharacterEncoding("UTF-8");
                     ErrorResponse error = ErrorResponse.builder()
                             .status(HttpServletResponse.SC_UNAUTHORIZED)
                             .message("Unauthorized")
                             .timestamp(System.currentTimeMillis())
-                            .path(req.getRequestURI())
+                            .path(HtmlUtils.htmlEscape(req.getRequestURI()))
                             .build();
-                    res.getWriter().write(objectMapper.writeValueAsString(error));
+                    String body = objectMapper.writeValueAsString(error);
+                    PrintWriter writer = res.getWriter();
+                    writer.write(body);
+                    writer.flush();
                 })
                 .accessDeniedHandler((req, res, e) -> {
                     res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    res.setContentType("application/json");
+                    res.setContentType("application/json;charset=UTF-8");
+                    res.setCharacterEncoding("UTF-8");
                     ErrorResponse error = ErrorResponse.builder()
                             .status(HttpServletResponse.SC_FORBIDDEN)
                             .message("Access Denied")
                             .timestamp(System.currentTimeMillis())
-                            .path(req.getRequestURI())
+                            .path(HtmlUtils.htmlEscape(req.getRequestURI()))
                             .build();
-                    res.getWriter().write(objectMapper.writeValueAsString(error));
+                    String body = objectMapper.writeValueAsString(error);
+                    PrintWriter writer = res.getWriter();
+                    writer.write(body);
+                    writer.flush();
                 })
             )
             .authorizeHttpRequests(auth -> auth

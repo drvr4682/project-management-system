@@ -6,11 +6,8 @@ import com.pms.projectservice.exception.ServiceUnavailableException;
 
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 
 /**
  * Project service's own fallback for AuthFeignClient.

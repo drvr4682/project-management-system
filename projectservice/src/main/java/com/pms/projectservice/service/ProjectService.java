@@ -21,8 +21,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -34,6 +37,8 @@ public class ProjectService {
     private final ProjectAccessService projectAccessService;
     private final AuditLogger auditLogger;
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     public String healthCheck() {
         return "Project Service is running";
     }
@@ -44,6 +49,23 @@ public class ProjectService {
         return user;
     }
 
+    private Project findProjectById(Long id) {
+        return projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found: " + id));
+    }
+
+    private Long toEpochMilli(LocalDateTime dt) {
+        return dt != null ? dt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() : null;
+    }
+
+    // ── Write operations — transactional ─────────────────────────────────────
+
+    /**
+     * Creates a project AND adds the creator as ADMIN member atomically.
+     * If the member save fails, the project insert is rolled back.
+     * Without @Transactional this would leave an orphaned project in the DB.
+     */
+    @Transactional
     public ProjectResponseDTO createProject(ProjectRequestDTO request) {
         String currentUser = getCurrentUser();
         log.info("ACTION=CREATE_PROJECT | USER={}", currentUser);
@@ -59,7 +81,8 @@ public class ProjectService {
 
         Project saved = projectRepository.save(project);
 
-        // Auto-add creator as project ADMIN
+        // This second save is inside the same transaction.
+        // If it throws, both saves roll back atomically.
         ProjectMember member = ProjectMember.builder()
                 .projectId(saved.getId())
                 .userId(currentUser)
@@ -73,24 +96,21 @@ public class ProjectService {
         return mapToResponse(saved);
     }
 
-    public ProjectResponseDTO getProjectById(Long id) {
-        String user = getCurrentUser();
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found: " + id));
-        projectAccessService.validateMember(id, user);
-        return mapToResponse(project);
-    }
-
+    /**
+     * Updating project fields. @Transactional ensures the dirty-check
+     * flush and the audit log happen atomically.
+     */
+    @Transactional
     public ProjectResponseDTO updateProject(Long id, ProjectRequestDTO request) {
         String user = getCurrentUser();
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found: " + id));
+
+        Project project = findProjectById(id);
+
         projectAccessService.validateAdmin(id, user);
 
         project.setName(request.getName());
         project.setDescription(request.getDescription());
 
-        // Also update status if provided
         if (request.getStatus() != null) {
             project.setStatus(parseStatus(request.getStatus(), project.getStatus()));
         }
@@ -99,20 +119,44 @@ public class ProjectService {
         return mapToResponse(projectRepository.save(project));
     }
 
+    /**
+     * Delete must be transactional — if something fails after delete
+     * (e.g. audit log throws) the delete should roll back.
+     */
+    @Transactional
     public void deleteProject(Long id) {
         String user = getCurrentUser();
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found: " + id));
+
+        Project project = findProjectById(id);
+
         projectAccessService.validateAdmin(id, user);
         projectRepository.delete(project);
         auditLogger.log(user, "DELETE_PROJECT", id, null);
         log.info("ACTION=DELETE_PROJECT | USER={} | PROJECT={}", user, id);
     }
 
+    // ── Read operations — readOnly = true ─────────────────────────────────────
+
+    /**
+     * readOnly = true tells Hibernate to skip dirty checking on loaded entities,
+     * which improves performance on reads. It also sets the connection to
+     * read-only at the JDBC level if the driver supports it.
+     */
+    @Transactional(readOnly = true)
+    public ProjectResponseDTO getProjectById(Long id) {
+        String user = getCurrentUser();
+
+        Project project = findProjectById(id);
+
+        projectAccessService.validateMember(id, user);
+        return mapToResponse(project);
+    }
+
+    @Transactional(readOnly = true)
     public Page<ProjectResponseDTO> getProjects(String status, String search,
             int page, int size, String sortBy, String direction) {
 
-        Sort sort = direction.equalsIgnoreCase("desc")
+        Sort sort = "desc".equals(direction.toLowerCase(Locale.ROOT))
                 ? Sort.by(sortBy).descending()
                 : Sort.by(sortBy).ascending();
 
@@ -124,13 +168,14 @@ public class ProjectService {
         }
 
         Page<Project> projectPage;
+        String normalizedSearch = search != null ? search.toLowerCase(Locale.ROOT) : null;
 
-        if (projectStatus != null && search != null) {
-            projectPage = projectRepository.findByStatusAndNameContainingIgnoreCase(projectStatus, search, pageable);
+        if (projectStatus != null && normalizedSearch != null) {
+            projectPage = projectRepository.findByStatusAndNameContaining(projectStatus, normalizedSearch, pageable);
         } else if (projectStatus != null) {
             projectPage = projectRepository.findByStatus(projectStatus, pageable);
-        } else if (search != null) {
-            projectPage = projectRepository.findByNameContainingIgnoreCase(search, pageable);
+        } else if (normalizedSearch != null) {
+            projectPage = projectRepository.findByNameContaining(normalizedSearch, pageable);
         } else {
             projectPage = projectRepository.findAll(pageable);
         }
@@ -138,19 +183,25 @@ public class ProjectService {
         return projectPage.map(this::mapToResponse);
     }
 
+    /**
+     * This is called by TaskService via Feign — read-only is appropriate.
+     * The admin check is a read, not a write.
+     */
+    @Transactional(readOnly = true)
     public void validateAdmin(Long projectId) {
         String user = getCurrentUser();
-        projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found: " + projectId));
+        findProjectById(projectId);
         projectAccessService.validateAdmin(projectId, user);
     }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
 
     private ProjectStatus parseStatus(String value, ProjectStatus fallback) {
         if (value == null) return fallback;
         try {
-            return ProjectStatus.valueOf(value.toUpperCase());
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid status value: " + value);
+            return ProjectStatus.valueOf(value.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid status value: " + value, e);
         }
     }
 
@@ -161,12 +212,8 @@ public class ProjectService {
                 .description(project.getDescription())
                 .owner(project.getOwnerId())
                 .status(project.getStatus().name())
-                .createAt(project.getCreatedAt() != null
-                        ? project.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                        : null)
-                .updateAt(project.getUpdatedAt() != null
-                        ? project.getUpdatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                        : null)
+                .createAt(toEpochMilli(project.getCreatedAt()))
+                .updateAt(toEpochMilli(project.getUpdatedAt()))
                 .build();
     }
 }

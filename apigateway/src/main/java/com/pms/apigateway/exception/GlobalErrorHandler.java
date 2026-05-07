@@ -3,6 +3,7 @@ package com.pms.apigateway.exception;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
 
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
@@ -26,7 +27,7 @@ public class GlobalErrorHandler implements ErrorWebExceptionHandler {
     private final ObjectMapper objectMapper;
 
     @Override
-    public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
+    public @NonNull Mono<Void> handle(@NonNull ServerWebExchange exchange, @NonNull Throwable ex) {
 
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         String message = "An unexpected error occurred";
@@ -53,7 +54,8 @@ public class GlobalErrorHandler implements ErrorWebExceptionHandler {
                     Mono.just(exchange.getResponse().bufferFactory().wrap(bytes))
             );
         } catch (Exception e) {
-            return Mono.error(e);
+            log.error("Failed to serialize error response", e);
+            return exchange.getResponse().setComplete();
         }
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.util.HtmlUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,12 +19,17 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private String sanitize(String input) {
+        if (input == null) return null;
+        return HtmlUtils.htmlEscape(input.replaceAll("[\r\n]", ""));
+    }
+
     private ErrorResponse build(HttpStatus status, String message, String path) {
         return ErrorResponse.builder()
                 .status(status.value())
-                .message(message)
+                .message(sanitize(message))
                 .timestamp(System.currentTimeMillis())
-                .path(path)
+                .path(sanitize(path))
                 .build();
     }
 
@@ -32,14 +38,17 @@ public class GlobalExceptionHandler {
                                                           HttpServletRequest request) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors()
-                .forEach(e -> errors.put(e.getField(), e.getDefaultMessage()));
+                .forEach(e -> errors.put(sanitize(e.getField()), sanitize(e.getDefaultMessage())));
+
+        String path = sanitize(request.getRequestURI());
+        log.warn("Validation failed for path: {}", path);
 
         return new ResponseEntity<>(
                 ErrorResponse.builder()
                         .status(HttpStatus.BAD_REQUEST.value())
                         .message("Validation failed")
                         .timestamp(System.currentTimeMillis())
-                        .path(request.getRequestURI())
+                        .path(path)
                         .errors(errors)
                         .build(),
                 HttpStatus.BAD_REQUEST
@@ -49,9 +58,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex,
                                                           HttpServletRequest request) {
-        log.warn("Bad request: {}", ex.getMessage());
+        log.warn("Bad request: {}", sanitize(ex.getMessage()));
         return new ResponseEntity<>(
-                build(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI()),
+                build(HttpStatus.BAD_REQUEST, sanitize(ex.getMessage()), sanitize(request.getRequestURI())),
                 HttpStatus.BAD_REQUEST
         );
     }
@@ -59,9 +68,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex,
                                                         HttpServletRequest request) {
-        log.warn("Resource not found: {}", ex.getMessage());
+        log.warn("Resource not found: {}", sanitize(ex.getMessage()));
         return new ResponseEntity<>(
-                build(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI()),
+                build(HttpStatus.NOT_FOUND, ex.getMessage(), sanitize(request.getRequestURI())),
                 HttpStatus.NOT_FOUND
         );
     }
@@ -69,9 +78,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex,
                                                             HttpServletRequest request) {
-        log.warn("Access denied: {}", ex.getMessage());
+        log.warn("Access denied: {}", sanitize(ex.getMessage()));
         return new ResponseEntity<>(
-                build(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI()),
+                build(HttpStatus.FORBIDDEN, ex.getMessage(), sanitize(request.getRequestURI())),
                 HttpStatus.FORBIDDEN
         );
     }
@@ -80,7 +89,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleSpringAccessDenied(AuthorizationDeniedException ex,
                                                                    HttpServletRequest request) {
         return new ResponseEntity<>(
-                build(HttpStatus.FORBIDDEN, "Access Denied", request.getRequestURI()),
+                build(HttpStatus.FORBIDDEN, "Access Denied", sanitize(request.getRequestURI())),
                 HttpStatus.FORBIDDEN
         );
     }
@@ -88,9 +97,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ServiceUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleServiceUnavailable(ServiceUnavailableException ex,
                                                                    HttpServletRequest request) {
-        log.error("Service unavailable: {}", ex.getMessage());
+        log.error("Service unavailable: {}", sanitize(ex.getMessage()));
         return new ResponseEntity<>(
-                build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request.getRequestURI()),
+                build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), sanitize(request.getRequestURI())),
                 HttpStatus.SERVICE_UNAVAILABLE
         );
     }
@@ -98,9 +107,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex,
                                                        HttpServletRequest request) {
-        log.error("Unexpected error at {}: ", request.getRequestURI(), ex);
+        log.error("Unexpected error at {}: ", sanitize(request.getRequestURI()), ex);
         return new ResponseEntity<>(
-                build(HttpStatus.INTERNAL_SERVER_ERROR, "Something went wrong", request.getRequestURI()),
+                build(HttpStatus.INTERNAL_SERVER_ERROR, "Something went wrong", sanitize(request.getRequestURI())),
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
     }

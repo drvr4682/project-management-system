@@ -1,9 +1,11 @@
 package com.pms.apigateway.security;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -25,6 +27,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper;
+
+    @Value("${internal.secret}")
+    private String internalSecret;
 
     private static final String[] PUBLIC_PATHS = {
         "/api/v1/auth/",
@@ -62,13 +67,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     .request(r -> r
                             .header("X-User-Email", email)
                             .header("X-User-Role", role)
+                            .header("X-Internal-Secret", internalSecret)
                     )
                     .build();
 
             return chain.filter(mutatedExchange);
 
         } catch (Exception e) {
-            log.warn("JWT validation failed for path: {}, reason: {}", path, e.getMessage());
+            log.warn("JWT validation failed for path: {}, reason: {}", path, e.getMessage(), e);
             return onError(exchange, "Invalid or expired JWT", HttpStatus.UNAUTHORIZED);
         }
     }
@@ -95,9 +101,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             return exchange.getResponse().writeWith(
                     Mono.just(exchange.getResponse().bufferFactory().wrap(bytes))
             );
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             log.error("Failed to write error response", e);
-            return Mono.error(e);
+            return exchange.getResponse().setComplete();
         }
     }
 
