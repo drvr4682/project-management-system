@@ -1,5 +1,0 @@
-package com.pms.projectservice.security;
-
-class JwtAuthenticationFilterTest {
-
-}
