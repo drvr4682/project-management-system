@@ -48,13 +48,8 @@ public class ProjectMemberService {
                     throw new IllegalArgumentException("User already a member");
                 });
 
-        ProjectRole role;
-        try {
-            role = ProjectRole.valueOf(request.getRole().toUpperCase());
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid role");
-        }
-
+        ProjectRole role = ProjectRole.valueOf(request.getRole().toUpperCase());
+        
         try {
 
             String response = authFeignClient.checkUser(request.getUserId());
@@ -123,6 +118,11 @@ public class ProjectMemberService {
                 .findByProjectIdAndUserId(projectId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
 
+        if (currentUser.equals(userId)) {
+            throw new IllegalArgumentException(
+                    "Project admin cannot remove themselves"
+            );
+        }
         projectMemberRepository.delete(member);
 
         auditLogger.log(currentUser, "REMOVE_MEMBER", projectId, userId);
