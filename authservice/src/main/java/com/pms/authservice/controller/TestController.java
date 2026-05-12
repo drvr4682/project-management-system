@@ -15,14 +15,8 @@ public class TestController {
         return "ADMIN access granted";
     }
 
-    @GetMapping("/manager")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public String managerAccess() {
-        return "MANAGER access granted";
-    }
-
     @GetMapping("/user")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public String userAccess() {
         return "USER access granted";
     }

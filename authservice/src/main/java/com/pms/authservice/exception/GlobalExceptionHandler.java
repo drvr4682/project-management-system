@@ -1,5 +1,6 @@
 package com.pms.authservice.exception;
 
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -50,6 +51,31 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(
                 buildResponse(ex.getMessage(), 401, request.getRequestURI()),
                 HttpStatus.UNAUTHORIZED
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidEnum(
+                HttpMessageNotReadableException ex,
+                HttpServletRequest request) {
+
+        String message = "Invalid request payload";
+
+        Throwable cause = ex.getCause();
+
+        if (cause != null && cause.getMessage() != null
+                && cause.getMessage().contains("com.pms.authservice.entity.Role")) {
+
+                message = "Invalid role. Allowed values are ADMIN or USER";
+        }
+
+        return new ResponseEntity<>(
+                buildResponse(
+                        message,
+                        HttpStatus.BAD_REQUEST.value(),
+                        request.getRequestURI()
+                ),
+                HttpStatus.BAD_REQUEST
         );
     }
 

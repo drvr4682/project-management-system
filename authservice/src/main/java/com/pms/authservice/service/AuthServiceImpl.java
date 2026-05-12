@@ -35,7 +35,7 @@ public class AuthServiceImpl implements AuthService {
 
         User user = User.builder()
                 .name(request.getName())
-                .email(request.getEmail())
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .build();
@@ -45,7 +45,7 @@ public class AuthServiceImpl implements AuthService {
         return RegisterResponse.builder()
                 .id(savedUser.getId())
                 .name(savedUser.getName())
-                .email(savedUser.getEmail())
+                .email(email)
                 .role(savedUser.getRole().name())
                 .build();
     }
@@ -53,14 +53,16 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponse login(LoginRequest request) {
 
+        String email = request.getEmail().trim().toLowerCase();
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
+                        email,
                         request.getPassword()
                 )
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());

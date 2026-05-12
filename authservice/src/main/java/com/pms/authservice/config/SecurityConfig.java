@@ -28,7 +28,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -39,8 +39,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/auth/**").permitAll()
                     .requestMatchers("/api/v1/auth/users/**").permitAll()
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                    .requestMatchers("/api/v1/management/**").hasAnyRole("ADMIN", "MANAGER")
-                    .requestMatchers("/api/v1/user/**").hasAnyRole("ADMIN", "MANAGER", "USER")
+                    .requestMatchers("/api/v1/user/**").hasAnyRole("ADMIN", "USER")
                     .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
