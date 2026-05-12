@@ -1,6 +1,7 @@
 package com.pms.projectservice.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,5 +21,9 @@ public class ProjectRequestDTO {
     @Size(max = 500, message = "Description must be less than 500 characters")
     private String description;
 
+    @Pattern(
+        regexp = "ACTIVE|COMPLETED|ARCHIVED",
+        message = "Status must be ACTIVE, COMPLETED or ARCHIVED"
+    )
     private String status;
 }

@@ -16,6 +16,6 @@ public class ProjectResponseDTO {
     private String description;
     private String owner;
     private String status;
-    private Long createAt;
-    private Long updateAt;
+    private Long createdAt;
+    private Long updatedAt;
 }

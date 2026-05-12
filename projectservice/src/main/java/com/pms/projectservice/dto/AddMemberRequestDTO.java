@@ -12,5 +12,5 @@ public class AddMemberRequestDTO {
     private String userId;
 
     @NotBlank(message = "Role is required")
-    private String role; //ADMIN / MEMBER / VIEWER
+    private String role;
 }

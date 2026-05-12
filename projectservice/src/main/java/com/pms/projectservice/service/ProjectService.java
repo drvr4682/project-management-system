@@ -12,6 +12,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -41,6 +45,7 @@ public class ProjectService {
         return user;
     }
 
+    @Transactional
     public ProjectResponseDTO createProject(ProjectRequestDTO request) {
 
         String currentUser = getCurrentUser();
@@ -69,7 +74,7 @@ public class ProjectService {
 
         log.info("Project created with ID: {}", saved.getId());
 
-        // ✅ ADD THIS BLOCK (CRITICAL)
+        // ADD OWNER AS PROJECT ADMIN
         ProjectMember member = ProjectMember.builder()
                 .projectId(saved.getId())
                 .userId(currentUser)
@@ -85,6 +90,7 @@ public class ProjectService {
         return mapToResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     public ProjectResponseDTO getProjectById(Long id) {
 
         String user = getCurrentUser();
@@ -97,18 +103,7 @@ public class ProjectService {
         return mapToResponse(project);
     }
 
-    private ProjectResponseDTO mapToResponse(Project project) {
-        return ProjectResponseDTO.builder()
-                .id(project.getId())
-                .name(project.getName())
-                .description(project.getDescription())
-                .owner(project.getOwnerId())
-                .status(project.getStatus().name())
-                .createAt(project.getCreatedAt() != null ? project.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : null)
-                .updateAt(project.getUpdatedAt() != null ? project.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : null)
-                .build();
-    }
-
+    @Transactional
     public ProjectResponseDTO updateProject(Long id, ProjectRequestDTO request) {
 
         String user = getCurrentUser();
@@ -121,11 +116,20 @@ public class ProjectService {
         project.setName(request.getName());
         project.setDescription(request.getDescription());
 
+        if (request.getStatus() != null) {
+            project.setStatus(
+                    ProjectStatus.valueOf(
+                            request.getStatus().toUpperCase()
+                    )
+            );
+        }
+
         auditLogger.log(user, "UPDATE_PROJECT", id, null);
 
         return mapToResponse(projectRepository.save(project));
     }
 
+    @Transactional
     public void deleteProject(Long id) {
 
         String user = getCurrentUser();
@@ -140,6 +144,7 @@ public class ProjectService {
         auditLogger.log(user, "DELETE_PROJECT", id, null);
     }
 
+    @Transactional(readOnly = true)
     public Page<ProjectResponseDTO> getProjects(
             String status, 
             String search,
@@ -147,7 +152,22 @@ public class ProjectService {
             int size,
             String sortBy,
             String direction) {
+
+        List<String> allowedSortFields =
+                List.of("name", "createdAt", "updatedAt", "status");
+
+        if (!allowedSortFields.contains(sortBy)) {
+            throw new IllegalArgumentException("Invalid sort field");
+        }
         
+        if (!direction.equalsIgnoreCase("asc")
+                && !direction.equalsIgnoreCase("desc")) {
+
+            throw new IllegalArgumentException(
+                    "Direction must be asc or desc"
+            );
+        }
+
         Sort sort = direction.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()
                 : Sort.by(sortBy).ascending();
@@ -167,18 +187,24 @@ public class ProjectService {
             }
         }
 
-        if (status != null && search != null) {
-            projectPage = projectRepository
-                    .findByStatusAndNameContainingIgnoreCase(projectStatus, search, pageable);
+        boolean hasStatus = status != null && !status.isBlank();
+        boolean hasSearch = search != null && !search.isBlank();
 
-        } else if (status != null) {
+        if (hasStatus && hasSearch) {
+
+            projectPage = projectRepository
+                    .findByStatusAndNameContainingIgnoreCase(
+                            projectStatus,
+                            search,
+                            pageable
+                    );
+
+        } else if (hasStatus) {
             projectPage = projectRepository
                     .findByStatus(projectStatus, pageable);
-
-        } else if (search != null) {
+        } else if (hasSearch) {
             projectPage = projectRepository
                     .findByNameContainingIgnoreCase(search, pageable);
-                    
         } else {
             projectPage = projectRepository.findAll(pageable);
         }
@@ -186,6 +212,7 @@ public class ProjectService {
         return projectPage.map(this::mapToResponse);
     }
 
+    @Transactional(readOnly = true)
     public void validateAdmin(Long projectId) {
 
         String user = SecurityUtils.getCurrentUser();
@@ -200,5 +227,18 @@ public class ProjectService {
 
         // RBAC check
         projectAccessService.validateAdmin(projectId, user);
+    }
+
+    
+    private ProjectResponseDTO mapToResponse(Project project) {
+        return ProjectResponseDTO.builder()
+                .id(project.getId())
+                .name(project.getName())
+                .description(project.getDescription())
+                .owner(project.getOwnerId())
+                .status(project.getStatus() != null ? project.getStatus().name() : null)
+                .createdAt(project.getCreatedAt() != null ? project.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : null)
+                .updatedAt(project.getUpdatedAt() != null ? project.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : null)
+                .build();
     }
 }

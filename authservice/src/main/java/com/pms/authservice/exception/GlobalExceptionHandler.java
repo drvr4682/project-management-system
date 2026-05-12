@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -133,6 +134,21 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(
                 buildResponse("Unauthorized", 401, request.getRequestURI()),
                 HttpStatus.UNAUTHORIZED
+        );
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ErrorResponse> handleMissingHeader(
+                MissingRequestHeaderException ex,
+                HttpServletRequest request) {
+
+        return new ResponseEntity<>(
+                buildResponse(
+                        "Required header is missing",
+                        400,
+                        request.getRequestURI()
+                ),
+                HttpStatus.BAD_REQUEST
         );
     }
 

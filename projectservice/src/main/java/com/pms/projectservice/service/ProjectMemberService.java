@@ -3,6 +3,7 @@ package com.pms.projectservice.service;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pms.projectservice.client.AuthFeignClient;
 import com.pms.projectservice.dto.AddMemberRequestDTO;
@@ -31,6 +32,7 @@ public class ProjectMemberService {
     private final ProjectAccessService projectAccessService;
     private final AuditLogger auditLogger;
 
+    @Transactional
     public String addMember(Long projectId, AddMemberRequestDTO request) {
 
         String currentUser = SecurityUtils.getCurrentUser();
@@ -86,6 +88,7 @@ public class ProjectMemberService {
         return "Member added successfully";
     }
 
+    @Transactional(readOnly = true)
     public List<ProjectMemberResponseDTO> getMembers(Long projectId) {
 
         String currentUser = SecurityUtils.getCurrentUser();
@@ -105,6 +108,7 @@ public class ProjectMemberService {
                 .toList();
     }
 
+    @Transactional
     public String removeMember(Long projectId, String userId) {
 
         String currentUser = SecurityUtils.getCurrentUser();

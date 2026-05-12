@@ -42,7 +42,7 @@ class AuthControllerTest {
         RegisterRequest request = new RegisterRequest();
         request.setName("Test");
         request.setEmail("test@test.com");
-        request.setPassword("123456");
+        request.setPassword("Test@123");
         request.setRole(Role.USER);
 
         Mockito.when(authService.register(Mockito.any()))

@@ -4,7 +4,16 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "project_members")
+@Table(
+    name = "project_members",
+        indexes = {
+        @Index(name = "idx_member_project", columnList = "project_id"),
+        @Index(name = "idx_member_user", columnList = "user_id")
+    },
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"project_id", "user_id"})
+    }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -23,5 +32,6 @@ public class ProjectMember {
     private String userId;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private ProjectRole role;
 }

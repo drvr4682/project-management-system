@@ -3,6 +3,7 @@ package com.pms.projectservice.controller;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +17,7 @@ import com.pms.projectservice.dto.ProjectMemberResponseDTO;
 import com.pms.projectservice.service.ProjectMemberService;
 
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/projects")
@@ -25,19 +27,22 @@ public class ProjectMemberController {
     private final ProjectMemberService projectMemberService;
 
     @PostMapping("/{projectId}/members")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<String> addMember(
             @PathVariable Long projectId,
-            @RequestBody AddMemberRequestDTO request) {
+            @Valid @RequestBody AddMemberRequestDTO request) {
 
         return ResponseEntity.ok(projectMemberService.addMember(projectId, request));
     } 
 
     @GetMapping("/{projectId}/members")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public List<ProjectMemberResponseDTO> getMembers(@PathVariable Long projectId) {
         return projectMemberService.getMembers(projectId);
     }
 
     @DeleteMapping("/{projectId}/members/{userId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public String removeMember(
             @PathVariable Long projectId,
             @PathVariable String userId) {

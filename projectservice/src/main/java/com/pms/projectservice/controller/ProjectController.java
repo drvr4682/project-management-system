@@ -1,6 +1,7 @@
 package com.pms.projectservice.controller;
 
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -57,9 +58,10 @@ public class ProjectController {
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @PostMapping
     public ResponseEntity<ProjectResponseDTO> createProject(@Valid @RequestBody ProjectRequestDTO request) {
-        return ResponseEntity.ok(projectService.createProject(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(projectService.createProject(request));
     }
 
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @GetMapping
     public ResponseEntity<Page<ProjectResponseDTO>> getProjects(
             @RequestParam(required = false) String status,
@@ -68,6 +70,14 @@ public class ProjectController {
             @RequestParam(defaultValue = "5") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
+
+        if (page < 0) {
+            throw new IllegalArgumentException("Page cannot be negative");
+        }
+
+        if (size < 1 || size > 100) {
+            throw new IllegalArgumentException("Size must be between 1 and 100");
+        }
 
         return ResponseEntity.ok(
                 projectService.getProjects(status, search, page, size, sortBy, direction)

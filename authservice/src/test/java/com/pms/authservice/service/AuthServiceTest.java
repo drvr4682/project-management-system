@@ -32,12 +32,12 @@ class AuthServiceTest {
         RegisterRequest request = new RegisterRequest();
         request.setName("Test");
         request.setEmail("test@mail.com");
-        request.setPassword("123");
+        request.setPassword("Test@123");
         request.setRole(Role.USER);
 
         // Mock behavior
         Mockito.when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
-        Mockito.when(passwordEncoder.encode("123")).thenReturn("hashed");
+        Mockito.when(passwordEncoder.encode("Test@123")).thenReturn("hashed");
 
         User savedUser = User.builder()
                 .id(1L)
@@ -64,7 +64,7 @@ class AuthServiceTest {
 
         LoginRequest request = new LoginRequest();
         request.setEmail("test@mail.com");
-        request.setPassword("123");
+        request.setPassword("Test@123");
 
         User user = User.builder()
                 .id(1L)

@@ -35,9 +35,16 @@ public class SecurityConfig {
 
         http
             .csrf(csrf -> csrf.disable())
+            .formLogin(form -> form.disable())
+            .httpBasic(httpBasic -> httpBasic.disable())
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/v1/auth/**").permitAll()
-                    .requestMatchers("/api/v1/auth/users/**").permitAll()
+                    .requestMatchers(
+                            "/api/v1/auth/health",
+                            "/api/v1/auth/register",
+                            "/api/v1/auth/login"
+
+                    ).permitAll()
+                    .requestMatchers("/api/v1/auth/users/**").authenticated()
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     .requestMatchers("/api/v1/user/**").hasAnyRole("ADMIN", "USER")
                     .anyRequest().authenticated()

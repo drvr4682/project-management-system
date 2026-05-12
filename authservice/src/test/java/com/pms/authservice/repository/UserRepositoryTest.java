@@ -25,7 +25,7 @@ class UserRepositoryTest {
         User user = new User();
         user.setName("Exists User");
         user.setEmail("test@example.com");
-        user.setPassword("password");
+        user.setPassword("Test@123");
         user.setRole(Role.USER);
 
         userRepository.save(user);
@@ -41,7 +41,7 @@ class UserRepositoryTest {
         User user = new User();
         user.setName("Test User");
         user.setEmail("exists@example.com");
-        user.setPassword("password");
+        user.setPassword("Test@123");
         user.setRole(Role.USER);
 
         userRepository.save(user);
