@@ -21,7 +21,7 @@ import org.mockito.MockitoAnnotations;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,6 +32,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 class ProjectServiceTest {
@@ -211,8 +212,8 @@ class ProjectServiceTest {
     }
 
     @Test
-    @DisplayName("Should return paginated projects")
-    void shouldReturnPaginatedProjects() {
+    @DisplayName("Should return paginated accessible projects")
+    void shouldReturnPaginatedAccessibleProjects() {
 
         Project project = Project.builder()
                 .id(1L)
@@ -222,11 +223,22 @@ class ProjectServiceTest {
                 .status(ProjectStatus.ACTIVE)
                 .build();
 
+        ProjectMember member = ProjectMember.builder()
+                .projectId(1L)
+                .userId("admin@test.com")
+                .role(ProjectRole.ADMIN)
+                .build();
+
         Page<Project> page =
                 new PageImpl<>(List.of(project));
 
-        when(projectRepository.findAll(any(PageRequest.class)))
-                .thenReturn(page);
+        when(projectMemberRepository.findByUserId("admin@test.com"))
+                .thenReturn(List.of(member));
+
+        when(projectRepository.findDistinctByIdIn(
+                anyList(),
+                any(Pageable.class)
+        )).thenReturn(page);
 
         Page<ProjectResponseDTO> result =
                 projectService.getProjects(

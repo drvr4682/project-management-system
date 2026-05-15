@@ -1,25 +1,30 @@
 package com.pms.projectservice.service;
 
-import com.pms.projectservice.dto.*;
-import com.pms.projectservice.repository.ProjectRepository;
-import com.pms.projectservice.security.SecurityUtils;
-import com.pms.projectservice.util.AuditLogger;
-import com.pms.projectservice.repository.ProjectMemberRepository;
-import com.pms.projectservice.exception.*;
-import com.pms.projectservice.entity.*;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pms.projectservice.dto.ProjectRequestDTO;
+import com.pms.projectservice.dto.ProjectResponseDTO;
+import com.pms.projectservice.entity.Project;
+import com.pms.projectservice.entity.ProjectMember;
+import com.pms.projectservice.entity.ProjectRole;
+import com.pms.projectservice.entity.ProjectStatus;
+import com.pms.projectservice.exception.ResourceNotFoundException;
+import com.pms.projectservice.exception.UnauthorizedException;
+import com.pms.projectservice.repository.ProjectMemberRepository;
+import com.pms.projectservice.repository.ProjectRepository;
+import com.pms.projectservice.security.SecurityUtils;
+import com.pms.projectservice.util.AuditLogger;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -153,13 +158,8 @@ public class ProjectService {
             String sortBy,
             String direction) {
 
-        List<String> allowedSortFields =
-                List.of("name", "createdAt", "updatedAt", "status");
+        String currentUser =SecurityUtils.getCurrentUser();
 
-        if (!allowedSortFields.contains(sortBy)) {
-            throw new IllegalArgumentException("Invalid sort field");
-        }
-        
         if (!direction.equalsIgnoreCase("asc")
                 && !direction.equalsIgnoreCase("desc")) {
 
@@ -172,41 +172,67 @@ public class ProjectService {
                 ? Sort.by(sortBy).descending()
                 : Sort.by(sortBy).ascending();
 
-
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<Project> projectPage;
+        List<Long> accessibleProjectIds =
+                projectMemberRepository
+                        .findByUserId(currentUser)
+                        .stream()
+                        .map(ProjectMember::getProjectId)
+                        .distinct()
+                        .toList();
 
-        ProjectStatus projectStatus = null;
-
-        if(status != null) {
-            try {
-                projectStatus = ProjectStatus.valueOf(status.toUpperCase());
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Invalid status value");
-            }
+        if (accessibleProjectIds.isEmpty()) {
+            return Page.empty(pageable);
         }
 
-        boolean hasStatus = status != null && !status.isBlank();
-        boolean hasSearch = search != null && !search.isBlank();
+        Page<Project> projectPage =
+                projectRepository.findDistinctByIdIn(
+                        accessibleProjectIds,
+                        pageable
+                );
 
-        if (hasStatus && hasSearch) {
+        if (status != null && !status.isBlank()) {
 
-            projectPage = projectRepository
-                    .findByStatusAndNameContainingIgnoreCase(
-                            projectStatus,
-                            search,
-                            pageable
+            ProjectStatus projectStatus =
+                    ProjectStatus.valueOf(status.toUpperCase());
+
+            List<Project> filtered =
+                    projectPage.getContent()
+                            .stream()
+                            .filter(project ->
+                                    project.getStatus() == projectStatus
+                            )
+                            .toList();
+
+            projectPage =
+                    new PageImpl<>(
+                            filtered,
+                            pageable,
+                            filtered.size()
                     );
+        }
 
-        } else if (hasStatus) {
-            projectPage = projectRepository
-                    .findByStatus(projectStatus, pageable);
-        } else if (hasSearch) {
-            projectPage = projectRepository
-                    .findByNameContainingIgnoreCase(search, pageable);
-        } else {
-            projectPage = projectRepository.findAll(pageable);
+        if (search != null && !search.isBlank()) {
+
+            String searchLower = search.toLowerCase();
+
+            List<Project> filtered =
+                    projectPage.getContent()
+                            .stream()
+                            .filter(project ->
+                                    project.getName()
+                                            .toLowerCase()
+                                            .contains(searchLower)
+                            )
+                            .toList();
+
+            projectPage =
+                    new PageImpl<>(
+                            filtered,
+                            pageable,
+                            filtered.size()
+                    );
         }
 
         return projectPage.map(this::mapToResponse);
