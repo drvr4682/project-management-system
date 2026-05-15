@@ -71,7 +71,7 @@ public class SecurityConfig {
             )
 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/projects/health").permitAll()
+                .requestMatchers("/health").permitAll()
                 .requestMatchers("/api/v1/projects/**").hasAnyRole("USER", "ADMIN")
                 .anyRequest().denyAll()
             )

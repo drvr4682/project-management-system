@@ -2,6 +2,7 @@ package com.pms.projectservice.service;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,9 @@ public class ProjectMemberService {
     private final AuthFeignClient authFeignClient;
     private final ProjectAccessService projectAccessService;
     private final AuditLogger auditLogger;
+
+    @Value("${internal.secret}")
+    private String internalSecret;
 
     @Transactional
     public String addMember(Long projectId, AddMemberRequestDTO request) {
@@ -65,7 +69,7 @@ public class ProjectMemberService {
         
         try {
 
-            String response = authFeignClient.checkUser(request.getUserId());
+            String response = authFeignClient.checkUser(request.getUserId(), internalSecret);
 
             if(!"User exists".equalsIgnoreCase(response)) {
                 throw new IllegalArgumentException("User does not exist");

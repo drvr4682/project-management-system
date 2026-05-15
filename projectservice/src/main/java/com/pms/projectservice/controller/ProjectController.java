@@ -28,11 +28,6 @@ public class ProjectController {
 
     private final ProjectService projectService;
 
-    @GetMapping("/health")
-    public String health() {
-        return projectService.healthCheck();
-    }
-
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @GetMapping("/{id}")
     public ProjectResponseDTO getProject(@PathVariable Long id) {

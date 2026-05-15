@@ -23,6 +23,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -54,6 +55,12 @@ class ProjectMemberServiceTest {
 
         MockitoAnnotations.openMocks(this);
 
+        ReflectionTestUtils.setField(
+                projectMemberService,
+                "internalSecret",
+                "test-internal-secret"
+        );
+
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
                         "admin@test.com",
@@ -84,7 +91,7 @@ class ProjectMemberServiceTest {
                 .findByProjectIdAndUserId(1L, "member@test.com"))
                 .thenReturn(Optional.empty());
 
-        when(authFeignClient.checkUser("member@test.com"))
+        when(authFeignClient.checkUser("member@test.com", "test-internal-secret"))
                 .thenReturn("User exists");
 
         String response =
@@ -234,7 +241,7 @@ class ProjectMemberServiceTest {
                 .findByProjectIdAndUserId(1L, "member@test.com"))
                 .thenReturn(Optional.empty());
 
-        when(authFeignClient.checkUser("member@test.com"))
+        when(authFeignClient.checkUser("member@test.com", "test-internal-secret"))
                 .thenThrow(
                         mock(RetryableException.class)
                 );
@@ -264,7 +271,7 @@ class ProjectMemberServiceTest {
                 ))
                 .thenReturn(Optional.empty());
 
-        when(authFeignClient.checkUser("member@test.com"))
+        when(authFeignClient.checkUser("member@test.com", "test-internal-secret"))
                 .thenReturn("User exists");
 
         IllegalArgumentException exception =
