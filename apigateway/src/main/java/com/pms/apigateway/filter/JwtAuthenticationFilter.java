@@ -7,6 +7,7 @@ import com.pms.apigateway.security.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -15,12 +16,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
+
+import java.util.*;
 
 @Slf4j
 @Component
@@ -78,10 +82,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .getContext()
                     .setAuthentication(authentication);
 
-            log.info(
-                    "JWT validated successfully for user: {}",
+            MutableHttpServletRequest wrappedRequest =
+                    new MutableHttpServletRequest(request);
+
+            wrappedRequest.putHeader(
+                    "X-Authenticated-User",
                     email
             );
+
+            wrappedRequest.putHeader(
+                    "X-Authenticated-Role",
+                    role
+            );
+
+            log.info(
+                    "Authenticated User: {} | Role: {}",
+                    email,
+                    role
+            );
+
+            filterChain.doFilter(
+                    wrappedRequest,
+                    response
+            );
+
+            return;
 
         } catch (Exception e) {
 
@@ -113,8 +138,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             return;
         }
-
-        filterChain.doFilter(request, response);
     }
 
     @Override
@@ -129,5 +152,68 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith("/api/v1/auth/register")
                 || path.startsWith("/api/v1/auth/health")
                 || path.startsWith("/health");
+    }
+
+    private static class MutableHttpServletRequest
+            extends HttpServletRequestWrapper {
+
+        private final Map<String, String> customHeaders =
+                new HashMap<>();
+
+        public MutableHttpServletRequest(
+                HttpServletRequest request
+        ) {
+            super(request);
+        }
+
+        public void putHeader(
+                String name,
+                String value
+        ) {
+            customHeaders.put(name, value);
+        }
+
+        @Override
+        public String getHeader(String name) {
+
+            String headerValue =
+                    customHeaders.get(name);
+
+            if (headerValue != null) {
+                return headerValue;
+            }
+
+            return ((HttpServletRequest) getRequest())
+                    .getHeader(name);
+        }
+
+        @Override
+        public Enumeration<String> getHeaderNames() {
+
+            Set<String> names =
+                    new HashSet<>(customHeaders.keySet());
+
+            Enumeration<String> originalHeaderNames =
+                    super.getHeaderNames();
+
+            while (originalHeaderNames.hasMoreElements()) {
+                names.add(originalHeaderNames.nextElement());
+            }
+
+            return Collections.enumeration(names);
+        }
+
+        @Override
+        public Enumeration<String> getHeaders(String name) {
+
+            if (customHeaders.containsKey(name)) {
+
+                return Collections.enumeration(
+                        List.of(customHeaders.get(name))
+                );
+            }
+
+            return super.getHeaders(name);
+        }
     }
 }
