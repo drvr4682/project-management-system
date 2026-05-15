@@ -48,7 +48,20 @@ public class ProjectMemberService {
                     throw new IllegalArgumentException("User already a member");
                 });
 
-        ProjectRole role = ProjectRole.valueOf(request.getRole().toUpperCase());
+        ProjectRole role;
+
+        try {
+
+            role = ProjectRole.valueOf(
+                    request.getRole().toUpperCase()
+            );
+
+        } catch (IllegalArgumentException e) {
+
+            throw new IllegalArgumentException(
+                    "Invalid project role"
+            );
+        }
         
         try {
 

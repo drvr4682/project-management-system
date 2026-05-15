@@ -244,4 +244,41 @@ class ProjectMemberServiceTest {
                 () -> projectMemberService.addMember(1L, request)
         );
     }
+    @Test
+    @DisplayName("Should throw exception for invalid project role")
+    void shouldThrowExceptionForInvalidProjectRole() {
+
+        AddMemberRequestDTO request =
+                new AddMemberRequestDTO();
+
+        request.setUserId("member@test.com");
+        request.setRole("SUPER_ADMIN");
+
+        doNothing().when(projectAccessService)
+                .validateAdmin(1L, "admin@test.com");
+
+        when(projectMemberRepository
+                .findByProjectIdAndUserId(
+                        1L,
+                        "member@test.com"
+                ))
+                .thenReturn(Optional.empty());
+
+        when(authFeignClient.checkUser("member@test.com"))
+                .thenReturn("User exists");
+
+        IllegalArgumentException exception =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> projectMemberService.addMember(
+                                1L,
+                                request
+                        )
+                );
+
+        assertEquals(
+                "Invalid project role",
+                exception.getMessage()
+        );
+    }
 }
