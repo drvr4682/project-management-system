@@ -98,4 +98,38 @@ class GatewaySecurityIntegrationTest {
 
         org.junit.jupiter.api.Assertions.assertTrue(valid);
     }
+
+    @Test
+    @DisplayName("USER role should not access admin routes")
+    void userRoleShouldNotAccessAdminRoutes()
+                throws Exception {
+
+        String userToken =
+                Jwts.builder()
+                        .setSubject("user@test.com")
+                        .claim("role", "USER")
+                        .setIssuedAt(new Date())
+                        .setExpiration(
+                                new Date(
+                                        System.currentTimeMillis()
+                                                + 3600000
+                                )
+                        )
+                        .signWith(
+                                Keys.hmacShaKeyFor(
+                                        "testsecretkeytestsecretkeytestsecret12"
+                                                .getBytes(StandardCharsets.UTF_8)
+                                )
+                        )
+                        .compact();
+
+        mockMvc.perform(
+                        get("/api/v1/admin/dashboard")
+                                .header(
+                                        "Authorization",
+                                        "Bearer " + userToken
+                                )
+                )
+                .andExpect(status().isForbidden());
+    }
 }

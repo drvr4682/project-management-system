@@ -48,7 +48,19 @@ public class SecurityConfig {
                             "/api/v1/auth/health"
                     ).permitAll()
 
-                    .anyRequest().authenticated()
+                    .requestMatchers(
+                            "/api/v1/admin/**"
+                    ).hasRole("ADMIN")
+
+                    .requestMatchers(
+                            "/api/v1/projects/**"
+                    ).hasAnyRole(
+                            "USER",
+                            "ADMIN"
+                    )
+
+                    .anyRequest()
+                    .authenticated()
             )
 
             .exceptionHandling(ex -> ex
@@ -62,6 +74,26 @@ public class SecurityConfig {
                                 ErrorResponse.builder()
                                         .status(401)
                                         .message("Unauthorized")
+                                        .timestamp(System.currentTimeMillis())
+                                        .path(req.getRequestURI())
+                                        .build();
+
+                        res.getWriter().write(
+                                objectMapper.writeValueAsString(error)
+                        );
+                })
+
+                .accessDeniedHandler((req, res, ex2) -> {
+                        res.setStatus(
+                                HttpServletResponse.SC_FORBIDDEN
+                        );
+
+                        res.setContentType("application/json");
+
+                        ErrorResponse error =
+                                ErrorResponse.builder()
+                                        .status(403)
+                                        .message("Access Denied")
                                         .timestamp(System.currentTimeMillis())
                                         .path(req.getRequestURI())
                                         .build();
