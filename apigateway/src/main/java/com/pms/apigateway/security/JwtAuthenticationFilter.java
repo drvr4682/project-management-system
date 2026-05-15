@@ -1,35 +1,38 @@
 package com.pms.apigateway.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pms.apigateway.exception.ErrorResponse;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-
 import org.springframework.stereotype.Component;
-
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 
-import reactor.core.publisher.Mono;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pms.apigateway.exception.ErrorResponse;
+import com.pms.apigateway.filter.CorrelationIdFilter;
 
-import java.nio.charset.StandardCharsets;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter implements WebFilter {
+
+    public static final String USER_EMAIL_HEADER =
+            "X-User-Email";
+
+    public static final String USER_ROLE_HEADER =
+            "X-User-Role";
 
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper;
@@ -87,6 +90,35 @@ public class JwtAuthenticationFilter implements WebFilter {
             String role =
                     jwtUtil.extractRole(token);
 
+            String correlationId =
+                    exchange.getRequest()
+                            .getHeaders()
+                            .getFirst(
+                                    CorrelationIdFilter.CORRELATION_ID_HEADER
+                            );
+
+            // Add trusted headers for downstream services
+            ServerHttpRequest mutatedRequest =
+                    exchange.getRequest()
+                            .mutate()
+
+                            .header(
+                                    USER_EMAIL_HEADER,
+                                    email
+                            )
+
+                            .header(
+                                    USER_ROLE_HEADER,
+                                    role
+                            )
+
+                            .header(
+                                    CorrelationIdFilter.CORRELATION_ID_HEADER,
+                                    correlationId
+                            )
+
+                            .build();
+
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                             email,
@@ -98,7 +130,13 @@ public class JwtAuthenticationFilter implements WebFilter {
                             )
                     );
 
-            return chain.filter(exchange)
+            log.info("Authenticated user: {} with role: {}", email, role);
+
+            return chain.filter(
+                            exchange.mutate()
+                                    .request(mutatedRequest)
+                                    .build()
+                    )
                     .contextWrite(
                             ReactiveSecurityContextHolder.withAuthentication(
                                     authentication
