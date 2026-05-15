@@ -1,65 +1,82 @@
 package com.pms.apigateway.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
-import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pms.apigateway.exception.ErrorResponse;
+import com.pms.apigateway.filter.JwtAuthenticationFilter;
 
-import com.pms.apigateway.security.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 @Configuration
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ObjectMapper objectMapper;
 
     @Bean
-    public SecurityWebFilterChain springSecurityFilterChain(
-            ServerHttpSecurity http
-    ) {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+            throws Exception {
 
-        return http
+        http
+            .csrf(csrf -> csrf.disable())
+            .formLogin(form -> form.disable())
+            .httpBasic(httpBasic -> httpBasic.disable())
 
-                // Disable default security mechanisms
-                .csrf(ServerHttpSecurity.CsrfSpec::disable)
-                .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
-                .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
-                .logout(ServerHttpSecurity.LogoutSpec::disable)
-                
-                // Stateless API Gateway
-                .securityContextRepository(
-                        NoOpServerSecurityContextRepository.getInstance()
-                )
+            .sessionManagement(session ->
+                    session.sessionCreationPolicy(
+                            SessionCreationPolicy.STATELESS
+                    )
+            )
 
-                // Route authorization
-                .authorizeExchange(exchange -> exchange
+            .authorizeHttpRequests(auth -> auth
 
-                        // Public endpoints
-                        .pathMatchers(
-                                "/health",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/register",
-                                "/api/v1/auth/health"
-                        ).permitAll()
+                    .requestMatchers(
+                            "/health",
+                            "/api/v1/auth/login",
+                            "/api/v1/auth/register",
+                            "/api/v1/auth/health"
+                    ).permitAll()
 
-                        // Allow browser preflight requests
-                        .pathMatchers(HttpMethod.OPTIONS)
-                        .permitAll()
+                    .anyRequest().authenticated()
+            )
 
-                        // Everything else requires authentication
-                        .anyExchange().authenticated()
-                )
+            .exceptionHandling(ex -> ex
 
-                // Register custom JWT filter
-                .addFilterAt(
-                        jwtAuthenticationFilter,
-                        SecurityWebFiltersOrder.AUTHENTICATION
-                )
-                .build();
+                    .authenticationEntryPoint((req, res, ex2) -> {
+
+                        res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        res.setContentType("application/json");
+
+                        ErrorResponse error =
+                                ErrorResponse.builder()
+                                        .status(401)
+                                        .message("Unauthorized")
+                                        .timestamp(System.currentTimeMillis())
+                                        .path(req.getRequestURI())
+                                        .build();
+
+                        res.getWriter().write(
+                                objectMapper.writeValueAsString(error)
+                        );
+                    })
+            )
+
+            .addFilterBefore(
+                    jwtAuthenticationFilter,
+                    UsernamePasswordAuthenticationFilter.class
+            );
+
+        return http.build();
     }
 }

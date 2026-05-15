@@ -3,7 +3,6 @@ package com.pms.apigateway.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-
 import jakarta.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -38,13 +37,8 @@ public class JwtUtil {
     }
 
     public String extractRole(String token) {
-
-        Object role =
-                extractAllClaims(token).get("role");
-
-        return role != null
-                ? role.toString()
-                : null;
+        return extractAllClaims(token)
+                .get("role", String.class);
     }
 
     public boolean validateToken(String token) {

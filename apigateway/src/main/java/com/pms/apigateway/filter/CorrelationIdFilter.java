@@ -1,67 +1,59 @@
 package com.pms.apigateway.filter;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.cloud.gateway.filter.GlobalFilter;
-import org.springframework.core.Ordered;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
-import reactor.core.publisher.Mono;
-
+import java.io.IOException;
 import java.util.UUID;
 
 @Slf4j
 @Component
-public class CorrelationIdFilter implements GlobalFilter, Ordered {
+public class CorrelationIdFilter extends OncePerRequestFilter {
 
-    public static final String CORRELATION_ID_HEADER =
+    public static final String CORRELATION_ID =
             "X-Correlation-Id";
 
     @Override
-    public Mono<Void> filter(
-            org.springframework.web.server.ServerWebExchange exchange,
-            org.springframework.cloud.gateway.filter.GatewayFilterChain chain
-    ) {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
         String correlationId =
-                exchange.getRequest()
-                        .getHeaders()
-                        .getFirst(CORRELATION_ID_HEADER);
+                request.getHeader(CORRELATION_ID);
 
-        // Reuse existing correlation ID if already present
-        if (correlationId == null || correlationId.isBlank()) {
+        if (correlationId == null
+                || correlationId.isBlank()) {
 
-            correlationId = UUID.randomUUID().toString();
+            correlationId =
+                    UUID.randomUUID().toString();
         }
 
-        ServerHttpRequest mutatedRequest =
-                exchange.getRequest()
-                        .mutate()
-                        .header(
-                                CORRELATION_ID_HEADER,
-                                correlationId
-                        )
-                        .build();
+        request.setAttribute(
+                CORRELATION_ID,
+                correlationId
+        );
+
+        response.setHeader(
+                CORRELATION_ID,
+                correlationId
+        );
 
         log.info(
-                "Correlation ID: {} | Method: {} | Path: {}",
-                correlationId,
-                mutatedRequest.getMethod(),
-                mutatedRequest.getURI().getPath()
+                "Incoming Request | Method: {} | URI: {} | CorrelationId: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                correlationId
         );
 
-        return chain.filter(
-                exchange.mutate()
-                        .request(mutatedRequest)
-                        .build()
-        );
-    }
-
-    @Override
-    public int getOrder() {
-
-        // Execute very early
-        return -1;
+        filterChain.doFilter(request, response);
     }
 }
