@@ -32,8 +32,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUserExists(UserAlreadyExistsException ex,
                                                 HttpServletRequest request) {
         return new ResponseEntity<>(
-                buildResponse(ex.getMessage(), 400, request.getRequestURI()),
-                HttpStatus.BAD_REQUEST
+                buildResponse(ex.getMessage(), 409, request.getRequestURI()),
+                HttpStatus.CONFLICT
         );
     }
 
