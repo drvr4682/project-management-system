@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -160,7 +159,7 @@ public class ProjectService {
             String sortBy,
             String direction) {
 
-        String currentUser =SecurityUtils.getCurrentUser();
+        String currentUser = SecurityUtils.getCurrentUser();
 
         if (!direction.equalsIgnoreCase("asc")
                 && !direction.equalsIgnoreCase("desc")) {
@@ -187,54 +186,63 @@ public class ProjectService {
         if (accessibleProjectIds.isEmpty()) {
             return Page.empty(pageable);
         }
+        
+        boolean hasStatus =
+                status != null && !status.isBlank();
 
-        Page<Project> projectPage =
-                projectRepository.findDistinctByIdIn(
-                        accessibleProjectIds,
-                        pageable
-                );
+        boolean hasSearch =
+                search != null && !search.isBlank();
 
-        if (status != null && !status.isBlank()) {
+        Page<Project> projectPage;
 
-            ProjectStatus projectStatus =
-                    ProjectStatus.valueOf(status.toUpperCase());
+        if (hasStatus && hasSearch) {
 
-            List<Project> filtered =
-                    projectPage.getContent()
-                            .stream()
-                            .filter(project ->
-                                    project.getStatus() == projectStatus
-                            )
-                            .toList();
+                ProjectStatus projectStatus =
+                        ProjectStatus.valueOf(
+                                status.toUpperCase()
+                        );
 
-            projectPage =
-                    new PageImpl<>(
-                            filtered,
-                            pageable,
-                            filtered.size()
-                    );
-        }
+                projectPage =
+                        projectRepository
+                                .findDistinctByIdInAndStatusAndNameContainingIgnoreCase(
+                                        accessibleProjectIds,
+                                        projectStatus,
+                                        search,
+                                        pageable
+                                );
 
-        if (search != null && !search.isBlank()) {
+        } else if (hasStatus) {
 
-            String searchLower = search.toLowerCase();
+                ProjectStatus projectStatus =
+                        ProjectStatus.valueOf(
+                                status.toUpperCase()
+                        );
 
-            List<Project> filtered =
-                    projectPage.getContent()
-                            .stream()
-                            .filter(project ->
-                                    project.getName()
-                                            .toLowerCase()
-                                            .contains(searchLower)
-                            )
-                            .toList();
+                projectPage =
+                        projectRepository
+                                .findDistinctByIdInAndStatus(
+                                        accessibleProjectIds,
+                                        projectStatus,
+                                        pageable
+                                );
 
-            projectPage =
-                    new PageImpl<>(
-                            filtered,
-                            pageable,
-                            filtered.size()
-                    );
+        } else if (hasSearch) {
+
+                projectPage =
+                        projectRepository
+                                .findDistinctByIdInAndNameContainingIgnoreCase(
+                                        accessibleProjectIds,
+                                        search,
+                                        pageable
+                                );
+
+        } else {
+
+                projectPage =
+                        projectRepository.findDistinctByIdIn(
+                                accessibleProjectIds,
+                                pageable
+                        );
         }
 
         return projectPage.map(this::mapToResponse);

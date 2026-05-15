@@ -25,4 +25,23 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
             List<Long> projectIds,
             Pageable pageable
     );
+
+    Page<Project> findDistinctByIdInAndStatus(
+            List<Long> projectIds,
+            ProjectStatus status,
+            Pageable pageable
+    );
+
+    Page<Project> findDistinctByIdInAndNameContainingIgnoreCase(
+            List<Long> projectIds,
+            String search,
+            Pageable pageable
+    );
+
+    Page<Project> findDistinctByIdInAndStatusAndNameContainingIgnoreCase(
+            List<Long> projectIds,
+            ProjectStatus status,
+            String search,
+            Pageable pageable
+    );
 }
