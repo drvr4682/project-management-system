@@ -140,13 +140,15 @@ public class ProjectService {
         String user = getCurrentUser();
 
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id:" + id));
 
         projectAccessService.validateAdmin(id, user);
 
+        projectMemberRepository.deleteByProjectId(id);
+
         projectRepository.delete(project);
 
-        auditLogger.log(user, "DELETE_PROJECT", id, null);
+        auditLogger.log(user, "DELETE_PROJECT", id, "Deleted project: " + project.getName());
     }
 
     @Transactional(readOnly = true)

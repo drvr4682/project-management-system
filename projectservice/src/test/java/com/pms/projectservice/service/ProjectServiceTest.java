@@ -207,6 +207,9 @@ class ProjectServiceTest {
 
         projectService.deleteProject(1L);
 
+        verify(projectMemberRepository, times(1))
+                .deleteByProjectId(1L);
+
         verify(projectRepository, times(1))
                 .delete(project);
     }
