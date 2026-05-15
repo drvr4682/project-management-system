@@ -27,6 +27,9 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        long startTime =
+                System.currentTimeMillis();
+
         String correlationId =
                 request.getHeader(CORRELATION_ID);
 
@@ -54,6 +57,25 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
                 correlationId
         );
 
-        filterChain.doFilter(request, response);
+        try {
+
+            filterChain.doFilter(
+                    request,
+                    response
+            );
+
+        } finally {
+
+            long duration =
+                    System.currentTimeMillis()
+                            - startTime;
+
+            log.info(
+                    "Completed Response | Status: {} | Duration: {} ms | CorrelationId: {}",
+                    response.getStatus(),
+                    duration,
+                    correlationId
+            );
+        }
     }
 }
