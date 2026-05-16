@@ -1,6 +1,7 @@
 package com.pms.projectservice.config;
 
 import feign.RequestInterceptor;
+import feign.codec.ErrorDecoder;
 import lombok.extern.slf4j.Slf4j;
 
 import org.slf4j.MDC;
@@ -43,5 +44,11 @@ public class FeignConfig {
                 );
             }
         };
+    }
+
+    @Bean
+    public ErrorDecoder errorDecoder() {
+
+        return new FeignErrorDecoder();
     }
 }
