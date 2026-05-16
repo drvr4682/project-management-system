@@ -2,6 +2,7 @@ package com.pms.authservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.authservice.exception.ErrorResponse;
+import com.pms.authservice.security.InternalServiceFilter;
 import com.pms.authservice.security.JwtAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
+    private final InternalServiceFilter internalServiceFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -44,7 +46,7 @@ public class SecurityConfig {
                             "/api/v1/auth/login"
 
                     ).permitAll()
-                    .requestMatchers("/api/v1/auth/users/**").authenticated()
+                    .requestMatchers("/internal/**").permitAll()
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     .requestMatchers("/api/v1/user/**").hasAnyRole("ADMIN", "USER")
                     .anyRequest().authenticated()
@@ -82,6 +84,8 @@ public class SecurityConfig {
                     response.getWriter().write(objectMapper.writeValueAsString(error));
                 })
             );
+
+        http.addFilterBefore(internalServiceFilter, UsernamePasswordAuthenticationFilter.class);
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

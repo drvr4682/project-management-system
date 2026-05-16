@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 )
 public interface AuthFeignClient {
     
-    @GetMapping("/api/v1/auth/users/{email}")
+    @GetMapping("/internal/auth/users/{email}")
     String checkUser(
         @PathVariable String email,
         @RequestHeader("X-Internal-Secret") String internalSecret 
