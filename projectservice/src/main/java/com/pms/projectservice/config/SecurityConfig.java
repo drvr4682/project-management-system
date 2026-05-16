@@ -2,6 +2,7 @@ package com.pms.projectservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.projectservice.exception.ErrorResponse;
+import com.pms.projectservice.filter.CorrelationContextFilter;
 import com.pms.projectservice.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
+    private final CorrelationContextFilter correlationContextFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -74,9 +76,11 @@ public class SecurityConfig {
                 .requestMatchers("/health").permitAll()
                 .requestMatchers("/api/v1/projects/**").hasAnyRole("USER", "ADMIN")
                 .anyRequest().denyAll()
-            )
+            );
 
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(correlationContextFilter, UsernamePasswordAuthenticationFilter.class);
+
+        http.addFilterAfter(jwtAuthenticationFilter, CorrelationContextFilter.class);
 
         return http.build();
     }

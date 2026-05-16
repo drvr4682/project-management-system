@@ -2,6 +2,7 @@ package com.pms.authservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.authservice.exception.ErrorResponse;
+import com.pms.authservice.filter.CorrelationContextFilter;
 import com.pms.authservice.security.InternalServiceFilter;
 import com.pms.authservice.security.JwtAuthenticationFilter;
 
@@ -31,6 +32,8 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
     private final InternalServiceFilter internalServiceFilter;
+    private final CorrelationContextFilter correlationContextFilter;
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -85,9 +88,11 @@ public class SecurityConfig {
                 })
             );
 
-        http.addFilterBefore(internalServiceFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(correlationContextFilter, UsernamePasswordAuthenticationFilter.class);
 
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(internalServiceFilter, CorrelationContextFilter.class);
+
+        http.addFilterAfter(jwtAuthenticationFilter, InternalServiceFilter.class);
 
         return http.build();
     }

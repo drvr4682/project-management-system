@@ -3,6 +3,7 @@ package com.pms.projectservice.config;
 import feign.RequestInterceptor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,6 +24,12 @@ public class FeignConfig {
 
             // Internal secret
             template.header("X-Internal-Secret", internalSecret);
+
+            String correlationId = MDC.get("X-Correlation-Id");
+
+            if (correlationId != null) {
+                template.header("X-Correlation-Id", correlationId);
+            }
 
             Authentication authentication =
                     SecurityContextHolder.getContext().getAuthentication();

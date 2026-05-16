@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -17,8 +18,7 @@ import java.util.UUID;
 @Component
 public class CorrelationIdFilter extends OncePerRequestFilter {
 
-    public static final String CORRELATION_ID =
-            "X-Correlation-Id";
+    public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
 
     @Override
     protected void doFilterInternal(
@@ -31,24 +31,20 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
                 System.currentTimeMillis();
 
         String correlationId =
-                request.getHeader(CORRELATION_ID);
+                request.getHeader(CORRELATION_ID_HEADER);
 
-        if (correlationId == null
-                || correlationId.isBlank()) {
-
-            correlationId =
-                    UUID.randomUUID().toString();
+        if (correlationId == null || correlationId.isBlank()) {
+            correlationId = UUID.randomUUID().toString();
         }
 
-        request.setAttribute(
-                CORRELATION_ID,
-                correlationId
-        );
+        MDC.put(CORRELATION_ID_HEADER, correlationId);
 
-        response.setHeader(
-                CORRELATION_ID,
-                correlationId
-        );
+        response.setHeader(CORRELATION_ID_HEADER, correlationId);
+
+        MutableHttpServletRequest mutableRequest =
+                new MutableHttpServletRequest(request);
+
+        mutableRequest.putHeader(CORRELATION_ID_HEADER, correlationId);
 
         log.info(
                 "Incoming Request | Method: {} | URI: {} | CorrelationId: {}",
@@ -59,16 +55,11 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
 
         try {
 
-            filterChain.doFilter(
-                    request,
-                    response
-            );
+            filterChain.doFilter(mutableRequest, response);
 
         } finally {
 
-            long duration =
-                    System.currentTimeMillis()
-                            - startTime;
+            long duration = System.currentTimeMillis() - startTime;
 
             log.info(
                     "Completed Response | Status: {} | Duration: {} ms | CorrelationId: {}",
@@ -76,6 +67,8 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
                     duration,
                     correlationId
             );
+
+            MDC.clear();
         }
     }
 }
