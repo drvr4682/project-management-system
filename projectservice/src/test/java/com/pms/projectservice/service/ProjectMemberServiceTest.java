@@ -11,8 +11,6 @@ import com.pms.projectservice.repository.ProjectMemberRepository;
 import com.pms.projectservice.security.SecurityUtils;
 import com.pms.projectservice.util.AuditLogger;
 
-import feign.RetryableException;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -59,12 +57,6 @@ class ProjectMemberServiceTest {
 
         when(securityUtils.getCorrelationId())
                 .thenReturn("corr-123");
-
-        ReflectionTestUtils.setField(
-                projectMemberService,
-                "internalSecret",
-                "test-internal-secret"
-        );
     }
 
     @Test
@@ -82,7 +74,7 @@ class ProjectMemberServiceTest {
                 .findByProjectIdAndUserId(1L, "member@test.com"))
                 .thenReturn(Optional.empty());
 
-        when(authFeignClient.checkUser("member@test.com", "test-internal-secret"))
+        when(authFeignClient.checkUser("member@test.com"))
                 .thenReturn("User exists");
 
         String response =
@@ -232,9 +224,11 @@ class ProjectMemberServiceTest {
                 .findByProjectIdAndUserId(1L, "member@test.com"))
                 .thenReturn(Optional.empty());
 
-        when(authFeignClient.checkUser("member@test.com", "test-internal-secret"))
+        when(authFeignClient.checkUser("member@test.com"))
                 .thenThrow(
-                        mock(RetryableException.class)
+                        new ServiceUnavailableException(
+                                "Auth service unavailable"
+                        )
                 );
 
         assertThrows(
@@ -262,7 +256,7 @@ class ProjectMemberServiceTest {
                 ))
                 .thenReturn(Optional.empty());
 
-        when(authFeignClient.checkUser("member@test.com", "test-internal-secret"))
+        when(authFeignClient.checkUser("member@test.com"))
                 .thenReturn("User exists");
 
         IllegalArgumentException exception =
