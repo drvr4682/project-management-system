@@ -34,13 +34,14 @@ public class ProjectService {
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectAccessService projectAccessService;
     private final AuditLogger auditLogger;
+    private final SecurityUtils securityUtils;
 
     public String healthCheck() {
         return "Project Service is running";
     }
 
     private String getCurrentUser() {
-        String user = SecurityUtils.getCurrentUser();
+        String user = securityUtils.getCurrentUser();
 
         if (user == null) {
             throw new UnauthorizedException("Unauthorized");
@@ -53,6 +54,12 @@ public class ProjectService {
     public ProjectResponseDTO createProject(ProjectRequestDTO request) {
 
         String currentUser = getCurrentUser();
+
+        log.info(
+                "Create Project Request | User: {} | CorrelationId: {}",
+                currentUser,
+                securityUtils.getCorrelationId()
+        );
 
         log.info("Creating project for user: {}", currentUser);
 
@@ -99,6 +106,13 @@ public class ProjectService {
 
         String user = getCurrentUser();
 
+        log.info(
+                "Get Project Request | User: {} | ProjectId: {} | CorrelationId: {}",
+                user,
+                id,
+                securityUtils.getCorrelationId()
+        );
+
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
@@ -111,6 +125,13 @@ public class ProjectService {
     public ProjectResponseDTO updateProject(Long id, ProjectRequestDTO request) {
 
         String user = getCurrentUser();
+
+        log.info(
+                "Update Project Request | User: {} | ProjectId: {} | CorrelationId: {}",
+                user,
+                id,
+                securityUtils.getCorrelationId()
+        );
 
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
@@ -138,6 +159,13 @@ public class ProjectService {
 
         String user = getCurrentUser();
 
+        log.info(
+                "Delete Project Request | User: {} | ProjectId: {} | CorrelationId: {}",
+                user,
+                id,
+                securityUtils.getCorrelationId()
+        );
+
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id:" + id));
 
@@ -159,7 +187,13 @@ public class ProjectService {
             String sortBy,
             String direction) {
 
-        String currentUser = SecurityUtils.getCurrentUser();
+        String currentUser = securityUtils.getCurrentUser();
+
+        log.info(
+                "Get Projects Request | User: {} | CorrelationId: {}",
+                currentUser,
+                securityUtils.getCorrelationId()
+        );
 
         if (!direction.equalsIgnoreCase("asc")
                 && !direction.equalsIgnoreCase("desc")) {
@@ -251,7 +285,14 @@ public class ProjectService {
     @Transactional(readOnly = true)
     public void validateAdmin(Long projectId) {
 
-        String user = SecurityUtils.getCurrentUser();
+        String user = securityUtils.getCurrentUser();
+
+        log.info(
+                "Validate Admin Request | User: {} | ProjectId: {} | CorrelationId: {}",
+                user,
+                projectId,
+                securityUtils.getCorrelationId()
+        );
 
         if (user == null) {
             throw new UnauthorizedException("Unauthorized");

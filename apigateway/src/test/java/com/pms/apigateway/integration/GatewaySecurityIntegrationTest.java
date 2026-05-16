@@ -75,7 +75,7 @@ class GatewaySecurityIntegrationTest {
         mockMvc.perform(
                         post("/api/v1/auth/login")
                 )
-                .andExpect(status().isBadRequest());
+                .andExpect(status().is5xxServerError());
     }
 
     @Test

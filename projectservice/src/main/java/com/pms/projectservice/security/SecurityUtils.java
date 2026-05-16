@@ -1,17 +1,39 @@
 package com.pms.projectservice.security;
 
+import jakarta.servlet.http.HttpServletRequest;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
 public class SecurityUtils {
 
-    private SecurityUtils() {
-    }
+    private final HttpServletRequest request;
 
-    public static String getCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    public String getCurrentUser() {
+
+        String gatewayUser =
+                request.getHeader(
+                        "X-Authenticated-User"
+                );
+
+        if (gatewayUser != null
+                && !gatewayUser.isBlank()) {
+
+            return gatewayUser;
+        }
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
 
         if (authentication == null 
                 || !authentication.isAuthenticated()
@@ -35,5 +57,19 @@ public class SecurityUtils {
         }
 
         return null;
+    }
+
+    public String getCurrentRole() {
+
+        return request.getHeader(
+                "X-Authenticated-Role"
+        );
+    }
+
+    public String getCorrelationId() {
+
+        return request.getHeader(
+                "X-Correlation-Id"
+        );
     }
 }

@@ -8,6 +8,7 @@ import com.pms.projectservice.entity.ProjectRole;
 import com.pms.projectservice.exception.ResourceNotFoundException;
 import com.pms.projectservice.exception.ServiceUnavailableException;
 import com.pms.projectservice.repository.ProjectMemberRepository;
+import com.pms.projectservice.security.SecurityUtils;
 import com.pms.projectservice.util.AuditLogger;
 
 import feign.RetryableException;
@@ -19,13 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,6 +43,9 @@ class ProjectMemberServiceTest {
     @Mock
     private AuditLogger auditLogger;
 
+    @Mock
+    private SecurityUtils securityUtils;
+
     @InjectMocks
     private ProjectMemberService projectMemberService;
 
@@ -55,25 +54,17 @@ class ProjectMemberServiceTest {
 
         MockitoAnnotations.openMocks(this);
 
+        when(securityUtils.getCurrentUser())
+                .thenReturn("admin@test.com");
+
+        when(securityUtils.getCorrelationId())
+                .thenReturn("corr-123");
+
         ReflectionTestUtils.setField(
                 projectMemberService,
                 "internalSecret",
                 "test-internal-secret"
         );
-
-        UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        "admin@test.com",
-                        null,
-                        Collections.emptyList()
-                );
-
-        SecurityContext securityContext =
-                SecurityContextHolder.createEmptyContext();
-
-        securityContext.setAuthentication(authentication);
-
-        SecurityContextHolder.setContext(securityContext);
     }
 
     @Test

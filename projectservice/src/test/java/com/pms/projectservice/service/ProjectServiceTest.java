@@ -9,6 +9,7 @@ import com.pms.projectservice.entity.ProjectStatus;
 import com.pms.projectservice.exception.ResourceNotFoundException;
 import com.pms.projectservice.repository.ProjectMemberRepository;
 import com.pms.projectservice.repository.ProjectRepository;
+import com.pms.projectservice.security.SecurityUtils;
 import com.pms.projectservice.util.AuditLogger;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,11 +23,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,6 +46,9 @@ class ProjectServiceTest {
     @Mock
     private AuditLogger auditLogger;
 
+    @Mock
+    private SecurityUtils securityUtils;
+
     @InjectMocks
     private ProjectService projectService;
 
@@ -57,19 +57,11 @@ class ProjectServiceTest {
 
         MockitoAnnotations.openMocks(this);
 
-        UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        "admin@test.com",
-                        null,
-                        Collections.emptyList()
-                );
+        when(securityUtils.getCurrentUser())
+                .thenReturn("admin@test.com");
 
-        SecurityContext securityContext =
-                SecurityContextHolder.createEmptyContext();
-
-        securityContext.setAuthentication(authentication);
-
-        SecurityContextHolder.setContext(securityContext);
+        when(securityUtils.getCorrelationId())
+                .thenReturn("corr-123");
     }
 
     @Test

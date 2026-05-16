@@ -32,6 +32,7 @@ public class ProjectMemberService {
     private final AuthFeignClient authFeignClient;
     private final ProjectAccessService projectAccessService;
     private final AuditLogger auditLogger;
+    private final SecurityUtils securityUtils;
 
     @Value("${internal.secret}")
     private String internalSecret;
@@ -39,7 +40,15 @@ public class ProjectMemberService {
     @Transactional
     public String addMember(Long projectId, AddMemberRequestDTO request) {
 
-        String currentUser = SecurityUtils.getCurrentUser();
+        String currentUser = securityUtils.getCurrentUser();
+
+        log.info(
+                "Add Member Request | User: {} | ProjectId: {} | TargetUser: {} | CorrelationId: {}",
+                currentUser,
+                projectId,
+                request.getUserId(),
+                securityUtils.getCorrelationId()
+        );
 
         if (currentUser == null) {
             throw new UnauthorizedException("Unauthorized");
@@ -103,7 +112,14 @@ public class ProjectMemberService {
     @Transactional(readOnly = true)
     public List<ProjectMemberResponseDTO> getMembers(Long projectId) {
 
-        String currentUser = SecurityUtils.getCurrentUser();
+        String currentUser = securityUtils.getCurrentUser();
+
+        log.info(
+                "Get Members Request | User: {} | ProjectId: {} | CorrelationId: {}",
+                currentUser,
+                projectId,
+                securityUtils.getCorrelationId()
+        );
 
         if (currentUser == null) {
             throw new UnauthorizedException("Unauthorized");
@@ -123,7 +139,15 @@ public class ProjectMemberService {
     @Transactional
     public String removeMember(Long projectId, String userId) {
 
-        String currentUser = SecurityUtils.getCurrentUser();
+        String currentUser = securityUtils.getCurrentUser();
+
+        log.info(
+                "Remove Member Request | User: {} | ProjectId: {} | TargetUser: {} | CorrelationId: {}",
+                currentUser,
+                projectId,
+                userId,
+                securityUtils.getCorrelationId()
+        );
 
         if (currentUser == null) {
             throw new UnauthorizedException("Unauthorized");
