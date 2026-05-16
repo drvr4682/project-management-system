@@ -40,7 +40,7 @@ public class FeignErrorDecoder implements ErrorDecoder {
             
             case 404 -> 
                     new RuntimeException(
-                        "Downstream resource not fount"
+                        "Downstream resource not found"
                     );
             
             case 500 -> 

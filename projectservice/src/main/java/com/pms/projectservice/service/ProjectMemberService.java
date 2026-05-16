@@ -2,7 +2,6 @@ package com.pms.projectservice.service;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,8 +17,9 @@ import com.pms.projectservice.repository.ProjectMemberRepository;
 import com.pms.projectservice.security.SecurityUtils;
 import com.pms.projectservice.util.AuditLogger;
 
-import feign.FeignException;
-import feign.RetryableException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,9 +33,6 @@ public class ProjectMemberService {
     private final ProjectAccessService projectAccessService;
     private final AuditLogger auditLogger;
     private final SecurityUtils securityUtils;
-
-    @Value("${internal.secret}")
-    private String internalSecret;
 
     @Transactional
     public String addMember(Long projectId, AddMemberRequestDTO request) {
@@ -75,23 +72,12 @@ public class ProjectMemberService {
                     "Invalid project role"
             );
         }
-        
-        try {
 
-            String response = authFeignClient.checkUser(request.getUserId(), internalSecret);
+        String response = validateUserFromAuthService(request.getUserId());
 
-            if(!"User exists".equalsIgnoreCase(response)) {
-                throw new IllegalArgumentException("User does not exist");
-            }
-            
-        } catch (FeignException.NotFound e) {
+        if (!"User exists".equalsIgnoreCase(response)) {
+
             throw new IllegalArgumentException("User does not exist");
-
-        } catch (RetryableException e) {
-            throw new ServiceUnavailableException("Auth service unavailable");
-
-        } catch (FeignException e) {
-            throw new ServiceUnavailableException("Auth service error");
         }
 
         ProjectMember member = ProjectMember.builder()
@@ -107,6 +93,39 @@ public class ProjectMemberService {
         log.info("User {} added to project {} as {}", request.getUserId(), projectId, role);
 
         return "Member added successfully";
+    }
+
+    @CircuitBreaker(
+            name = "authService",
+            fallbackMethod = "validateUserFallback"
+    )
+    @Retry(name = "authService")
+    public String validateUserFromAuthService(
+            String userId
+    ) {
+
+        log.info(
+                "Calling AuthService to validate user: {}",
+                userId
+        );
+
+        return authFeignClient.checkUser(userId);
+    }
+
+    public String validateUserFallback(
+            String userId,
+            Exception exception
+    ) {
+
+        log.error(
+                "AuthService fallback triggered for user: {} | Error: {}",
+                userId,
+                exception.getMessage()
+        );
+
+        throw new ServiceUnavailableException(
+                "Auth service unavailable"
+        );
     }
 
     @Transactional(readOnly = true)
