@@ -24,7 +24,8 @@ public class GlobalExceptionHandler {
     ) {
 
         log.error(
-                "Gateway timeout occurred: {}",
+                "Gateway timeout occurred for path {}: {}",
+                request.getRequestURI(),
                 ex.getMessage()
         );
 
@@ -49,7 +50,8 @@ public class GlobalExceptionHandler {
     ) {
 
         log.error(
-                "Downstream service unavailable: {}",
+                "Downstream service unavailable for path {}: {}",
+                request.getRequestURI(),
                 ex.getMessage()
         );
 
@@ -65,7 +67,32 @@ public class GlobalExceptionHandler {
                 error,
                 HttpStatus.SERVICE_UNAVAILABLE
         );
+    }
 
+    @ExceptionHandler(InvalidJwtException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidJwtException(
+            InvalidJwtException ex,
+            HttpServletRequest request
+    ) {
+
+        log.warn(
+                "Invalid JWT for path {}: {}",
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+
+        ErrorResponse error =
+                ErrorResponse.builder()
+                        .status(HttpStatus.UNAUTHORIZED.value())
+                        .message("Invalid JWT: " + ex.getMessage())
+                        .timestamp(System.currentTimeMillis())
+                        .path(request.getRequestURI())
+                        .build();
+
+        return new ResponseEntity<>(
+                error,
+                HttpStatus.UNAUTHORIZED
+        );
     }
 
     @ExceptionHandler(Exception.class)
@@ -75,8 +102,10 @@ public class GlobalExceptionHandler {
     ) {
 
         log.error(
-                "Unhandled gateway exception: {}",
-                ex.getMessage()
+                "Unhandled gateway exception for path {}: {}",
+                request.getRequestURI(),
+                ex.getMessage(),
+                ex
         );
 
         ErrorResponse error =

@@ -1,9 +1,7 @@
 package com.pms.apigateway.exception;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.mock.web.MockHttpServletRequest;
-
 import org.springframework.http.ResponseEntity;
 
 import java.net.ConnectException;
@@ -19,9 +17,7 @@ class GlobalExceptionHandlerTest {
     @Test
     void shouldHandleTimeoutException() {
 
-        MockHttpServletRequest request =
-                new MockHttpServletRequest();
-
+        MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI("/api/v1/projects");
 
         ResponseEntity<ErrorResponse> response =
@@ -30,23 +26,17 @@ class GlobalExceptionHandlerTest {
                         request
                 );
 
-        assertEquals(
-                504,
-                response.getStatusCode().value()
-        );
-
-        assertEquals(
-                "Downstream service timeout",
-                response.getBody().getMessage()
-        );
+        assertEquals(504, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals("Downstream service timeout", response.getBody().getMessage());
+        assertEquals("/api/v1/projects", response.getBody().getPath());
+        assertTrue(response.getBody().getTimestamp() > 0);
     }
 
     @Test
     void shouldHandleConnectionException() {
 
-        MockHttpServletRequest request =
-                new MockHttpServletRequest();
-
+        MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI("/api/v1/projects");
 
         ResponseEntity<ErrorResponse> response =
@@ -55,23 +45,15 @@ class GlobalExceptionHandlerTest {
                         request
                 );
 
-        assertEquals(
-                503,
-                response.getStatusCode().value()
-        );
-
-        assertEquals(
-                "Downstream service unavailable",
-                response.getBody().getMessage()
-        );
+        assertEquals(503, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals("Downstream service unavailable", response.getBody().getMessage());
     }
 
     @Test
     void shouldHandleGenericException() {
 
-        MockHttpServletRequest request =
-                new MockHttpServletRequest();
-
+        MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI("/api/v1/projects");
 
         ResponseEntity<ErrorResponse> response =
@@ -80,14 +62,26 @@ class GlobalExceptionHandlerTest {
                         request
                 );
 
-        assertEquals(
-                500,
-                response.getStatusCode().value()
-        );
+        assertEquals(500, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals("Something went wrong", response.getBody().getMessage());
+    }
 
-        assertEquals(
-                "Something went wrong",
-                response.getBody().getMessage()
-        );
+    // FIX: Added test for InvalidJwtException handler which was defined but never tested
+    @Test
+    void shouldHandleInvalidJwtException() {
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/v1/projects");
+
+        ResponseEntity<ErrorResponse> response =
+                handler.handleInvalidJwtException(
+                        new InvalidJwtException("Token expired"),
+                        request
+                );
+
+        assertEquals(401, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().getMessage().contains("Token expired"));
     }
 }

@@ -1,12 +1,12 @@
 package com.pms.apigateway.filter;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
+
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletRequestWrapper;
 
 public class MutableHttpServletRequest extends HttpServletRequestWrapper {
 
@@ -24,12 +24,10 @@ public class MutableHttpServletRequest extends HttpServletRequestWrapper {
     public String getHeader(String name) {
 
         String headerValue = customHeaders.get(name);
-
         if (headerValue != null) {
             return headerValue;
         }
-
-        return ((HttpServletRequest) getRequest()).getHeader(name);
+        return super.getHeader(name);
     }
 
     @Override
@@ -37,17 +35,12 @@ public class MutableHttpServletRequest extends HttpServletRequestWrapper {
 
         Map<String, String> combinedHeaders = new HashMap<>();
 
-        Enumeration<String> headerNames =
-                ((HttpServletRequest) getRequest()).getHeaderNames();
-
-        while (headerNames.hasMoreElements()) {
-
-            String headerName = headerNames.nextElement();
-
-            combinedHeaders.put(
-                    headerName,
-                    ((HttpServletRequest) getRequest()).getHeader(headerName)
-            );
+        Enumeration<String> originalHeaderNames = super.getHeaderNames();
+        if (originalHeaderNames != null) {
+            while (originalHeaderNames.hasMoreElements()) {
+                String headerName = originalHeaderNames.nextElement();
+                combinedHeaders.put(headerName, super.getHeader(headerName));
+            }
         }
 
         combinedHeaders.putAll(customHeaders);
@@ -57,13 +50,10 @@ public class MutableHttpServletRequest extends HttpServletRequestWrapper {
 
     @Override
     public Enumeration<String> getHeaders(String name) {
-
         String headerValue = customHeaders.get(name);
-
         if (headerValue != null) {
             return Collections.enumeration(Collections.singletonList(headerValue));
         }
-
-        return ((HttpServletRequest) getRequest()).getHeaders(name);
+        return super.getHeaders(name);
     }
 }

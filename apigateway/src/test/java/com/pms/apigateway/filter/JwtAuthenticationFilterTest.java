@@ -6,48 +6,44 @@ import com.pms.apigateway.security.JwtUtil;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
-import org.junit.jupiter.api.Test;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 
+import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class JwtAuthenticationFilterTest {
 
+    private static final String TEST_SECRET =
+            "testsecretkeytestsecretkeytestsecret12";
+
     @Test
     void shouldRejectInvalidToken() throws Exception {
 
-        JwtUtil jwtUtil =
-                org.mockito.Mockito.mock(JwtUtil.class);
+        JwtUtil jwtUtil = org.mockito.Mockito.mock(JwtUtil.class);
 
-        org.mockito.Mockito.when(
-                        jwtUtil.extractUsername("invalid")
-                )
-                .thenThrow(new RuntimeException());
+        org.mockito.Mockito
+                .when(jwtUtil.validateToken("invalid"))
+                .thenReturn(false);
 
         JwtAuthenticationFilter filter =
-                new JwtAuthenticationFilter(
-                        jwtUtil,
-                        new ObjectMapper()
-                );
+                new JwtAuthenticationFilter(jwtUtil, new ObjectMapper());
 
-        MockHttpServletRequest request =
-                new MockHttpServletRequest();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer invalid");
 
-        request.addHeader(
-                "Authorization",
-                "Bearer invalid"
-        );
-
-        MockHttpServletResponse response =
-                new MockHttpServletResponse();
-
-        MockFilterChain chain =
-                new MockFilterChain();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain            = new MockFilterChain();
 
         filter.doFilter(request, response, chain);
 
@@ -55,22 +51,31 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void shouldAddAuthenticatedHeaders()
-            throws Exception {
+    void shouldPassThroughWhenNoAuthorizationHeader() throws Exception {
 
-        JwtUtil jwtUtil =
-                new JwtUtil();
+        JwtUtil jwtUtil = org.mockito.Mockito.mock(JwtUtil.class);
+
+        JwtAuthenticationFilter filter =
+                new JwtAuthenticationFilter(jwtUtil, new ObjectMapper());
+
+        MockHttpServletRequest request   = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain            = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertEquals(200, response.getStatus());
+    }
+
+    @Test
+    void shouldAddAuthenticatedHeaders() throws Exception {
+
+        JwtUtil jwtUtil = new JwtUtil();
 
         java.lang.reflect.Field secretField =
                 JwtUtil.class.getDeclaredField("secret");
-
         secretField.setAccessible(true);
-
-        secretField.set(
-                jwtUtil,
-                "testsecretkeytestsecretkeytestsecret12"
-        );
-
+        secretField.set(jwtUtil, TEST_SECRET);
         jwtUtil.init();
 
         String token =
@@ -79,33 +84,68 @@ class JwtAuthenticationFilterTest {
                         .claim("role", "ADMIN")
                         .signWith(
                                 Keys.hmacShaKeyFor(
-                                        "testsecretkeytestsecretkeytestsecret12"
-                                                .getBytes(StandardCharsets.UTF_8)
+                                        TEST_SECRET.getBytes(StandardCharsets.UTF_8)
                                 )
                         )
                         .compact();
 
         JwtAuthenticationFilter filter =
-                new JwtAuthenticationFilter(
-                        jwtUtil,
-                        new ObjectMapper()
-                );
+                new JwtAuthenticationFilter(jwtUtil, new ObjectMapper());
 
-        MockHttpServletRequest request =
-                new MockHttpServletRequest();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer " + token);
 
-        request.addHeader(
-                "Authorization",
-                "Bearer " + token
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        AtomicReference<HttpServletRequest> capturedRequest = new AtomicReference<>();
+
+        Filter capturingFilter = (ServletRequest req, ServletResponse res, FilterChain fc) -> {
+            capturedRequest.set((HttpServletRequest) req);
+            // Do NOT call fc.doFilter — this is the last filter; no servlet to invoke
+        };
+
+        MockFilterChain chain = new MockFilterChain(
+                new jakarta.servlet.http.HttpServlet() {},
+                capturingFilter
         );
 
-        MockHttpServletResponse response =
-                new MockHttpServletResponse();
+        filter.doFilter(request, response, chain);
 
-        MockFilterChain chain =
-                new MockFilterChain();
+        // Status stays at 200 because we never invoke an unimplemented servlet
+        assertEquals(200, response.getStatus());
+
+        // Verify authenticated headers were injected into the downstream request
+        assertNotNull(capturedRequest.get(), "Downstream request should have been captured");
+        assertEquals(
+                "admin@test.com",
+                capturedRequest.get().getHeader("X-Authenticated-User"),
+                "X-Authenticated-User header should be set"
+        );
+        assertEquals(
+                "ADMIN",
+                capturedRequest.get().getHeader("X-Authenticated-Role"),
+                "X-Authenticated-Role header should be set"
+        );
+    }
+
+    @Test
+    void shouldSkipFilterForPublicEndpoints() throws Exception {
+
+        JwtUtil jwtUtil = org.mockito.Mockito.mock(JwtUtil.class);
+
+        JwtAuthenticationFilter filter =
+                new JwtAuthenticationFilter(jwtUtil, new ObjectMapper());
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setServletPath("/api/v1/auth/login");
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain            = new MockFilterChain();
 
         filter.doFilter(request, response, chain);
+
+        org.mockito.Mockito.verify(jwtUtil, org.mockito.Mockito.never())
+                .validateToken(org.mockito.Mockito.anyString());
 
         assertEquals(200, response.getStatus());
     }

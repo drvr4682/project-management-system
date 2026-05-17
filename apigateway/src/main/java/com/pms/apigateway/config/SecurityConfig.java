@@ -15,6 +15,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -56,7 +57,8 @@ public class SecurityConfig {
                     ).hasRole("ADMIN")
 
                     .requestMatchers(
-                            "/api/v1/projects/**"
+                            "/api/v1/projects/**",
+                            "/api/v1/tasks/**"
                     ).hasAnyRole(
                             "USER",
                             "ADMIN"
@@ -68,7 +70,7 @@ public class SecurityConfig {
 
             .exceptionHandling(ex -> ex
 
-                    .authenticationEntryPoint((req, res, ex2) -> {
+                    .authenticationEntryPoint((req, res, authEx) -> {
 
                         res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         res.setContentType("application/json");
@@ -76,7 +78,7 @@ public class SecurityConfig {
                         ErrorResponse error =
                                 ErrorResponse.builder()
                                         .status(401)
-                                        .message("Unauthorized")
+                                        .message("Unauthorized: " + authEx.getMessage())
                                         .timestamp(System.currentTimeMillis())
                                         .path(req.getRequestURI())
                                         .build();
@@ -84,19 +86,17 @@ public class SecurityConfig {
                         res.getWriter().write(
                                 objectMapper.writeValueAsString(error)
                         );
-                })
+                    })
 
-                .accessDeniedHandler((req, res, ex2) -> {
-                        res.setStatus(
-                                HttpServletResponse.SC_FORBIDDEN
-                        );
+                    .accessDeniedHandler((req, res, accessEx) -> {
 
+                        res.setStatus(HttpServletResponse.SC_FORBIDDEN);
                         res.setContentType("application/json");
 
                         ErrorResponse error =
                                 ErrorResponse.builder()
                                         .status(403)
-                                        .message("Access Denied")
+                                        .message("Access Denied: " + accessEx.getMessage())
                                         .timestamp(System.currentTimeMillis())
                                         .path(req.getRequestURI())
                                         .build();
@@ -115,6 +115,10 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> null;
+        return username -> {
+            throw new UsernameNotFoundException(
+                    "Gateway does not load users from a store. JWT is validated directly."
+            );
+        };
     }
 }

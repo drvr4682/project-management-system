@@ -7,6 +7,7 @@ import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctio
 import org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
 
@@ -23,6 +24,13 @@ public class GatewayRoutesConfig {
     @Value("${services.project.url}")
     private String projectServiceUrl;
 
+    // FIX: Added task service URL mapping to match the .env TASK_SERVICE_URL entry
+    @Value("${services.task.url:http://localhost:8083}")
+    private String taskServiceUrl;
+
+    @Value("${gateway.secret}")
+    private String gatewaySecret;
+
     @Bean
     public RouterFunction<ServerResponse> gatewayRoutes() {
 
@@ -34,12 +42,8 @@ public class GatewayRoutesConfig {
                                 path("/api/v1/auth/**"),
                                 HandlerFunctions.http(authServiceUrl)
                         )
-                        .before(
-                                addRequestHeader(
-                                        "X-Gateway",
-                                        "API-GATEWAY"
-                                )
-                        )
+                        .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
+                        .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
                         .build();
 
         RouterFunction<ServerResponse> projectRoute =
@@ -48,14 +52,34 @@ public class GatewayRoutesConfig {
                                 path("/api/v1/projects/**"),
                                 HandlerFunctions.http(projectServiceUrl)
                         )
-                        .before(
-                                addRequestHeader(
-                                        "X-Gateway",
-                                        "API-GATEWAY"
-                                )
-                        )
+                        .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
+                        .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
                         .build();
 
-        return authRoute.and(projectRoute);
+        RouterFunction<ServerResponse> adminRoute =
+                GatewayRouterFunctions.route("admin-service")
+                        .route(
+                                path("/api/v1/admin/**"),
+                                HandlerFunctions.http(projectServiceUrl)
+                        )
+                        .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
+                        .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
+                        .build();
+
+        // FIX: Added task service route to match the TASK_SERVICE_URL in .env
+        RouterFunction<ServerResponse> taskRoute =
+                GatewayRouterFunctions.route("task-service")
+                        .route(
+                                path("/api/v1/tasks/**"),
+                                HandlerFunctions.http(taskServiceUrl)
+                        )
+                        .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
+                        .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
+                        .build();
+
+        return authRoute
+                .and(projectRoute)
+                .and(adminRoute)
+                .and(taskRoute);
     }
 }

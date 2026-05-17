@@ -7,7 +7,6 @@ import com.pms.apigateway.security.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -16,15 +15,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-
-import java.util.*;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -41,59 +37,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String authHeader =
-                request.getHeader("Authorization");
+        String authHeader = request.getHeader("Authorization");
 
-        if (authHeader == null
-                || !authHeader.startsWith("Bearer ")) {
-
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token =
-                authHeader.substring(7);
+        String token = authHeader.substring(7);
 
         try {
+            if (!jwtUtil.validateToken(token)) {
+                writeUnauthorizedResponse(response, request, "Token validation failed");
+                return;
+            }
 
-            String email =
-                    jwtUtil.extractUsername(token);
-
-            String role =
-                    jwtUtil.extractRole(token);
+            String email = jwtUtil.extractUsername(token);
+            String role  = jwtUtil.extractRole(token);
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                             email,
-                            token,
-                            List.of(
-                                    new SimpleGrantedAuthority(
-                                            "ROLE_" + role
-                                    )
-                            )
+                            null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
                     );
 
             authentication.setDetails(
-                    new WebAuthenticationDetailsSource()
-                            .buildDetails(request)
+                    new WebAuthenticationDetailsSource().buildDetails(request)
             );
 
-            SecurityContextHolder
-                    .getContext()
-                    .setAuthentication(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
             MutableHttpServletRequest wrappedRequest =
                     new MutableHttpServletRequest(request);
 
-            wrappedRequest.putHeader(
-                    "X-Authenticated-User",
-                    email
-            );
-
-            wrappedRequest.putHeader(
-                    "X-Authenticated-Role",
-                    role
-            );
+            wrappedRequest.putHeader("X-Authenticated-User", email);
+            wrappedRequest.putHeader("X-Authenticated-Role", role);
 
             log.info(
                     "Authenticated User: {} | Role: {}",
@@ -101,119 +80,54 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     role
             );
 
-            filterChain.doFilter(
-                    wrappedRequest,
-                    response
-            );
-
-            return;
+            filterChain.doFilter(wrappedRequest, response);
 
         } catch (Exception e) {
 
             log.error(
-                    "JWT validation failed: {}",
+                    "JWT validation failed for path {}: {}",
+                    request.getRequestURI(),
                     e.getMessage()
             );
 
-            response.setStatus(
-                    HttpServletResponse.SC_UNAUTHORIZED
-            );
+            // FIX: Clear any partial authentication that may have been set
+            SecurityContextHolder.clearContext();
 
-            response.setContentType(
-                    "application/json"
-            );
-
-            ErrorResponse error =
-                    ErrorResponse.builder()
-                            .status(401)
-                            .message("Invalid JWT")
-                            .timestamp(System.currentTimeMillis())
-                            .path(request.getRequestURI())
-                            .build();
-
-            response.getWriter()
-                    .write(
-                            objectMapper.writeValueAsString(error)
-                    );
-
-            return;
+            writeUnauthorizedResponse(response, request, "Invalid or expired JWT");
         }
+    }
+
+    private void writeUnauthorizedResponse(
+            HttpServletResponse response,
+            HttpServletRequest request,
+            String message
+    ) throws IOException {
+
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        ErrorResponse error =
+                ErrorResponse.builder()
+                        .status(401)
+                        .message(message)
+                        .timestamp(System.currentTimeMillis())
+                        .path(request.getRequestURI())
+                        .build();
+
+        response.getWriter().write(
+                objectMapper.writeValueAsString(error)
+        );
     }
 
     @Override
-    protected boolean shouldNotFilter(
-            HttpServletRequest request
-    ) {
+    protected boolean shouldNotFilter(HttpServletRequest request) {
 
-        String path =
-                request.getServletPath();
+        String path = request.getServletPath();
 
-        return path.startsWith("/api/v1/auth/login")
+        return path.equals("/health")
+                || path.startsWith("/api/v1/auth/login")
                 || path.startsWith("/api/v1/auth/register")
-                || path.startsWith("/api/v1/auth/health")
-                || path.startsWith("/health");
-    }
-
-    private static class MutableHttpServletRequest
-            extends HttpServletRequestWrapper {
-
-        private final Map<String, String> customHeaders =
-                new HashMap<>();
-
-        public MutableHttpServletRequest(
-                HttpServletRequest request
-        ) {
-            super(request);
-        }
-
-        public void putHeader(
-                String name,
-                String value
-        ) {
-            customHeaders.put(name, value);
-        }
-
-        @Override
-        public String getHeader(String name) {
-
-            String headerValue =
-                    customHeaders.get(name);
-
-            if (headerValue != null) {
-                return headerValue;
-            }
-
-            return ((HttpServletRequest) getRequest())
-                    .getHeader(name);
-        }
-
-        @Override
-        public Enumeration<String> getHeaderNames() {
-
-            Set<String> names =
-                    new HashSet<>(customHeaders.keySet());
-
-            Enumeration<String> originalHeaderNames =
-                    super.getHeaderNames();
-
-            while (originalHeaderNames.hasMoreElements()) {
-                names.add(originalHeaderNames.nextElement());
-            }
-
-            return Collections.enumeration(names);
-        }
-
-        @Override
-        public Enumeration<String> getHeaders(String name) {
-
-            if (customHeaders.containsKey(name)) {
-
-                return Collections.enumeration(
-                        List.of(customHeaders.get(name))
-                );
-            }
-
-            return super.getHeaders(name);
-        }
+                || path.startsWith("/api/v1/auth/health");
     }
 }

@@ -19,6 +19,7 @@ import java.util.UUID;
 public class CorrelationIdFilter extends OncePerRequestFilter {
 
     public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
+    public static final String MDC_KEY = "correlationId";
 
     @Override
     protected void doFilterInternal(
@@ -27,23 +28,20 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        long startTime =
-                System.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
 
-        String correlationId =
-                request.getHeader(CORRELATION_ID_HEADER);
+        String correlationId = request.getHeader(CORRELATION_ID_HEADER);
 
         if (correlationId == null || correlationId.isBlank()) {
             correlationId = UUID.randomUUID().toString();
         }
 
-        MDC.put(CORRELATION_ID_HEADER, correlationId);
+        MDC.put(MDC_KEY, correlationId);
 
         response.setHeader(CORRELATION_ID_HEADER, correlationId);
 
         MutableHttpServletRequest mutableRequest =
                 new MutableHttpServletRequest(request);
-
         mutableRequest.putHeader(CORRELATION_ID_HEADER, correlationId);
 
         log.info(
@@ -54,15 +52,13 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
         );
 
         try {
-
             filterChain.doFilter(mutableRequest, response);
-
         } finally {
 
             long duration = System.currentTimeMillis() - startTime;
 
             log.info(
-                    "Completed Response | Status: {} | Duration: {} ms | CorrelationId: {}",
+                    "Completed Response | Status: {} | Duration: {}ms | CorrelationId: {}",
                     response.getStatus(),
                     duration,
                     correlationId
