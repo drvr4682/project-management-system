@@ -74,6 +74,7 @@ class ProjectControllerTest {
 
         mockMvc.perform(
                         post("/api/v1/projects")
+                                .header("X-Gateway-Secret", "test-gateway-secret")
                                 .contentType(
                                         MediaType.APPLICATION_JSON
                                 )
@@ -118,6 +119,7 @@ class ProjectControllerTest {
 
         mockMvc.perform(
                         get("/api/v1/projects")
+                .header("X-Gateway-Secret", "test-gateway-secret")
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].name")
@@ -141,6 +143,7 @@ class ProjectControllerTest {
 
         mockMvc.perform(
                         post("/api/v1/projects")
+                                .header("X-Gateway-Secret", "test-gateway-secret")
                                 .contentType(
                                         MediaType.APPLICATION_JSON
                                 )

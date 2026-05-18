@@ -12,12 +12,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Slf4j
 @Component
 public class CorrelationContextFilter extends OncePerRequestFilter {
 
     public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
+    public static final String MDC_KEY = "correlationId";
 
     @Override
     protected void doFilterInternal(
@@ -26,29 +28,25 @@ public class CorrelationContextFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String correlationId =
-                request.getHeader(CORRELATION_ID_HEADER);
+        String correlationId = request.getHeader(CORRELATION_ID_HEADER);
 
-        if (correlationId != null && !correlationId.isBlank()) {
-
-            MDC.put(
-                    CORRELATION_ID_HEADER,
-                    correlationId
-            );
-
-            log.info(
-                    "CorrelationId received: {}",
-                    correlationId
-            );
+        if (correlationId == null || correlationId.isBlank()) {
+            correlationId = UUID.randomUUID().toString();
         }
 
+        MDC.put(MDC_KEY, correlationId);
+
+        response.setHeader(CORRELATION_ID_HEADER, correlationId);
+
+        log.info(
+                "Incoming Request | Method: {} | URI: {} | CorrelationId: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                correlationId
+        );
+
         try {
-
-            filterChain.doFilter(
-                    request,
-                    response
-            );
-
+            filterChain.doFilter(request, response);
         } finally {
 
             MDC.clear();

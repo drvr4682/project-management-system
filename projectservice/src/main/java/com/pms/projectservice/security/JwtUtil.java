@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 
@@ -27,12 +28,12 @@ public class JwtUtil {
     public JwtUtil(String secret, long expiration) {
         this.secret = secret;
         this.expiration = expiration;
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     @PostConstruct
     public void init() {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(String email, String role) {
@@ -53,8 +54,7 @@ public class JwtUtil {
     }
 
     public String extractRole(String token) {
-        return extractAllClaims(token)
-                .get("role", String.class);
+        return extractAllClaims(token).get("role", String.class);
     }
 
     public Claims extractAllClaims(String token) {
@@ -72,8 +72,20 @@ public class JwtUtil {
             extractAllClaims(token);
             return true;
 
+        } catch (ExpiredJwtException e) {
+            log(e, "Token expired");
+        } catch (MalformedJwtException e) {
+            log(e, "Malformed token");
+        } catch (io.jsonwebtoken.security.SignatureException e) {
+            log(e, "Invalid signature");
         } catch (Exception e) {
-            return false;
+            log(e, "Token validation failed");
         }
+        return false;
+    }
+
+    private void log(Exception e, String context) {
+        
+        System.err.println("[JwtUtil] " + context + ": " + e.getMessage());
     }
 }

@@ -23,10 +23,10 @@ public class FeignConfig {
 
         return template -> {
 
-            // Internal secret
+            // Always send internal secret for service-to-service auth
             template.header("X-Internal-Secret", internalSecret);
 
-            String correlationId = MDC.get("X-Correlation-Id");
+            String correlationId = MDC.get("correlationId");
 
             if (correlationId != null) {
                 template.header("X-Correlation-Id", correlationId);

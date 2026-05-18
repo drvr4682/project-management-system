@@ -26,14 +26,12 @@ public class ProjectAccessService {
                 .orElseThrow(() -> {
 
                     log.warn(
-                            "Access denied. User {} is not member of project {}",
+                            "Access denied. User {} is not a member of project {}",
                             userId,
                             projectId
                     );
 
-                    return new AccessDeniedException(
-                            "User not part of project"
-                    );
+                    return new AccessDeniedException("User not part of project");
                 });
     }
 
@@ -50,9 +48,7 @@ public class ProjectAccessService {
                     projectId
             );
 
-            throw new AccessDeniedException(
-                    "Only ADMIN can perform this action"
-            );
+            throw new AccessDeniedException("Only ADMIN can perform this action");
         }
     }
 }

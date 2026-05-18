@@ -5,20 +5,16 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pms.projectservice.client.AuthFeignClient;
 import com.pms.projectservice.dto.AddMemberRequestDTO;
 import com.pms.projectservice.dto.ProjectMemberResponseDTO;
 import com.pms.projectservice.entity.ProjectMember;
 import com.pms.projectservice.entity.ProjectRole;
 import com.pms.projectservice.exception.ResourceNotFoundException;
-import com.pms.projectservice.exception.ServiceUnavailableException;
 import com.pms.projectservice.exception.UnauthorizedException;
 import com.pms.projectservice.repository.ProjectMemberRepository;
+import com.pms.projectservice.repository.ProjectRepository;
 import com.pms.projectservice.security.SecurityUtils;
 import com.pms.projectservice.util.AuditLogger;
-
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.retry.annotation.Retry;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,10 +25,11 @@ import lombok.extern.slf4j.Slf4j;
 public class ProjectMemberService {
 
     private final ProjectMemberRepository projectMemberRepository;
-    private final AuthFeignClient authFeignClient;
+    private final ProjectRepository projectRepository;
     private final ProjectAccessService projectAccessService;
     private final AuditLogger auditLogger;
     private final SecurityUtils securityUtils;
+    private final AuthValidationComponent authValidationComponent;
 
     @Transactional
     public String addMember(Long projectId, AddMemberRequestDTO request) {
@@ -51,6 +48,11 @@ public class ProjectMemberService {
             throw new UnauthorizedException("Unauthorized");
         }
 
+        projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Project not found with id: " + projectId
+                ));
+
         projectAccessService.validateAdmin(projectId, currentUser);
 
         projectMemberRepository.findByProjectIdAndUserId(projectId, request.getUserId())
@@ -59,24 +61,16 @@ public class ProjectMemberService {
                 });
 
         ProjectRole role;
-
         try {
-
-            role = ProjectRole.valueOf(
-                    request.getRole().toUpperCase()
-            );
-
+            role = ProjectRole.valueOf(request.getRole().toUpperCase());
         } catch (IllegalArgumentException e) {
-
-            throw new IllegalArgumentException(
-                    "Invalid project role"
-            );
+            throw new IllegalArgumentException("Invalid project role");
         }
 
-        String response = validateUserFromAuthService(request.getUserId());
+        String authResponse = authValidationComponent.validateUser(request.getUserId());
 
-        if (!"User exists".equalsIgnoreCase(response)) {
 
+        if (!"User exists".equalsIgnoreCase(authResponse)) {
             throw new IllegalArgumentException("User does not exist");
         }
 
@@ -90,42 +84,14 @@ public class ProjectMemberService {
 
         auditLogger.log(currentUser, "ADD_MEMBER", projectId, request.getUserId());
 
-        log.info("User {} added to project {} as {}", request.getUserId(), projectId, role);
+        log.info(
+                "User {} added to project {} as {}",
+                request.getUserId(),
+                projectId,
+                role
+        );
 
         return "Member added successfully";
-    }
-
-    @CircuitBreaker(
-            name = "authService",
-            fallbackMethod = "validateUserFallback"
-    )
-    @Retry(name = "authService")
-    public String validateUserFromAuthService(
-            String userId
-    ) {
-
-        log.info(
-                "Calling AuthService to validate user: {}",
-                userId
-        );
-
-        return authFeignClient.checkUser(userId);
-    }
-
-    public String validateUserFallback(
-            String userId,
-            Exception exception
-    ) {
-
-        log.error(
-                "AuthService fallback triggered for user: {} | Error: {}",
-                userId,
-                exception.getMessage()
-        );
-
-        throw new ServiceUnavailableException(
-                "Auth service unavailable"
-        );
     }
 
     @Transactional(readOnly = true)
@@ -183,6 +149,7 @@ public class ProjectMemberService {
                     "Project admin cannot remove themselves"
             );
         }
+
         projectMemberRepository.delete(member);
 
         auditLogger.log(currentUser, "REMOVE_MEMBER", projectId, userId);

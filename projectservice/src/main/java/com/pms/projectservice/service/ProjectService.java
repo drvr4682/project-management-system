@@ -1,10 +1,11 @@
 package com.pms.projectservice.service;
 
+import java.time.ZoneOffset;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,10 +37,6 @@ public class ProjectService {
     private final AuditLogger auditLogger;
     private final SecurityUtils securityUtils;
 
-    public String healthCheck() {
-        return "Project Service is running";
-    }
-
     private String getCurrentUser() {
         String user = securityUtils.getCurrentUser();
 
@@ -61,19 +58,15 @@ public class ProjectService {
                 securityUtils.getCorrelationId()
         );
 
-        log.info("Creating project for user: {}", currentUser);
-
-        // Status handling
         ProjectStatus status;
         try {
             status = request.getStatus() != null
                     ? ProjectStatus.valueOf(request.getStatus().toUpperCase())
                     : ProjectStatus.ACTIVE;
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid status value");
+            throw new IllegalArgumentException("Invalid status value: " + request.getStatus());
         }
 
-        // Create project
         Project project = Project.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -85,7 +78,7 @@ public class ProjectService {
 
         log.info("Project created with ID: {}", saved.getId());
 
-        // ADD OWNER AS PROJECT ADMIN
+        // Automatically add the creator as project ADMIN
         ProjectMember member = ProjectMember.builder()
                 .projectId(saved.getId())
                 .userId(currentUser)
@@ -96,7 +89,7 @@ public class ProjectService {
 
         auditLogger.log(currentUser, "CREATE_PROJECT", saved.getId(), null);
 
-        log.info("Owner added as ADMIN in project_members");
+        log.info("Owner {} added as ADMIN in project_members for project {}", currentUser, saved.getId());
 
         return mapToResponse(saved);
     }
@@ -117,7 +110,7 @@ public class ProjectService {
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         projectAccessService.validateMember(id, user);
-        
+
         return mapToResponse(project);
     }
 
@@ -142,11 +135,13 @@ public class ProjectService {
         project.setDescription(request.getDescription());
 
         if (request.getStatus() != null) {
-            project.setStatus(
-                    ProjectStatus.valueOf(
-                            request.getStatus().toUpperCase()
-                    )
-            );
+            try {
+                project.setStatus(
+                        ProjectStatus.valueOf(request.getStatus().toUpperCase())
+                );
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid status value: " + request.getStatus());
+            }
         }
 
         auditLogger.log(user, "UPDATE_PROJECT", id, null);
@@ -167,7 +162,9 @@ public class ProjectService {
         );
 
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id:" + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Project not found with id: " + id
+                ));
 
         projectAccessService.validateAdmin(id, user);
 
@@ -180,14 +177,14 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public Page<ProjectResponseDTO> getProjects(
-            String status, 
+            String status,
             String search,
             int page,
             int size,
             String sortBy,
             String direction) {
 
-        String currentUser = securityUtils.getCurrentUser();
+        String currentUser = getCurrentUser();
 
         log.info(
                 "Get Projects Request | User: {} | CorrelationId: {}",
@@ -198,9 +195,7 @@ public class ProjectService {
         if (!direction.equalsIgnoreCase("asc")
                 && !direction.equalsIgnoreCase("desc")) {
 
-            throw new IllegalArgumentException(
-                    "Direction must be asc or desc"
-            );
+            throw new IllegalArgumentException("Direction must be asc or desc");
         }
 
         Sort sort = direction.equalsIgnoreCase("desc")
@@ -210,8 +205,7 @@ public class ProjectService {
         Pageable pageable = PageRequest.of(page, size, sort);
 
         List<Long> accessibleProjectIds =
-                projectMemberRepository
-                        .findByUserId(currentUser)
+                projectMemberRepository.findByUserId(currentUser)
                         .stream()
                         .map(ProjectMember::getProjectId)
                         .distinct()
@@ -220,63 +214,50 @@ public class ProjectService {
         if (accessibleProjectIds.isEmpty()) {
             return Page.empty(pageable);
         }
-        
-        boolean hasStatus =
-                status != null && !status.isBlank();
 
-        boolean hasSearch =
-                search != null && !search.isBlank();
+        boolean hasStatus = status != null && !status.isBlank();
+        boolean hasSearch = search != null && !search.isBlank();
 
         Page<Project> projectPage;
 
         if (hasStatus && hasSearch) {
 
-                ProjectStatus projectStatus =
-                        ProjectStatus.valueOf(
-                                status.toUpperCase()
-                        );
+            ProjectStatus projectStatus = ProjectStatus.valueOf(status.toUpperCase());
 
-                projectPage =
-                        projectRepository
-                                .findDistinctByIdInAndStatusAndNameContainingIgnoreCase(
-                                        accessibleProjectIds,
-                                        projectStatus,
-                                        search,
-                                        pageable
-                                );
+            projectPage = projectRepository
+                    .findDistinctByIdInAndStatusAndNameContainingIgnoreCase(
+                            accessibleProjectIds,
+                            projectStatus,
+                            search,
+                            pageable
+                    );
 
         } else if (hasStatus) {
 
-                ProjectStatus projectStatus =
-                        ProjectStatus.valueOf(
-                                status.toUpperCase()
-                        );
+            ProjectStatus projectStatus = ProjectStatus.valueOf(status.toUpperCase());
 
-                projectPage =
-                        projectRepository
-                                .findDistinctByIdInAndStatus(
-                                        accessibleProjectIds,
-                                        projectStatus,
-                                        pageable
-                                );
+            projectPage = projectRepository
+                    .findDistinctByIdInAndStatus(
+                            accessibleProjectIds,
+                            projectStatus,
+                            pageable
+                    );
 
         } else if (hasSearch) {
 
-                projectPage =
-                        projectRepository
-                                .findDistinctByIdInAndNameContainingIgnoreCase(
-                                        accessibleProjectIds,
-                                        search,
-                                        pageable
-                                );
+            projectPage = projectRepository
+                    .findDistinctByIdInAndNameContainingIgnoreCase(
+                            accessibleProjectIds,
+                            search,
+                            pageable
+                    );
 
         } else {
 
-                projectPage =
-                        projectRepository.findDistinctByIdIn(
-                                accessibleProjectIds,
-                                pageable
-                        );
+            projectPage = projectRepository.findDistinctByIdIn(
+                    accessibleProjectIds,
+                    pageable
+            );
         }
 
         return projectPage.map(this::mapToResponse);
@@ -285,7 +266,7 @@ public class ProjectService {
     @Transactional(readOnly = true)
     public void validateAdmin(Long projectId) {
 
-        String user = securityUtils.getCurrentUser();
+        String user = getCurrentUser();
 
         log.info(
                 "Validate Admin Request | User: {} | ProjectId: {} | CorrelationId: {}",
@@ -294,19 +275,12 @@ public class ProjectService {
                 securityUtils.getCorrelationId()
         );
 
-        if (user == null) {
-            throw new UnauthorizedException("Unauthorized");
-        }
-
-        // check project exists
         projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        // RBAC check
         projectAccessService.validateAdmin(projectId, user);
     }
 
-    
     private ProjectResponseDTO mapToResponse(Project project) {
         return ProjectResponseDTO.builder()
                 .id(project.getId())
@@ -314,8 +288,12 @@ public class ProjectService {
                 .description(project.getDescription())
                 .owner(project.getOwnerId())
                 .status(project.getStatus() != null ? project.getStatus().name() : null)
-                .createdAt(project.getCreatedAt() != null ? project.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : null)
-                .updatedAt(project.getUpdatedAt() != null ? project.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : null)
+                .createdAt(project.getCreatedAt() != null
+                        ? project.getCreatedAt().toInstant(ZoneOffset.UTC).toEpochMilli()
+                        : null)
+                .updatedAt(project.getUpdatedAt() != null
+                        ? project.getUpdatedAt().toInstant(ZoneOffset.UTC).toEpochMilli()
+                        : null)
                 .build();
     }
 }

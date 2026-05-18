@@ -8,7 +8,6 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-
 import org.springframework.stereotype.Component;
 
 @Component
@@ -19,23 +18,16 @@ public class SecurityUtils {
 
     public String getCurrentUser() {
 
-        String gatewayUser =
-                request.getHeader(
-                        "X-Authenticated-User"
-                );
+        String gatewayUser = request.getHeader("X-Authenticated-User");
 
-        if (gatewayUser != null
-                && !gatewayUser.isBlank()) {
-
+        if (gatewayUser != null && !gatewayUser.isBlank()) {
             return gatewayUser;
         }
 
         Authentication authentication =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
+                SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication == null 
+        if (authentication == null
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
             return null;
@@ -48,11 +40,9 @@ public class SecurityUtils {
         }
 
         if (principal instanceof String principalString) {
-
             if ("anonymousUser".equals(principalString)) {
                 return null;
             }
-
             return principalString;
         }
 
@@ -60,16 +50,10 @@ public class SecurityUtils {
     }
 
     public String getCurrentRole() {
-
-        return request.getHeader(
-                "X-Authenticated-Role"
-        );
+        return request.getHeader("X-Authenticated-Role");
     }
 
     public String getCorrelationId() {
-
-        return request.getHeader(
-                "X-Correlation-Id"
-        );
+        return request.getHeader("X-Correlation-Id");
     }
 }

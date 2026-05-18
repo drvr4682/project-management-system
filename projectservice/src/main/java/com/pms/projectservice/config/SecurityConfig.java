@@ -3,15 +3,15 @@ package com.pms.projectservice.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.projectservice.exception.ErrorResponse;
 import com.pms.projectservice.filter.CorrelationContextFilter;
+import com.pms.projectservice.filter.GatewayValidationFilter;
 import com.pms.projectservice.security.JwtAuthenticationFilter;
+
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -27,6 +27,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
     private final CorrelationContextFilter correlationContextFilter;
+    private final GatewayValidationFilter gatewayValidationFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -40,7 +41,7 @@ public class SecurityConfig {
             )
 
             .exceptionHandling(ex -> ex
-                .authenticationEntryPoint((req, res, ex2) -> {
+                .authenticationEntryPoint((req, res, authEx) -> {
                     res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     res.setContentType("application/json");
 
@@ -54,21 +55,21 @@ public class SecurityConfig {
                     res.getWriter().write(objectMapper.writeValueAsString(error));
                 })
                 
-                .accessDeniedHandler((req, res, ex2) -> {
+                .accessDeniedHandler((req, res, accessEx) -> {
 
                     log.warn("Access denied for endpoint: {}", req.getRequestURI());
-                    
+
                     res.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     res.setContentType("application/json");
-                    
-                        ErrorResponse error = ErrorResponse.builder()
-                                .status(HttpServletResponse.SC_FORBIDDEN)
-                                .message("Access Denied")
-                                .timestamp(System.currentTimeMillis())
-                                .path(req.getRequestURI())
-                                .build();
 
-                        res.getWriter().write(objectMapper.writeValueAsString(error));
+                    ErrorResponse error = ErrorResponse.builder()
+                            .status(HttpServletResponse.SC_FORBIDDEN)
+                            .message("Access Denied")
+                            .timestamp(System.currentTimeMillis())
+                            .path(req.getRequestURI())
+                            .build();
+
+                    res.getWriter().write(objectMapper.writeValueAsString(error));
                 })
             )
 
@@ -76,24 +77,18 @@ public class SecurityConfig {
                 .requestMatchers(
                         "/health",
                         "/actuator/health",
-                        "/actuator/info"    
+                        "/actuator/info"
                 ).permitAll()
                 .requestMatchers("/api/v1/projects/**").hasAnyRole("USER", "ADMIN")
                 .anyRequest().denyAll()
-            );
+            )
 
-        http.addFilterBefore(correlationContextFilter, UsernamePasswordAuthenticationFilter.class);
 
-        http.addFilterAfter(jwtAuthenticationFilter, CorrelationContextFilter.class);
+            .addFilterBefore(correlationContextFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(gatewayValidationFilter, CorrelationContextFilter.class)
+            .addFilterAfter(jwtAuthenticationFilter, GatewayValidationFilter.class);
 
         return http.build();
     }
 
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration
-    ) throws Exception {
-
-        return configuration.getAuthenticationManager();
-    }
 }

@@ -18,8 +18,10 @@ import lombok.extern.slf4j.Slf4j;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex,
-                                                        HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleNotFound(
+            ResourceNotFoundException ex,
+            HttpServletRequest request) {
+
         log.error("Resource not found: {}", ex.getMessage());
 
         return new ResponseEntity<>(
@@ -29,8 +31,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException ex,
-                                                                HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleUnauthorized(
+            UnauthorizedException ex,
+            HttpServletRequest request) {
+
         log.warn("Unauthorized: {}", ex.getMessage());
 
         return new ResponseEntity<>(
@@ -40,13 +44,28 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex,
-                                                                HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleAccessDenied(
+            AccessDeniedException ex,
+            HttpServletRequest request) {
+
         log.warn("Access denied: {}", ex.getMessage());
 
         return new ResponseEntity<>(
                 buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI()),
                 HttpStatus.FORBIDDEN
+        );
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleServiceUnavailable(
+            ServiceUnavailableException ex,
+            HttpServletRequest request) {
+
+        log.error("Service unavailable: {}", ex.getMessage());
+
+        return new ResponseEntity<>(
+                buildResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request.getRequestURI()),
+                HttpStatus.SERVICE_UNAVAILABLE
         );
     }
 
@@ -73,8 +92,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex,
-                                                            HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleBadRequest(
+            IllegalArgumentException ex,
+            HttpServletRequest request) {
+
         log.warn("Bad request: {}", ex.getMessage());
 
         return new ResponseEntity<>(
@@ -84,21 +105,21 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AuthorizationDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleSpringAccessDenied(AuthorizationDeniedException ex,
-                                                                    HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleSpringAccessDenied(
+            AuthorizationDeniedException ex,
+            HttpServletRequest request) {
 
         return new ResponseEntity<>(
-                buildResponse(
-                        HttpStatus.FORBIDDEN, 
-                        "Access Denied", 
-                        request.getRequestURI()
-                ),
-                HttpStatus.FORBIDDEN);
+                buildResponse(HttpStatus.FORBIDDEN, "Access Denied", request.getRequestURI()),
+                HttpStatus.FORBIDDEN
+        );
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex,
-                                                        HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleGeneric(
+            Exception ex,
+            HttpServletRequest request) {
+
         log.error("Unexpected error: ", ex);
 
         return new ResponseEntity<>(
@@ -114,17 +135,5 @@ public class GlobalExceptionHandler {
                 .timestamp(System.currentTimeMillis())
                 .path(path)
                 .build();
-    }
-
-    @ExceptionHandler(ServiceUnavailableException.class)
-    public ResponseEntity<ErrorResponse> handleServiceUnavailable(ServiceUnavailableException ex,
-                                                                    HttpServletRequest request) {
-
-        log.error("Service unavailable: {}", ex.getMessage());
-
-        return new ResponseEntity<>(
-                buildResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request.getRequestURI()),
-                HttpStatus.SERVICE_UNAVAILABLE
-        );
     }
 }

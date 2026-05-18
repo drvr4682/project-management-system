@@ -63,17 +63,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 );
 
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                log.debug("Authenticated user: {} | role: {}", email, role);
             }
 
         } catch (Exception e) {
-            log.error("JWT validation failed: {}", e.getMessage());
+            log.error(
+                    "JWT validation failed for path {}: {}",
+                    request.getRequestURI(),
+                    e.getMessage()
+            );
+
+            SecurityContextHolder.clearContext();
 
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
 
             ErrorResponse error = ErrorResponse.builder()
                     .status(HttpServletResponse.SC_UNAUTHORIZED)
-                    .message("Invalid JWT")
+                    .message("Invalid or expired JWT")
                     .timestamp(System.currentTimeMillis())
                     .path(request.getRequestURI())
                     .build();
