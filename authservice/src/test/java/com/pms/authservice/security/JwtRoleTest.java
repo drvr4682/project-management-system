@@ -3,22 +3,30 @@ package com.pms.authservice.security;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+@TestPropertySource(locations = "classpath:application.properties")
 class JwtRoleTest {
 
     @Autowired
     private JwtUtil jwtUtil;
 
     @Test
-    void shouldContainRoleInToken() {
+    void shouldContainAdminRoleInToken() {
 
-        String token = jwtUtil.generateToken("test@mail.com", "ADMIN");
+        String token = jwtUtil.generateToken("admin@test.com", "ADMIN");
 
-        String role = jwtUtil.extractRole(token);
+        assertEquals("ADMIN", jwtUtil.extractRole(token));
+    }
 
-        assertEquals("ADMIN", role);
+    @Test
+    void shouldContainUserRoleInToken() {
+
+        String token = jwtUtil.generateToken("user@test.com", "USER");
+
+        assertEquals("USER", jwtUtil.extractRole(token));
     }
 }

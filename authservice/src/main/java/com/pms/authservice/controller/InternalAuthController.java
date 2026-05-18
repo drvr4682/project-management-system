@@ -15,12 +15,9 @@ public class InternalAuthController {
     private final AuthService authService;
 
     @GetMapping("/users/{email}")
-    public ResponseEntity<String> checkUser(
-            @PathVariable String email
-    ) {
+    public ResponseEntity<String> checkUser(@PathVariable String email) {
 
-        boolean exists =
-                authService.userExists(email);
+        boolean exists = authService.userExists(email);
 
         if (exists) {
             return ResponseEntity.ok("User exists");

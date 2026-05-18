@@ -1,5 +1,8 @@
 package com.pms.authservice.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pms.authservice.exception.ErrorResponse;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,9 +18,6 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pms.authservice.exception.ErrorResponse;
-
 import java.io.IOException;
 import java.util.List;
 
@@ -30,10 +30,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final ObjectMapper objectMapper;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
 
@@ -57,26 +58,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                 List.of(new SimpleGrantedAuthority("ROLE_" + role))
                         );
 
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
 
         } catch (Exception e) {
+            log.warn("JWT validation failed: {}", e.getMessage());
+
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
 
             ErrorResponse error = ErrorResponse.builder()
                     .status(HttpServletResponse.SC_UNAUTHORIZED)
-                    .message("Invalid JWT")
+                    .message("Invalid or expired JWT token")
                     .timestamp(System.currentTimeMillis())
                     .path(request.getRequestURI())
                     .build();
 
             response.getWriter().write(objectMapper.writeValueAsString(error));
-
             return;
         }
 

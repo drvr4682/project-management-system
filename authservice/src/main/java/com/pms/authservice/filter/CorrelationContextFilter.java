@@ -26,31 +26,16 @@ public class CorrelationContextFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String correlationId =
-                request.getHeader(CORRELATION_ID_HEADER);
+        String correlationId = request.getHeader(CORRELATION_ID_HEADER);
 
         if (correlationId != null && !correlationId.isBlank()) {
-
-            MDC.put(
-                    CORRELATION_ID_HEADER,
-                    correlationId
-            );
-
-            log.info(
-                    "CorrelationId received: {}",
-                    correlationId
-            );
+            MDC.put(CORRELATION_ID_HEADER, correlationId);
+            log.info("CorrelationId received: {}", correlationId);
         }
 
         try {
-
-            filterChain.doFilter(
-                    request,
-                    response
-            );
-
+            filterChain.doFilter(request, response);
         } finally {
-
             MDC.clear();
         }
     }

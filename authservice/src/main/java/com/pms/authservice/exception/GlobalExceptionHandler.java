@@ -56,9 +56,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidEnum(
-                HttpMessageNotReadableException ex,
-                HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleInvalidPayload(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request) {
 
         String message = "Invalid request payload";
 
@@ -71,11 +71,7 @@ public class GlobalExceptionHandler {
         }
 
         return new ResponseEntity<>(
-                buildResponse(
-                        message,
-                        HttpStatus.BAD_REQUEST.value(),
-                        request.getRequestURI()
-                ),
+                buildResponse(message, HttpStatus.BAD_REQUEST.value(), request.getRequestURI()),
                 HttpStatus.BAD_REQUEST
         );
     }
@@ -143,11 +139,7 @@ public class GlobalExceptionHandler {
                 HttpServletRequest request) {
 
         return new ResponseEntity<>(
-                buildResponse(
-                        "Required header is missing",
-                        400,
-                        request.getRequestURI()
-                ),
+                buildResponse("Required header is missing", 400, request.getRequestURI()),
                 HttpStatus.BAD_REQUEST
         );
     }

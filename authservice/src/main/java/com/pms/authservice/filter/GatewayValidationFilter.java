@@ -1,4 +1,4 @@
-package com.pms.authservice.security;
+package com.pms.authservice.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.authservice.exception.ErrorResponse;
@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -20,12 +21,14 @@ import java.io.IOException;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class InternalServiceFilter extends OncePerRequestFilter {
+public class GatewayValidationFilter extends OncePerRequestFilter {
 
-    @Value("${internal.secret}")
-    private String internalSecret;
+    @Value("${gateway.secret}")
+    private String gatewaySecret;
 
     private final ObjectMapper objectMapper;
+
+    private static final String GATEWAY_SECRET_HEADER = "X-Gateway-Secret";
 
     @Override
     protected void doFilterInternal(
@@ -34,25 +37,26 @@ public class InternalServiceFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String path = request.getRequestURI();
+        String path = request.getServletPath();
 
-        if (!path.startsWith("/internal/")) {
+        // Bypass gateway check for health endpoint and all internal service endpoints
+        if (isGatewayExempt(path)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String requestSecret = request.getHeader("X-Internal-Secret");
+        String incomingSecret = request.getHeader(GATEWAY_SECRET_HEADER);
 
-        if (requestSecret == null || !requestSecret.equals(internalSecret)) {
+        if (incomingSecret == null || !incomingSecret.equals(gatewaySecret)) {
 
-            log.warn("Unauthorized internal request: {}", path);
+            log.warn("Blocked direct service access | Path: {}", path);
 
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setStatus(HttpStatus.FORBIDDEN.value());
             response.setContentType("application/json");
 
             ErrorResponse error = ErrorResponse.builder()
-                    .status(HttpServletResponse.SC_FORBIDDEN)
-                    .message("Invalid internal service secret")
+                    .status(HttpStatus.FORBIDDEN.value())
+                    .message("Direct service access forbidden")
                     .timestamp(System.currentTimeMillis())
                     .path(path)
                     .build();
@@ -61,8 +65,11 @@ public class InternalServiceFilter extends OncePerRequestFilter {
             return;
         }
 
-        log.info("Authorized internal request: {}", path);
-
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isGatewayExempt(String path) {
+        return path.equals("/api/v1/auth/health")
+                || path.startsWith("/internal/");
     }
 }

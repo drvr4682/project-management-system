@@ -4,9 +4,10 @@ import com.pms.authservice.entity.Role;
 import com.pms.authservice.entity.User;
 
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.util.Optional;
 
@@ -22,32 +23,44 @@ class UserRepositoryTest {
     @Test
     void shouldSaveAndFindUserByEmail() {
 
-        User user = new User();
-        user.setName("Exists User");
-        user.setEmail("test@example.com");
-        user.setPassword("Test@123");
-        user.setRole(Role.USER);
+        User user = User.builder()
+                .name("Exists User")
+                .email("test@example.com")
+                .password("hashedpassword")
+                .role(Role.USER)
+                .build();
 
         userRepository.save(user);
 
         Optional<User> found = userRepository.findByEmail("test@example.com");
 
         assertTrue(found.isPresent());
+        assertEquals("test@example.com", found.get().getEmail());
     }
 
     @Test
     void shouldReturnTrueIfEmailExists() {
 
-        User user = new User();
-        user.setName("Test User");
-        user.setEmail("exists@example.com");
-        user.setPassword("Test@123");
-        user.setRole(Role.USER);
+        User user = User.builder()
+                .name("Test User")
+                .email("exists@example.com")
+                .password("hashedpassword")
+                .role(Role.USER)
+                .build();
 
         userRepository.save(user);
 
-        boolean exists = userRepository.existsByEmail("exists@example.com");
+        assertTrue(userRepository.existsByEmail("exists@example.com"));
+    }
 
-        assertTrue(exists);
+    @Test
+    void shouldReturnFalseIfEmailNotExists() {
+        assertFalse(userRepository.existsByEmail("nobody@example.com"));
+    }
+
+    @Test
+    void shouldReturnEmptyOptionalForUnknownEmail() {
+        Optional<User> found = userRepository.findByEmail("ghost@example.com");
+        assertFalse(found.isPresent());
     }
 }

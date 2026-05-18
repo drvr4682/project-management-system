@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,83 +18,67 @@ class InternalServiceFilterTest {
 
     @BeforeEach
     void setUp() {
-
-        filter = new InternalServiceFilter(
-                new ObjectMapper()
-        );
-
-        ReflectionTestUtils.setField(
-                filter,
-                "internalSecret",
-                "testinternalkey"
-        );
+        filter = new InternalServiceFilter(new ObjectMapper());
+        ReflectionTestUtils.setField(filter, "internalSecret", "testinternalkey");
     }
 
     @Test
-    void shouldAllowValidInternalRequest()
-            throws Exception {
+    void shouldAllowValidInternalRequest() throws Exception {
 
-        MockHttpServletRequest request =
-                new MockHttpServletRequest();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/internal/auth/users/test@mail.com");
+        request.addHeader("X-Internal-Secret", "testinternalkey");
 
-        request.setRequestURI(
-                "/internal/auth/users/test@mail.com"
-        );
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain filterChain = new MockFilterChain();
 
-        request.addHeader(
-                "X-Internal-Secret",
-                "testinternalkey"
-        );
+        filter.doFilter(request, response, filterChain);
 
-        MockHttpServletResponse response =
-                new MockHttpServletResponse();
-
-        MockFilterChain filterChain =
-                new MockFilterChain();
-
-        filter.doFilter(
-                request,
-                response,
-                filterChain
-        );
-
-        assertEquals(
-                200,
-                response.getStatus()
-        );
+        assertEquals(200, response.getStatus());
     }
 
     @Test
-    void shouldRejectInvalidInternalRequest()
-            throws Exception {
+    void shouldRejectInvalidInternalRequest() throws Exception {
 
-        MockHttpServletRequest request =
-                new MockHttpServletRequest();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/internal/auth/users/test@mail.com");
+        request.addHeader("X-Internal-Secret", "wrong-secret");
 
-        request.setRequestURI(
-                "/internal/auth/users/test@mail.com"
-        );
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain filterChain = new MockFilterChain();
 
-        request.addHeader(
-                "X-Internal-Secret",
-                "wrong-secret"
-        );
+        filter.doFilter(request, response, filterChain);
 
-        MockHttpServletResponse response =
-                new MockHttpServletResponse();
+        assertEquals(403, response.getStatus());
+    }
 
-        MockFilterChain filterChain =
-                new MockFilterChain();
+    @Test
+    void shouldRejectRequestWithMissingSecret() throws Exception {
 
-        filter.doFilter(
-                request,
-                response,
-                filterChain
-        );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/internal/auth/users/test@mail.com");
+        // No X-Internal-Secret header
 
-        assertEquals(
-                403,
-                response.getStatus()
-        );
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain filterChain = new MockFilterChain();
+
+        filter.doFilter(request, response, filterChain);
+
+        assertEquals(403, response.getStatus());
+    }
+
+    @Test
+    void shouldPassThroughNonInternalRequest() throws Exception {
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/v1/auth/health");
+        // No secret needed — not an /internal/ path
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain filterChain = new MockFilterChain();
+
+        filter.doFilter(request, response, filterChain);
+
+        assertEquals(200, response.getStatus());
     }
 }
