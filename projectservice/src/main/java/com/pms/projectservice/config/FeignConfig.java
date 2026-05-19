@@ -18,13 +18,24 @@ public class FeignConfig {
     @Value("${internal.secret}")
     private String internalSecret;
 
+    // FIX: Added gateway.secret so Feign calls to other services pass GatewayValidationFilter.
+    // All downstream services check X-Gateway-Secret for non-exempted paths.
+    @Value("${gateway.secret}")
+    private String gatewaySecret;
+
     @Bean
     public RequestInterceptor requestInterceptor() {
 
         return template -> {
 
-            // Always send internal secret for service-to-service auth
+            // Send internal secret for service-to-service identification
             template.header("X-Internal-Secret", internalSecret);
+
+            // FIX: Send gateway secret so downstream services pass GatewayValidationFilter
+            template.header("X-Gateway-Secret", gatewaySecret);
+
+            // FIX: Send X-Gateway header consistent with how gateway adds it
+            template.header("X-Gateway", "API-GATEWAY");
 
             String correlationId = MDC.get("correlationId");
 

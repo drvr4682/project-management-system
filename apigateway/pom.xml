@@ -16,7 +16,6 @@
     <groupId>com.pms</groupId>
     <artifactId>apigateway</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-
     <name>apigateway</name>
     <description>API Gateway Service</description>
 

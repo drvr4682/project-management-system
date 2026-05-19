@@ -24,8 +24,7 @@ public class GatewayRoutesConfig {
     @Value("${services.project.url}")
     private String projectServiceUrl;
 
-    // FIX: Added task service URL mapping to match the .env TASK_SERVICE_URL entry
-    @Value("${services.task.url:http://localhost:8083}")
+    @Value("${services.task.url}")
     private String taskServiceUrl;
 
     @Value("${gateway.secret}")
@@ -66,7 +65,6 @@ public class GatewayRoutesConfig {
                         .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
                         .build();
 
-        // FIX: Added task service route to match the TASK_SERVICE_URL in .env
         RouterFunction<ServerResponse> taskRoute =
                 GatewayRouterFunctions.route("task-service")
                         .route(

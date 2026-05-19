@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -87,6 +88,20 @@ public class GlobalExceptionHandler {
                         .path(request.getRequestURI())
                         .errors(errors)
                         .build(),
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    // FIX: Handle missing required request parameters — returns 400 instead of 500
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(
+            MissingServletRequestParameterException ex,
+            HttpServletRequest request) {
+
+        log.warn("Missing required request parameter: {}", ex.getParameterName());
+        String message = "Required parameter '" + ex.getParameterName() + "' is missing";
+        return new ResponseEntity<>(
+                buildResponse(HttpStatus.BAD_REQUEST, message, request.getRequestURI()),
                 HttpStatus.BAD_REQUEST
         );
     }

@@ -17,13 +17,22 @@ public class FeignConfig {
     @Value("${internal.secret}")
     private String internalSecret;
 
+    @Value("${gateway.secret}")
+    private String gatewaySecret;
+
     @Bean
     public RequestInterceptor requestInterceptor() {
 
         return template -> {
 
-            // Always send internal secret for service-to-service auth
+            // Send internal secret for service-to-service identification
             template.header("X-Internal-Secret", internalSecret);
+
+            // FIX: Send gateway secret so downstream services (ProjectService) pass GatewayValidationFilter
+            template.header("X-Gateway-Secret", gatewaySecret);
+
+            // FIX: Send X-Gateway header as well, consistent with how gateway adds it
+            template.header("X-Gateway", "API-GATEWAY");
 
             // Propagate correlation ID
             String correlationId = MDC.get("correlationId");
