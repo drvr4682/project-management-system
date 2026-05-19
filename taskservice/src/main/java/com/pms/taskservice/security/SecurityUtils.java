@@ -1,21 +1,33 @@
 package com.pms.taskservice.security;
 
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
 
+@Component
+@RequiredArgsConstructor
 public class SecurityUtils {
 
-    private SecurityUtils() {
-        // Utility class
-    }
+    private final HttpServletRequest request;
 
-    public static String getCurrentUser() {
+    public String getCurrentUser() {
+
+        String gatewayUser = request.getHeader("X-Authenticated-User");
+
+        if (gatewayUser != null && !gatewayUser.isBlank()) {
+            return gatewayUser;
+        }
 
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication == null || !authentication.isAuthenticated()) {
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
             return null;
         }
 
@@ -25,26 +37,21 @@ public class SecurityUtils {
             return userDetails.getUsername();
         }
 
-        if (principal instanceof String) {
-            return (String) principal;
+        if (principal instanceof String principalString) {
+            if ("anonymousUser".equals(principalString)) {
+                return null;
+            }
+            return principalString;
         }
 
         return null;
     }
 
-    public static String getCurrentRole() {
+    public String getCurrentRole() {
+        return request.getHeader("X-Authenticated-Role");
+    }
 
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null
-                || authentication.getAuthorities().isEmpty()) {
-            return null;
-        }
-
-        return authentication.getAuthorities()
-                .iterator()
-                .next()
-                .getAuthority();
+    public String getCorrelationId() {
+        return request.getHeader("X-Correlation-Id");
     }
 }

@@ -1,22 +1,19 @@
 package com.pms.taskservice.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pms.taskservice.exception.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pms.taskservice.exception.ErrorResponse;
 
 import java.io.IOException;
 import java.util.List;
@@ -27,57 +24,73 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        String header = request.getHeader("Authorization");
+        final String authHeader = request.getHeader("Authorization");
 
-        if (header == null || !header.startsWith("Bearer ")) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = header.substring(7);
+        String token = authHeader.substring(7);
 
         try {
             String email = jwtUtil.extractUsername(token);
-            String role = jwtUtil.extractRole(token);
+            String role  = jwtUtil.extractRole(token);
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                UsernamePasswordAuthenticationToken auth =
+                UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 email,
                                 token,
                                 List.of(new SimpleGrantedAuthority("ROLE_" + role))
                         );
 
-                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                authToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
 
-                SecurityContextHolder.getContext().setAuthentication(auth);
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+                log.debug("Authenticated user: {} | role: {}", email, role);
             }
 
         } catch (Exception e) {
+            log.error("JWT validation failed for path {}: {}", request.getRequestURI(), e.getMessage());
+
+            SecurityContextHolder.clearContext();
+
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
 
             ErrorResponse error = ErrorResponse.builder()
                     .status(HttpServletResponse.SC_UNAUTHORIZED)
-                    .message("Invalid JWT")
+                    .message("Invalid or expired JWT")
                     .timestamp(System.currentTimeMillis())
                     .path(request.getRequestURI())
                     .build();
 
             response.getWriter().write(objectMapper.writeValueAsString(error));
-
             return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return path.equals("/health")
+                || path.equals("/actuator/health")
+                || path.equals("/actuator/info");
     }
 }

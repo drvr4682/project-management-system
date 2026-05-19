@@ -1,84 +1,123 @@
 package com.pms.taskservice.repository;
 
 import com.pms.taskservice.entity.Task;
+import com.pms.taskservice.entity.TaskPriority;
 import com.pms.taskservice.entity.TaskStatus;
-
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.*;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.test.context.ActiveProfiles;
 
-import java.util.List;
+import java.time.LocalDateTime;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
+@ActiveProfiles("test")
 class TaskRepositoryTest {
 
     @Autowired
     private TaskRepository taskRepository;
 
-    @Test
-    void shouldSaveAndFetchByProjectId() {
+    private static final Long PROJECT_ID = 1L;
+    private static final String USER_A   = "usera@example.com";
+    private static final String USER_B   = "userb@example.com";
 
-        Task task = Task.builder()
-                .title("Test Task")
-                .projectId(1L)
-                .assignedTo("user@test.com")
-                .status(TaskStatus.TODO)
+    @BeforeEach
+    void setUp() {
+        taskRepository.deleteAll();
+
+        taskRepository.save(task("Task Alpha", TaskStatus.TODO,       TaskPriority.HIGH,   USER_A));
+        taskRepository.save(task("Task Beta",  TaskStatus.IN_PROGRESS,TaskPriority.MEDIUM, USER_A));
+        taskRepository.save(task("Task Gamma", TaskStatus.DONE,       TaskPriority.LOW,    USER_B));
+        taskRepository.save(task("Other Work", TaskStatus.TODO,       TaskPriority.CRITICAL, null));
+    }
+
+    private Task task(String title, TaskStatus status, TaskPriority priority, String assignedTo) {
+        return Task.builder()
+                .title(title)
+                .status(status)
+                .priority(priority)
+                .projectId(PROJECT_ID)
+                .createdBy(USER_A)
+                .assignedTo(assignedTo)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
+    }
 
-        taskRepository.save(task);
-
-        var page = taskRepository.findByProjectId(
-                        1L,
-                        org.springframework.data.domain.PageRequest.of(0, 10)
-                );
-
-        List<Task> tasks = page.getContent();
-
-        assertFalse(tasks.isEmpty());
-        assertEquals("Test Task", tasks.get(0).getTitle());
+    private Pageable page() {
+        return PageRequest.of(0, 10);
     }
 
     @Test
-    void shouldFindByAssignedUser() {
-
-        Task task = Task.builder()
-                .title("Assigned Task")
-                .projectId(2L)
-                .assignedTo("user@test.com")
-                .status(TaskStatus.IN_PROGRESS)
-                .build();
-
-        taskRepository.save(task);
-
-        List<Task> tasks = taskRepository.findByAssignedTo("user@test.com");
-
-        assertEquals(1, tasks.size());
+    void findByProjectId_returnsAllProjectTasks() {
+        Page<Task> result = taskRepository.findByProjectId(PROJECT_ID, page());
+        assertThat(result.getTotalElements()).isEqualTo(4);
     }
 
     @Test
-    void shouldFilterByStatus() {
+    void findByProjectIdAndStatus_filtersByStatus() {
+        Page<Task> result = taskRepository.findByProjectIdAndStatus(
+                PROJECT_ID, TaskStatus.TODO, page());
+        assertThat(result.getTotalElements()).isEqualTo(2);
+    }
 
-        Task task = Task.builder()
-                .title("Done Task")
-                .projectId(3L)
-                .assignedTo("user@test.com")
-                .status(TaskStatus.DONE)
-                .build();
+    @Test
+    void findByProjectIdAndPriority_filtersByPriority() {
+        Page<Task> result = taskRepository.findByProjectIdAndPriority(
+                PROJECT_ID, TaskPriority.HIGH, page());
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("Task Alpha");
+    }
 
-        taskRepository.save(task);
+    @Test
+    void findByProjectIdAndAssignedTo_filtersByAssignee() {
+        Page<Task> result = taskRepository.findByProjectIdAndAssignedTo(
+                PROJECT_ID, USER_A, page());
+        assertThat(result.getTotalElements()).isEqualTo(2);
+    }
 
-        var page = taskRepository.findByProjectIdAndStatus(
-                        3L,
-                        TaskStatus.DONE,
-                        org.springframework.data.domain.PageRequest.of(0, 10)
-                );
+    @Test
+    void findByProjectIdAndTitleContainingIgnoreCase_searchWorks() {
+        Page<Task> result = taskRepository
+                .findByProjectIdAndTitleContainingIgnoreCase(PROJECT_ID, "task", page());
+        assertThat(result.getTotalElements()).isEqualTo(3);
+    }
 
-        List<Task> tasks = page.getContent();
+    @Test
+    void findByProjectIdAndStatusAndPriority_combinedFilter() {
+        Page<Task> result = taskRepository
+                .findByProjectIdAndStatusAndPriority(
+                        PROJECT_ID, TaskStatus.TODO, TaskPriority.HIGH, page());
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("Task Alpha");
+    }
 
-        assertEquals(1, tasks.size());
+    @Test
+    void findByProjectIdAndStatusAndTitleContaining_combinedFilter() {
+        Page<Task> result = taskRepository
+                .findByProjectIdAndStatusAndTitleContainingIgnoreCase(
+                        PROJECT_ID, TaskStatus.TODO, "Task", page());
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("Task Alpha");
+    }
+
+    @Test
+    void findByProjectIdAndStatusAndPriorityAndTitle_allFilters() {
+        Page<Task> result = taskRepository
+                .findByProjectIdAndStatusAndPriorityAndTitleContainingIgnoreCase(
+                        PROJECT_ID, TaskStatus.TODO, TaskPriority.HIGH, "alpha", page());
+        assertThat(result.getTotalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void deleteByProjectId_removesAllProjectTasks() {
+        taskRepository.deleteByProjectId(PROJECT_ID);
+        assertThat(taskRepository.findByProjectId(PROJECT_ID, page()).getTotalElements()).isZero();
     }
 }
