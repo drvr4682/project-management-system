@@ -1,5 +1,6 @@
 package com.pms.projectservice.service;
 
+import com.pms.common.security.SecurityUtils;
 import com.pms.projectservice.client.AuthFeignClient;
 import com.pms.projectservice.dto.AddMemberRequestDTO;
 import com.pms.projectservice.dto.ProjectMemberResponseDTO;
@@ -11,7 +12,6 @@ import com.pms.projectservice.exception.ResourceNotFoundException;
 import com.pms.projectservice.exception.ServiceUnavailableException;
 import com.pms.projectservice.repository.ProjectMemberRepository;
 import com.pms.projectservice.repository.ProjectRepository;
-import com.pms.projectservice.security.SecurityUtils;
 import com.pms.projectservice.util.AuditLogger;
 
 import org.junit.jupiter.api.BeforeEach;

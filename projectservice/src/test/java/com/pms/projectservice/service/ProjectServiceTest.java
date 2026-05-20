@@ -1,5 +1,6 @@
 package com.pms.projectservice.service;
 
+import com.pms.common.security.SecurityUtils;
 import com.pms.projectservice.dto.ProjectRequestDTO;
 import com.pms.projectservice.dto.ProjectResponseDTO;
 import com.pms.projectservice.entity.Project;
@@ -9,7 +10,6 @@ import com.pms.projectservice.entity.ProjectStatus;
 import com.pms.projectservice.exception.ResourceNotFoundException;
 import com.pms.projectservice.repository.ProjectMemberRepository;
 import com.pms.projectservice.repository.ProjectRepository;
-import com.pms.projectservice.security.SecurityUtils;
 import com.pms.projectservice.util.AuditLogger;
 
 import org.junit.jupiter.api.BeforeEach;

@@ -23,9 +23,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pms.common.security.JwtUtil;
 import com.pms.projectservice.dto.ProjectRequestDTO;
 import com.pms.projectservice.dto.ProjectResponseDTO;
-import com.pms.projectservice.security.JwtUtil;
 import com.pms.projectservice.service.ProjectService;
 
 @WebMvcTest(

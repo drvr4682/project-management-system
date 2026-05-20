@@ -1,10 +1,10 @@
 package com.pms.projectservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pms.projectservice.exception.ErrorResponse;
-import com.pms.projectservice.filter.CorrelationContextFilter;
-import com.pms.projectservice.filter.GatewayValidationFilter;
-import com.pms.projectservice.security.JwtAuthenticationFilter;
+import com.pms.common.exception.ErrorResponse;
+import com.pms.common.filter.CorrelationContextFilter;
+import com.pms.common.filter.GatewayValidationFilter;
+import com.pms.common.security.JwtAuthenticationFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +54,7 @@ public class SecurityConfig {
 
                     res.getWriter().write(objectMapper.writeValueAsString(error));
                 })
-                
+
                 .accessDeniedHandler((req, res, accessEx) -> {
 
                     log.warn("Access denied for endpoint: {}", req.getRequestURI());
@@ -75,7 +75,7 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                        "/health",
+                        "/api/v1/projects/health",
                         "/actuator/health",
                         "/actuator/info"
                 ).permitAll()
@@ -83,12 +83,10 @@ public class SecurityConfig {
                 .anyRequest().denyAll()
             )
 
-
             .addFilterBefore(correlationContextFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(gatewayValidationFilter, CorrelationContextFilter.class)
             .addFilterAfter(jwtAuthenticationFilter, GatewayValidationFilter.class);
 
         return http.build();
     }
-
 }

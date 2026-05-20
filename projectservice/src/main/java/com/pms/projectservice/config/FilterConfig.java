@@ -1,15 +1,32 @@
 package com.pms.projectservice.config;
 
-import com.pms.projectservice.filter.CorrelationContextFilter;
-import com.pms.projectservice.filter.GatewayValidationFilter;
-import com.pms.projectservice.security.JwtAuthenticationFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pms.common.filter.CorrelationContextFilter;
+import com.pms.common.filter.GatewayValidationFilter;
+import com.pms.common.security.JwtAuthenticationFilter;
+import com.pms.common.security.JwtUtil;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class FilterConfig {
+
+    @Value("${gateway.secret}")
+    private String gatewaySecret;
+
+    @Bean
+    public GatewayValidationFilter gatewayValidationFilter(ObjectMapper objectMapper) {
+        return new GatewayValidationFilter(gatewaySecret, objectMapper);
+    }
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter(
+            JwtUtil jwtUtil, ObjectMapper objectMapper) {
+        return new JwtAuthenticationFilter(jwtUtil, objectMapper);
+    }
 
     @Bean
     public FilterRegistrationBean<CorrelationContextFilter> correlationFilterRegistration(
