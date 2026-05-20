@@ -1,9 +1,9 @@
 package com.pms.apigateway.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pms.apigateway.exception.ErrorResponse;
 import com.pms.apigateway.filter.CorrelationIdFilter;
-import com.pms.apigateway.filter.JwtAuthenticationFilter;
+import com.pms.common.exception.ErrorResponse;
+import com.pms.common.security.JwtAuthenticationFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -29,84 +29,57 @@ public class SecurityConfig {
     private final CorrelationIdFilter correlationIdFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
             .csrf(csrf -> csrf.disable())
             .formLogin(form -> form.disable())
             .httpBasic(httpBasic -> httpBasic.disable())
-
             .sessionManagement(session ->
-                    session.sessionCreationPolicy(
-                            SessionCreationPolicy.STATELESS
-                    )
+                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-
             .authorizeHttpRequests(auth -> auth
-
                     .requestMatchers(
                             "/health",
                             "/api/v1/auth/login",
                             "/api/v1/auth/register",
                             "/api/v1/auth/health"
                     ).permitAll()
-
-                    .requestMatchers(
-                            "/api/v1/admin/**"
-                    ).hasRole("ADMIN")
-
+                    .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     .requestMatchers(
                             "/api/v1/projects/**",
                             "/api/v1/tasks/**"
-                    ).hasAnyRole(
-                            "USER",
-                            "ADMIN"
-                    )
-
-                    .anyRequest()
-                    .authenticated()
+                    ).hasAnyRole("USER", "ADMIN")
+                    .anyRequest().authenticated()
             )
-
             .exceptionHandling(ex -> ex
-
                     .authenticationEntryPoint((req, res, authEx) -> {
-
                         res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         res.setContentType("application/json");
 
-                        ErrorResponse error =
-                                ErrorResponse.builder()
-                                        .status(401)
-                                        .message("Unauthorized: " + authEx.getMessage())
-                                        .timestamp(System.currentTimeMillis())
-                                        .path(req.getRequestURI())
-                                        .build();
+                        ErrorResponse error = ErrorResponse.builder()
+                                .status(401)
+                                .message("Unauthorized: " + authEx.getMessage())
+                                .timestamp(System.currentTimeMillis())
+                                .path(req.getRequestURI())
+                                .build();
 
-                        res.getWriter().write(
-                                objectMapper.writeValueAsString(error)
-                        );
+                        res.getWriter().write(objectMapper.writeValueAsString(error));
                     })
-
                     .accessDeniedHandler((req, res, accessEx) -> {
-
                         res.setStatus(HttpServletResponse.SC_FORBIDDEN);
                         res.setContentType("application/json");
 
-                        ErrorResponse error =
-                                ErrorResponse.builder()
-                                        .status(403)
-                                        .message("Access Denied: " + accessEx.getMessage())
-                                        .timestamp(System.currentTimeMillis())
-                                        .path(req.getRequestURI())
-                                        .build();
+                        ErrorResponse error = ErrorResponse.builder()
+                                .status(403)
+                                .message("Access Denied: " + accessEx.getMessage())
+                                .timestamp(System.currentTimeMillis())
+                                .path(req.getRequestURI())
+                                .build();
 
-                        res.getWriter().write(
-                                objectMapper.writeValueAsString(error)
-                        );
+                        res.getWriter().write(objectMapper.writeValueAsString(error));
                     })
             )
-
             .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(jwtAuthenticationFilter, CorrelationIdFilter.class);
 

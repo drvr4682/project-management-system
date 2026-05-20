@@ -8,7 +8,7 @@ import com.pms.authservice.entity.User;
 import com.pms.authservice.exception.UserAlreadyExistsException;
 import com.pms.authservice.exception.UserNotFoundException;
 import com.pms.authservice.repository.UserRepository;
-import com.pms.authservice.security.JwtUtil;
+import com.pms.common.security.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
 

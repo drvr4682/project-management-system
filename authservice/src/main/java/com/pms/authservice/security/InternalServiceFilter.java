@@ -1,7 +1,7 @@
 package com.pms.authservice.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pms.authservice.exception.ErrorResponse;
+import com.pms.common.exception.ErrorResponse;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

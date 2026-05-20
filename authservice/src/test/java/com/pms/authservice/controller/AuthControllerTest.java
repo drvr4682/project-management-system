@@ -5,8 +5,8 @@ import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
 import com.pms.authservice.entity.Role;
 import com.pms.authservice.security.CustomUserDetailsService;
-import com.pms.authservice.security.JwtUtil;
 import com.pms.authservice.service.AuthService;
+import com.pms.common.security.JwtUtil;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;

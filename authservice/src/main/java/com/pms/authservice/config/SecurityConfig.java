@@ -1,11 +1,11 @@
 package com.pms.authservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pms.authservice.exception.ErrorResponse;
-import com.pms.authservice.filter.CorrelationContextFilter;
-import com.pms.authservice.filter.GatewayValidationFilter;
+import com.pms.common.exception.ErrorResponse;
+import com.pms.common.filter.CorrelationContextFilter;
+import com.pms.common.filter.GatewayValidationFilter;
+import com.pms.common.security.JwtAuthenticationFilter;
 import com.pms.authservice.security.InternalServiceFilter;
-import com.pms.authservice.security.JwtAuthenticationFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -90,10 +90,8 @@ public class SecurityConfig {
                 })
             );
 
-        http.addFilterBefore(correlationContextFilter, UsernamePasswordAuthenticationFilter.class);
-        http.addFilterAfter(gatewayValidationFilter, CorrelationContextFilter.class);
-        http.addFilterAfter(internalServiceFilter, GatewayValidationFilter.class);
-        http.addFilterAfter(jwtAuthenticationFilter, InternalServiceFilter.class);
+        http.addFilterBefore(gatewayValidationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

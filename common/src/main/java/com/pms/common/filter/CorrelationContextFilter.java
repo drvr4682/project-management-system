@@ -1,4 +1,4 @@
-package com.pms.apigateway.filter;
+package com.pms.common.filter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,9 +14,20 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
+/**
+ * Propagates (or generates) a correlation ID for distributed tracing.
+ *
+ * <p>Reads the {@code X-Correlation-Id} header; generates a fresh UUID when
+ * absent. The ID is stored in {@link MDC} under the key {@code correlationId}
+ * and echoed back to the caller via the response header.
+ *
+ * <p>Replaces the three per-service copies (authservice, projectservice,
+ * taskservice). The authservice copy did not generate a UUID — that behaviour
+ * is now unified to always ensure a correlation ID exists.
+ */
 @Slf4j
 @Component
-public class CorrelationIdFilter extends OncePerRequestFilter {
+public class CorrelationContextFilter extends OncePerRequestFilter {
 
     public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
     public static final String MDC_KEY = "correlationId";
@@ -28,9 +39,8 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        long startTime = System.currentTimeMillis();
-
         String correlationId = request.getHeader(CORRELATION_ID_HEADER);
+
         if (correlationId == null || correlationId.isBlank()) {
             correlationId = UUID.randomUUID().toString();
         }
@@ -38,19 +48,14 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
         MDC.put(MDC_KEY, correlationId);
         response.setHeader(CORRELATION_ID_HEADER, correlationId);
 
-        // Propagate correlationId to downstream services via the mutable wrapper
-        MutableHttpServletRequest mutableRequest = new MutableHttpServletRequest(request);
-        mutableRequest.putHeader(CORRELATION_ID_HEADER, correlationId);
-
         log.info("Incoming Request | Method: {} | URI: {} | CorrelationId: {}",
-                request.getMethod(), request.getRequestURI(), correlationId);
+                request.getMethod(),
+                request.getRequestURI(),
+                correlationId);
 
         try {
-            filterChain.doFilter(mutableRequest, response);
+            filterChain.doFilter(request, response);
         } finally {
-            long duration = System.currentTimeMillis() - startTime;
-            log.info("Completed Response | Status: {} | Duration: {}ms | CorrelationId: {}",
-                    response.getStatus(), duration, correlationId);
             MDC.clear();
         }
     }

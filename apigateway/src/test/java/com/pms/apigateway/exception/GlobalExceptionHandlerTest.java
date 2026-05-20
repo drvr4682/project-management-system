@@ -2,6 +2,9 @@ package com.pms.apigateway.exception;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
+
+import com.pms.common.exception.ErrorResponse;
+
 import org.springframework.http.ResponseEntity;
 
 import java.net.ConnectException;

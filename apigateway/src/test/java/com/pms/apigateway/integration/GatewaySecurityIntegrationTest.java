@@ -1,6 +1,6 @@
 package com.pms.apigateway.integration;
 
-import com.pms.apigateway.security.JwtUtil;
+import com.pms.common.security.JwtUtil;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -95,9 +96,7 @@ class GatewaySecurityIntegrationTest {
     @DisplayName("JWT filter should validate a correctly signed token")
     void jwtFilterShouldAuthenticateValidToken() {
 
-        boolean valid = jwtUtil.validateToken(validAdminToken);
-
-        org.junit.jupiter.api.Assertions.assertTrue(valid,
+        assertTrue(jwtUtil.validateToken(validAdminToken),
                 "A valid ADMIN token should pass validation");
     }
 
@@ -115,7 +114,6 @@ class GatewaySecurityIntegrationTest {
     @Test
     @DisplayName("ADMIN role should be allowed through to admin routes (5xx = service down, not security block)")
     void adminRoleShouldAccessAdminRoutes() throws Exception {
-
         mockMvc.perform(
                         get("/api/v1/admin/dashboard")
                                 .header("Authorization", "Bearer " + validAdminToken)
@@ -126,7 +124,6 @@ class GatewaySecurityIntegrationTest {
     @Test
     @DisplayName("Invalid JWT token should return 401")
     void invalidJwtShouldReturn401() throws Exception {
-
         mockMvc.perform(
                         get("/api/v1/projects")
                                 .header("Authorization", "Bearer this.is.invalid")

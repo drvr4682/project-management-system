@@ -5,8 +5,9 @@ import com.pms.authservice.dto.LoginRequest;
 import com.pms.authservice.dto.LoginResponse;
 import com.pms.authservice.entity.Role;
 import com.pms.authservice.entity.User;
-import com.pms.authservice.security.JwtUtil;
 import com.pms.authservice.repository.UserRepository;
+import com.pms.common.security.JwtUtil;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.security.crypto.password.PasswordEncoder;
