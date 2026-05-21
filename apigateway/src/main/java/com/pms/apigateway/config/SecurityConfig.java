@@ -41,6 +41,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(
                             "/health",
+                            "/test/public",
                             "/api/v1/auth/login",
                             "/api/v1/auth/register",
                             "/api/v1/auth/health",
@@ -49,6 +50,8 @@ public class SecurityConfig {
                             "/actuator/health",
                             "/actuator/info"
                     ).permitAll()
+                    .requestMatchers("/test/admin").hasRole("ADMIN")
+                    .requestMatchers("/test/user").hasAnyRole("USER", "ADMIN")
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     .requestMatchers(
                             "/api/v1/projects/**",
