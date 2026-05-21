@@ -32,15 +32,8 @@ public class JwtUtil {
 
     private Key key;
 
-    /** Default constructor — used by Spring. */
     public JwtUtil() {}
 
-    /**
-     * Test constructor — bypasses Spring property injection.
-     *
-     * @param secret     HMAC-SHA256 secret (minimum 32 characters)
-     * @param expiration token lifetime in milliseconds
-     */
     public JwtUtil(String secret, long expiration) {
         this.secret = secret;
         this.expiration = expiration;
@@ -52,17 +45,7 @@ public class JwtUtil {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    // -------------------------------------------------------------------------
     // Token generation
-    // -------------------------------------------------------------------------
-
-    /**
-     * Generates a signed JWT containing the given subject (email) and role claim.
-     *
-     * @param email user's email address — stored as the JWT subject
-     * @param role  user's role (e.g. "USER" or "ADMIN") — stored as the "role" claim
-     * @return compact, URL-safe JWT string
-     */
     public String generateToken(String email, String role) {
         return Jwts.builder()
                 .setSubject(email)
@@ -73,14 +56,8 @@ public class JwtUtil {
                 .compact();
     }
 
-    // -------------------------------------------------------------------------
     // Claim extraction
-    // -------------------------------------------------------------------------
 
-    /**
-     * Returns all claims from the token.
-     * Throws a runtime exception (wrapped or JJWT-native) on any parse failure.
-     */
     public Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(key)
@@ -89,29 +66,15 @@ public class JwtUtil {
                 .getBody();
     }
 
-    /** Returns the subject claim (typically the user's email). */
     public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
     }
 
-    /**
-     * Returns the "role" claim.
-     * Returns {@code null} if the claim is absent rather than throwing.
-     */
     public String extractRole(String token) {
         return extractAllClaims(token).get("role", String.class);
     }
 
-    // -------------------------------------------------------------------------
     // Validation
-    // -------------------------------------------------------------------------
-
-    /**
-     * Validates the token signature and expiry.
-     *
-     * @return {@code true} if the token is well-formed, correctly signed, and
-     *         not expired; {@code false} otherwise
-     */
     public boolean validateToken(String token) {
         try {
             extractAllClaims(token);

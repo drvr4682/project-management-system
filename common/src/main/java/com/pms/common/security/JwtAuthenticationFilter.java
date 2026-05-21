@@ -20,24 +20,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * Canonical JWT authentication filter shared by all PMS microservices.
- *
- * <p>Replaces the four nearly-identical per-service copies. Each service
- * declares this as a Spring bean (via {@code @Component} on a subclass, or
- * by importing this class directly if Spring component-scan covers the
- * {@code com.pms.common} package).
- *
- * <p>Behaviour:
- * <ul>
- *   <li>Reads the {@code Authorization: Bearer <token>} header.</li>
- *   <li>Validates the token with {@link JwtUtil#validateToken(String)}.</li>
- *   <li>Populates the {@link SecurityContextHolder} on success.</li>
- *   <li>Returns 401 JSON on any JWT failure.</li>
- *   <li>Skips {@code /health}, {@code /actuator/health}, and
- *       {@code /actuator/info} automatically.</li>
- * </ul>
- */
 @Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {

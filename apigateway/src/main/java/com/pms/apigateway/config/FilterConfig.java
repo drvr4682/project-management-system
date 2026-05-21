@@ -2,6 +2,7 @@ package com.pms.apigateway.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.apigateway.filter.CorrelationIdFilter;
+import com.pms.common.filter.CorrelationContextFilter;
 import com.pms.common.security.JwtAuthenticationFilter;
 import com.pms.common.security.JwtUtil;
 
@@ -23,6 +24,16 @@ public class FilterConfig {
             CorrelationIdFilter filter
     ) {
         FilterRegistrationBean<CorrelationIdFilter> registration =
+                new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<CorrelationContextFilter> correlationContextFilterRegistration(
+            CorrelationContextFilter filter
+    ) {
+        FilterRegistrationBean<CorrelationContextFilter> registration =
                 new FilterRegistrationBean<>(filter);
         registration.setEnabled(false);
         return registration;

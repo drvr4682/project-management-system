@@ -16,10 +16,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-/**
- * Unit tests for {@link GatewayValidationFilter}.
- * Replaces the three per-service copies (authservice, projectservice, taskservice).
- */
 class GatewayValidationFilterTest {
 
     private static final String GATEWAY_SECRET = "test-gateway-secret";

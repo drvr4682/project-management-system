@@ -13,8 +13,8 @@ public class FeignErrorDecoder implements ErrorDecoder {
     public Exception decode(String methodKey, Response response) {
 
         log.error(
-                "Feign error | Method: {} | Status: {}", 
-                methodKey, 
+                "Feign error | Method: {} | Status: {}",
+                methodKey,
                 response.status()
         );
 
@@ -30,17 +30,17 @@ public class FeignErrorDecoder implements ErrorDecoder {
                         "Downstream auth error: " + response.status()
                     );
 
-            case 404 -> 
+            case 404 ->
                     new IllegalArgumentException(
-                        "User does not exist in auth service"
+                        "User does not exist"
                     );
             
-            case 500 -> 
+            case 500 ->
                     new RuntimeException(
                         "Auth service returned internal error"
                     );
 
-            default -> 
+            default ->
                     defaultErrorDecoder.decode(methodKey, response);
         };
     }

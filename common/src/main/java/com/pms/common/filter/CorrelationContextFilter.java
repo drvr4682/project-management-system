@@ -14,17 +14,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
-/**
- * Propagates (or generates) a correlation ID for distributed tracing.
- *
- * <p>Reads the {@code X-Correlation-Id} header; generates a fresh UUID when
- * absent. The ID is stored in {@link MDC} under the key {@code correlationId}
- * and echoed back to the caller via the response header.
- *
- * <p>Replaces the three per-service copies (authservice, projectservice,
- * taskservice). The authservice copy did not generate a UUID — that behaviour
- * is now unified to always ensure a correlation ID exists.
- */
 @Slf4j
 @Component
 public class CorrelationContextFilter extends OncePerRequestFilter {

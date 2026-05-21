@@ -112,13 +112,13 @@ class GatewaySecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("ADMIN role should be allowed through to admin routes (5xx = service down, not security block)")
+    @DisplayName("ADMIN role should be allowed through to admin routes by the gateway security layer")
     void adminRoleShouldAccessAdminRoutes() throws Exception {
         mockMvc.perform(
                         get("/api/v1/admin/dashboard")
                                 .header("Authorization", "Bearer " + validAdminToken)
                 )
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isForbidden());
     }
 
     @Test

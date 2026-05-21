@@ -16,26 +16,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Blocks direct HTTP access to microservices that bypasses the API Gateway.
- *
- * <p>Every request must carry the {@code X-Gateway-Secret} header whose value
- * matches the configured {@code gateway.secret} property. Requests that fail
- * this check receive a 403 JSON response.
- *
- * <p>Replaces the three nearly-identical per-service copies in authservice,
- * projectservice, and taskservice. Callers register it as a Spring bean and
- * supply the gateway secret via constructor injection.
- *
- * <h3>Exempt paths</h3>
- * Sub-classes or the wrapping bean can override {@link #isPublicPath(String)}
- * to add service-specific exemptions. The base implementation exempts:
- * <ul>
- *   <li>{@code /health}</li>
- *   <li>{@code /actuator/health}</li>
- *   <li>{@code /actuator/info}</li>
- * </ul>
- */
 @Slf4j
 @RequiredArgsConstructor
 public class GatewayValidationFilter extends OncePerRequestFilter {
@@ -82,10 +62,6 @@ public class GatewayValidationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * Returns {@code true} for paths that should bypass the gateway-secret
-     * check. Override in sub-classes to add service-specific exemptions.
-     */
     protected boolean isPublicPath(String path) {
         return path.equals("/health")
                 || path.equals("/actuator/health")

@@ -79,11 +79,12 @@ public class SecurityConfig {
                 ).permitAll()
                 .requestMatchers("/api/v1/tasks/**").hasAnyRole("USER", "ADMIN")
                 .anyRequest().denyAll()
-            )
+            );
 
-            .addFilterBefore(correlationContextFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(gatewayValidationFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        // Explicit, ordered filter chain: Correlation → GatewayValidation → JWT
+        http.addFilterBefore(correlationContextFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(gatewayValidationFilter, CorrelationContextFilter.class);
+        http.addFilterAfter(jwtAuthenticationFilter, GatewayValidationFilter.class);
 
         return http.build();
     }

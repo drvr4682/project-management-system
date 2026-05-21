@@ -10,28 +10,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-/**
- * Shared utility for reading the authenticated user from either the
- * gateway-injected headers ({@code X-Authenticated-User} /
- * {@code X-Authenticated-Role}) or the Spring {@link SecurityContextHolder}.
- *
- * <p>Gateway header takes precedence because downstream services receive
- * pre-validated identity from the API Gateway.
- *
- * <p>Replaces the identical copies in projectservice and taskservice.
- */
 @Component
 @RequiredArgsConstructor
 public class SecurityUtils {
 
     private final HttpServletRequest request;
 
-    /**
-     * Returns the current user's email/username.
-     * Checks the {@code X-Authenticated-User} header first, then the
-     * Spring security context. Returns {@code null} if no authenticated
-     * user is found.
-     */
     public String getCurrentUser() {
 
         String gatewayUser = request.getHeader("X-Authenticated-User");
@@ -60,18 +44,10 @@ public class SecurityUtils {
         return null;
     }
 
-    /**
-     * Returns the role from the {@code X-Authenticated-Role} gateway header,
-     * or {@code null} if absent.
-     */
     public String getCurrentRole() {
         return request.getHeader("X-Authenticated-Role");
     }
 
-    /**
-     * Returns the correlation ID from the {@code X-Correlation-Id} header,
-     * or {@code null} if absent.
-     */
     public String getCorrelationId() {
         return request.getHeader("X-Correlation-Id");
     }

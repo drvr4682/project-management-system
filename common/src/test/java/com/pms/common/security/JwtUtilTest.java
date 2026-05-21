@@ -9,15 +9,8 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Unit tests for the canonical {@link JwtUtil}.
- *
- * <p>Uses the test constructor — no Spring context needed.
- * Replaces and consolidates the four per-service JwtUtilTest classes.
- */
 class JwtUtilTest {
 
-    /** Must be at least 32 characters for HS256. */
     private static final String SECRET =
             "test-secret-key-must-be-at-least-32-chars-long";
     private static final long EXPIRATION = 86_400_000L; // 24 h
@@ -29,10 +22,7 @@ class JwtUtilTest {
         jwtUtil = new JwtUtil(SECRET, EXPIRATION);
     }
 
-    // -------------------------------------------------------------------------
     // generateToken
-    // -------------------------------------------------------------------------
-
     @Test
     @DisplayName("generateToken returns a non-blank JWT string")
     void generateToken_returnsNonBlankJwt() {
@@ -40,10 +30,7 @@ class JwtUtilTest {
         assertThat(token).isNotBlank();
     }
 
-    // -------------------------------------------------------------------------
     // extractUsername / extractRole / extractAllClaims
-    // -------------------------------------------------------------------------
-
     @Test
     @DisplayName("extractUsername returns the subject set during generation")
     void extractUsername_returnsSubject() {
@@ -76,10 +63,7 @@ class JwtUtilTest {
                 .isInstanceOf(Exception.class);
     }
 
-    // -------------------------------------------------------------------------
     // validateToken
-    // -------------------------------------------------------------------------
-
     @Test
     @DisplayName("validateToken returns true for a fresh, valid token")
     void validateToken_validToken_returnsTrue() {

@@ -5,7 +5,6 @@ import com.pms.common.exception.ErrorResponse;
 import com.pms.common.filter.CorrelationContextFilter;
 import com.pms.common.filter.GatewayValidationFilter;
 import com.pms.common.security.JwtAuthenticationFilter;
-import com.pms.authservice.security.InternalServiceFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -32,7 +31,6 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
-    private final InternalServiceFilter internalServiceFilter;
     private final CorrelationContextFilter correlationContextFilter;
     private final GatewayValidationFilter gatewayValidationFilter;
 
@@ -53,7 +51,6 @@ public class SecurityConfig {
                     .requestMatchers("/internal/**").permitAll()
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     .requestMatchers("/api/v1/user/**").hasAnyRole("ADMIN", "USER")
-                    
                     .requestMatchers("/api/v1/test/admin").hasRole("ADMIN")
                     .requestMatchers("/api/v1/test/user").hasAnyRole("ADMIN", "USER")
                     .anyRequest().denyAll()

@@ -22,10 +22,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-/**
- * Unit tests for {@link SecurityUtils}.
- * Replaces the two per-service copies (projectservice, taskservice).
- */
 @ExtendWith(MockitoExtension.class)
 class SecurityUtilsTest {
 
@@ -40,10 +36,7 @@ class SecurityUtilsTest {
         SecurityContextHolder.clearContext();
     }
 
-    // -------------------------------------------------------------------------
     // getCurrentUser
-    // -------------------------------------------------------------------------
-
     @Test
     @DisplayName("Returns gateway header value when X-Authenticated-User is present")
     void getCurrentUser_gatewayHeaderPresent_returnsHeader() {
@@ -91,10 +84,7 @@ class SecurityUtilsTest {
         assertThat(securityUtils.getCurrentUser()).isNull();
     }
 
-    // -------------------------------------------------------------------------
     // getCurrentRole / getCorrelationId
-    // -------------------------------------------------------------------------
-
     @Test
     @DisplayName("getCurrentRole returns X-Authenticated-Role header value")
     void getCurrentRole_returnsHeader() {
