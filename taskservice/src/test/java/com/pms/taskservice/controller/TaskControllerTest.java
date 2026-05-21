@@ -1,13 +1,14 @@
 package com.pms.taskservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pms.common.filter.GatewayValidationFilter;
+import com.pms.common.security.JwtUtil;
 import com.pms.taskservice.dto.AssignTaskRequestDTO;
 import com.pms.taskservice.dto.TaskRequestDTO;
 import com.pms.taskservice.dto.TaskResponseDTO;
 import com.pms.taskservice.exception.AccessDeniedException;
 import com.pms.taskservice.exception.ResourceNotFoundException;
 import com.pms.taskservice.exception.ServiceUnavailableException;
-import com.pms.taskservice.security.JwtUtil;
 import com.pms.taskservice.service.TaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
@@ -31,18 +33,6 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * Controller-slice test for {@link TaskController}.
- *
- * <p>Security auto-configuration is excluded so that tests focus purely on
- * HTTP contract (routing, serialisation, validation, error mapping) without
- * needing a real JWT or gateway secret.  Role-level security is enforced
- * separately by the existing {@code TaskServiceTest} and integration tests.</p>
- *
- * <p>Every test sends the {@code X-Gateway-Secret} header so the
- * {@link com.pms.taskservice.filter.GatewayValidationFilter} — which <em>is</em>
- * loaded even in the slice — does not short-circuit with 403.</p>
- */
 @WebMvcTest(
         controllers = TaskController.class,
         excludeAutoConfiguration = SecurityAutoConfiguration.class
@@ -179,7 +169,6 @@ class TaskControllerTest {
         @WithMockUser(username = "user@example.com", roles = {"USER"})
         @DisplayName("Returns 400 when status value is invalid (pattern violation)")
         void createTask_invalidStatus_returns400() throws Exception {
-            // Build via map so @Pattern fires — the builder doesn't enforce it
             String body = """
                     {
                       "title": "Task",
@@ -308,7 +297,7 @@ class TaskControllerTest {
                             .param("projectId", String.valueOf(PROJECT_ID)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content[0].id").value(TASK_ID))
-                    .andExpect(jsonPath("$.page.totalElements").value(1)); // Spring Boot 3.x: Page metadata is nested under "page"
+                    .andExpect(jsonPath("$.page.totalElements").value(1));
         }
 
         @Test
@@ -657,24 +646,33 @@ class TaskControllerTest {
 
     @Nested
     @DisplayName("GatewayValidationFilter integration")
-    class GatewayFilter {
+    class GatewayValidationFilterTest {
+
+        private MockMvc filteredMvc;
+
+        @BeforeEach
+        void setUpWithFilter() {
+            GatewayValidationFilter filter =
+                    new GatewayValidationFilter(GATEWAY_SECRET_VAL, objectMapper);
+            filteredMvc = MockMvcBuilders
+                    .standaloneSetup(new TaskController(taskService))
+                    .addFilter(filter)
+                    .build();
+        }
 
         @Test
-        @WithMockUser(username = "user@example.com", roles = {"USER"})
         @DisplayName("Returns 403 when X-Gateway-Secret header is missing")
         void noGatewaySecret_returns403() throws Exception {
-            // No GATEWAY_SECRET_HDR header — filter should reject before reaching controller
-            mockMvc.perform(get(BASE_URL + "/{taskId}", TASK_ID))
+            filteredMvc.perform(get(BASE_URL + "/{taskId}", TASK_ID))
                     .andExpect(status().isForbidden());
 
             verifyNoInteractions(taskService);
         }
 
         @Test
-        @WithMockUser(username = "user@example.com", roles = {"USER"})
         @DisplayName("Returns 403 when X-Gateway-Secret value is wrong")
         void wrongGatewaySecret_returns403() throws Exception {
-            mockMvc.perform(get(BASE_URL + "/{taskId}", TASK_ID)
+            filteredMvc.perform(get(BASE_URL + "/{taskId}", TASK_ID)
                             .header(GATEWAY_SECRET_HDR, "wrong-secret"))
                     .andExpect(status().isForbidden());
 

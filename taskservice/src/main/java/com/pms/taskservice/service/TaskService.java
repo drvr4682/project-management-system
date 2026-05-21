@@ -1,5 +1,6 @@
 package com.pms.taskservice.service;
 
+import com.pms.common.security.SecurityUtils;
 import com.pms.taskservice.dto.AssignTaskRequestDTO;
 import com.pms.taskservice.dto.TaskRequestDTO;
 import com.pms.taskservice.dto.TaskResponseDTO;
@@ -10,7 +11,6 @@ import com.pms.taskservice.exception.AccessDeniedException;
 import com.pms.taskservice.exception.ResourceNotFoundException;
 import com.pms.taskservice.exception.UnauthorizedException;
 import com.pms.taskservice.repository.TaskRepository;
-import com.pms.taskservice.security.SecurityUtils;
 import com.pms.taskservice.util.AuditLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

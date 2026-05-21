@@ -43,7 +43,11 @@ public class SecurityConfig {
                             "/health",
                             "/api/v1/auth/login",
                             "/api/v1/auth/register",
-                            "/api/v1/auth/health"
+                            "/api/v1/auth/health",
+                            "/api/v1/projects/health",
+                            "/api/v1/tasks/health",
+                            "/actuator/health",
+                            "/actuator/info"
                     ).permitAll()
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     .requestMatchers(

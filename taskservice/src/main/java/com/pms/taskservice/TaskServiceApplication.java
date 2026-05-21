@@ -10,7 +10,10 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport;
         pageSerializationMode =
                 EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO
 )
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {
+    "com.pms.taskservice",
+    "com.pms.common"
+})
 public class TaskServiceApplication {
 
     public static void main(String[] args) {

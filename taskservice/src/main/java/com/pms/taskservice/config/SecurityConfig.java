@@ -1,13 +1,15 @@
 package com.pms.taskservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pms.taskservice.exception.ErrorResponse;
-import com.pms.taskservice.filter.CorrelationContextFilter;
-import com.pms.taskservice.filter.GatewayValidationFilter;
-import com.pms.taskservice.security.JwtAuthenticationFilter;
+import com.pms.common.exception.ErrorResponse;
+import com.pms.common.filter.CorrelationContextFilter;
+import com.pms.common.filter.GatewayValidationFilter;
+import com.pms.common.security.JwtAuthenticationFilter;
+
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -71,7 +73,7 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                        "/health",
+                        "/api/v1/tasks/health",
                         "/actuator/health",
                         "/actuator/info"
                 ).permitAll()
@@ -80,8 +82,8 @@ public class SecurityConfig {
             )
 
             .addFilterBefore(correlationContextFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(gatewayValidationFilter, CorrelationContextFilter.class)
-            .addFilterAfter(jwtAuthenticationFilter, GatewayValidationFilter.class);
+            .addFilterBefore(gatewayValidationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
