@@ -69,13 +69,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- DOTENV -->
-        <dependency>
-            <groupId>me.paulschwarz</groupId>
-            <artifactId>spring-dotenv</artifactId>
-            <version>4.0.0</version>
-        </dependency>
-
         <!-- TESTING -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

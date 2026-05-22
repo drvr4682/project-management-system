@@ -1,0 +1,27 @@
+# Build artifacts
+**/target/
+**/.mvn/
+
+# IDE / OS
+**/.idea/
+**/.vscode/
+**/*.iml
+**/.DS_Store
+**/Thumbs.db
+
+# Secrets — never ship .env into an image
+**/.env
+
+# Tests (already excluded by -DskipTests, but keeps context lean)
+**/src/test/
+
+# Git
+**/.git/
+**/.gitignore
+**/.gitattributes
+
+# Docker files themselves (not needed inside the build)
+*.Dockerfile
+docker-compose.yml
+.env.example
+README.md

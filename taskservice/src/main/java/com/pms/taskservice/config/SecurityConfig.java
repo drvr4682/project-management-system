@@ -2,7 +2,6 @@ package com.pms.taskservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.common.exception.ErrorResponse;
-import com.pms.common.filter.CorrelationContextFilter;
 import com.pms.common.filter.GatewayValidationFilter;
 import com.pms.common.security.JwtAuthenticationFilter;
 
@@ -28,7 +27,6 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
-    private final CorrelationContextFilter correlationContextFilter;
     private final GatewayValidationFilter gatewayValidationFilter;
 
     @Bean

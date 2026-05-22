@@ -1,0 +1,205 @@
+services:
+
+  # =====================================================
+  # POSTGRESQL
+  # =====================================================
+  postgres:
+    image: postgres:16-alpine
+
+    container_name: pms-postgres
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - pms-network
+
+
+
+  # =====================================================
+  # AUTH SERVICE
+  # =====================================================
+  authservice:
+
+    build:
+      context: .
+      dockerfile: authservice/Dockerfile
+
+    container_name: pms-authservice
+
+    restart: unless-stopped
+
+    environment:
+      AUTH_SERVICE_PORT: ${AUTH_SERVICE_PORT}
+
+      AUTH_DB_URL: ${AUTH_DB_URL}
+      AUTH_DB_USERNAME: ${AUTH_DB_USERNAME}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
+
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - pms-network
+
+
+
+  # =====================================================
+  # PROJECT SERVICE
+  # =====================================================
+  projectservice:
+
+    build:
+      context: .
+      dockerfile: projectservice/Dockerfile
+
+    container_name: pms-projectservice
+
+    restart: unless-stopped
+
+    environment:
+      PROJECT_SERVICE_PORT: ${PROJECT_SERVICE_PORT}
+
+      PROJECT_DB_URL: ${PROJECT_DB_URL}
+      PROJECT_DB_USERNAME: ${PROJECT_DB_USERNAME}
+      PROJECT_DB_PASSWORD: ${PROJECT_DB_PASSWORD}
+
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      authservice:
+        condition: service_started
+
+    networks:
+      - pms-network
+
+
+
+  # =====================================================
+  # TASK SERVICE
+  # =====================================================
+  taskservice:
+
+    build:
+      context: .
+      dockerfile: taskservice/Dockerfile
+
+    container_name: pms-taskservice
+
+    restart: unless-stopped
+
+    environment:
+      TASK_SERVICE_PORT: ${TASK_SERVICE_PORT}
+
+      TASK_DB_URL: ${TASK_DB_URL}
+      TASK_DB_USERNAME: ${TASK_DB_USERNAME}
+      TASK_DB_PASSWORD: ${TASK_DB_PASSWORD}
+
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      PROJECT_SERVICE_URL: ${PROJECT_SERVICE_URL}
+
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      authservice:
+        condition: service_started
+
+      projectservice:
+        condition: service_started
+
+    networks:
+      - pms-network
+
+
+
+  # =====================================================
+  # API GATEWAY
+  # =====================================================
+  apigateway:
+
+    build:
+      context: .
+      dockerfile: apigateway/Dockerfile
+
+    container_name: pms-apigateway
+
+    restart: unless-stopped
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      API_GATEWAY_PORT: ${API_GATEWAY_PORT}
+
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      PROJECT_SERVICE_URL: ${PROJECT_SERVICE_URL}
+      TASK_SERVICE_URL: ${TASK_SERVICE_URL}
+
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
+
+    depends_on:
+      authservice:
+        condition: service_started
+
+      projectservice:
+        condition: service_started
+
+      taskservice:
+        condition: service_started
+
+    networks:
+      - pms-network
+
+
+
+volumes:
+  postgres-data:
+
+
+
+networks:
+  pms-network:
+    driver: bridge
