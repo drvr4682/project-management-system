@@ -5,11 +5,14 @@ import lombok.Data;
 
 @Data
 @Builder
-public class LoginResponse {
-    private String token;
+public class RefreshTokenResponse {
 
+    // New short-lived access token
+    private String accessToken;
+
+    // New refresh token (rotation: old one is revoked)
     private String refreshToken;
-    
+
     private String email;
     private String role;
 }

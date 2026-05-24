@@ -25,6 +25,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     public RegisterResponse register(RegisterRequest request) {
@@ -65,10 +66,12 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        String accessToken  = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        String refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
 
         return LoginResponse.builder()
-                .token(token)
+                .token(accessToken)
+                .refreshToken(refreshToken)
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .build();
@@ -77,5 +80,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public boolean userExists(String email) {
         return userRepository.existsByEmail(email.trim().toLowerCase());
+    }
+
+    @Override
+    public void logout(String userEmail) {
+        refreshTokenService.revokeAll(userEmail);
     }
 }

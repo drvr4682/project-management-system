@@ -57,6 +57,15 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(
+            InvalidRefreshTokenException ex, HttpServletRequest request) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 401, request.getRequestURI()),
+                HttpStatus.UNAUTHORIZED
+        );
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleInvalidPayload(
             HttpMessageNotReadableException ex, HttpServletRequest request) {

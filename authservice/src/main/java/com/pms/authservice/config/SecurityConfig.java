@@ -45,10 +45,11 @@ public class SecurityConfig {
                     .requestMatchers(
                             "/api/v1/auth/health",
                             "/api/v1/auth/register",
-                            "/api/v1/auth/login"
-
+                            "/api/v1/auth/login",
+                            "/api/v1/auth/refresh"   // no JWT needed — caller only has the refresh token
                     ).permitAll()
                     .requestMatchers("/internal/**").permitAll()
+                    .requestMatchers("/api/v1/auth/logout").authenticated()  // must carry a valid JWT
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     .requestMatchers("/api/v1/user/**").hasAnyRole("ADMIN", "USER")
                     .requestMatchers("/api/v1/test/admin").hasRole("ADMIN")
