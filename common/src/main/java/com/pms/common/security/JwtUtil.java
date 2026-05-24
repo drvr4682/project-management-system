@@ -35,9 +35,9 @@ public class JwtUtil {
     public JwtUtil() {}
 
     public JwtUtil(String secret, long expiration) {
-        this.secret = secret;
+        this.secret     = secret;
         this.expiration = expiration;
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.key        = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     @PostConstruct
@@ -73,6 +73,16 @@ public class JwtUtil {
 
     public String extractRole(String token) {
         return extractAllClaims(token).get("role", String.class);
+    }
+
+    public String extractJti(String token) {
+        return extractAllClaims(token).get("jti", String.class);
+    }
+
+    public long getExpirationMillis(String token) {
+        Date expiry = extractAllClaims(token).getExpiration();
+        long remaining = expiry.getTime() - System.currentTimeMillis();
+        return remaining > 0 ? remaining : 0;
     }
 
     // Validation

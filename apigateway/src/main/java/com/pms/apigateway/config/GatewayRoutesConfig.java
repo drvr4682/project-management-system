@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import org.springframework.web.servlet.function.RouterFunction;
+import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
 import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.addRequestHeader;
@@ -43,6 +44,7 @@ public class GatewayRoutesConfig {
                         )
                         .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
                         .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
+                        .filter(propagateCorrelationId())
                         .build();
 
         RouterFunction<ServerResponse> projectRoute =
@@ -53,6 +55,7 @@ public class GatewayRoutesConfig {
                         )
                         .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
                         .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
+                        .filter(propagateCorrelationId())
                         .build();
 
         RouterFunction<ServerResponse> adminRoute =
@@ -63,6 +66,7 @@ public class GatewayRoutesConfig {
                         )
                         .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
                         .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
+                        .filter(propagateCorrelationId())
                         .build();
 
         RouterFunction<ServerResponse> taskRoute =
@@ -73,11 +77,27 @@ public class GatewayRoutesConfig {
                         )
                         .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
                         .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
+                        .filter(propagateCorrelationId())
                         .build();
 
         return authRoute
                 .and(projectRoute)
                 .and(adminRoute)
                 .and(taskRoute);
+    }
+
+    private org.springframework.web.servlet.function.HandlerFilterFunction<ServerResponse, ServerResponse>
+            propagateCorrelationId() {
+
+        return (request, next) -> {
+            String correlationId = request.headers().firstHeader("X-Correlation-Id");
+            if (correlationId != null && !correlationId.isBlank()) {
+                ServerRequest mutated = ServerRequest.from(request)
+                        .header("X-Correlation-Id", correlationId)
+                        .build();
+                return next.handle(mutated);
+            }
+            return next.handle(request);
+        };
     }
 }

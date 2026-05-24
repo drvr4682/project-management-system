@@ -39,38 +39,33 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((req, res, authEx) -> {
                     res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     res.setContentType("application/json");
-
+                    res.setCharacterEncoding("UTF-8");
                     ErrorResponse error = ErrorResponse.builder()
                             .status(HttpServletResponse.SC_UNAUTHORIZED)
                             .message("Unauthorized")
                             .timestamp(System.currentTimeMillis())
                             .path(req.getRequestURI())
                             .build();
-
                     res.getWriter().write(objectMapper.writeValueAsString(error));
                 })
                 .accessDeniedHandler((req, res, accessEx) -> {
                     log.warn("Access denied for endpoint: {}", req.getRequestURI());
-
                     res.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     res.setContentType("application/json");
-
+                    res.setCharacterEncoding("UTF-8");
                     ErrorResponse error = ErrorResponse.builder()
                             .status(HttpServletResponse.SC_FORBIDDEN)
                             .message("Access Denied")
                             .timestamp(System.currentTimeMillis())
                             .path(req.getRequestURI())
                             .build();
-
                     res.getWriter().write(objectMapper.writeValueAsString(error));
                 })
             )
-
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                         "/api/v1/tasks/health",
@@ -82,11 +77,10 @@ public class SecurityConfig {
             );
 
         http.addFilterBefore(gatewayValidationFilter, UsernamePasswordAuthenticationFilter.class);
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtAuthenticationFilter, GatewayValidationFilter.class);
 
         return http.build();
     }
-
 
     @Bean
     public UserDetailsService userDetailsService() {

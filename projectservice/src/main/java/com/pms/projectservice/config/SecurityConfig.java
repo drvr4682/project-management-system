@@ -2,7 +2,6 @@ package com.pms.projectservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.common.exception.ErrorResponse;
-import com.pms.common.filter.CorrelationContextFilter;
 import com.pms.common.filter.GatewayValidationFilter;
 import com.pms.common.security.JwtAuthenticationFilter;
 
@@ -28,7 +27,6 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
-    private final CorrelationContextFilter correlationContextFilter;
     private final GatewayValidationFilter gatewayValidationFilter;
 
     @Bean
@@ -46,24 +44,20 @@ public class SecurityConfig {
                 .authenticationEntryPoint((req, res, authEx) -> {
                     res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     res.setContentType("application/json");
-
+                    res.setCharacterEncoding("UTF-8");
                     ErrorResponse error = ErrorResponse.builder()
                             .status(HttpServletResponse.SC_UNAUTHORIZED)
                             .message("Unauthorized")
                             .timestamp(System.currentTimeMillis())
                             .path(req.getRequestURI())
                             .build();
-
                     res.getWriter().write(objectMapper.writeValueAsString(error));
                 })
-
                 .accessDeniedHandler((req, res, accessEx) -> {
-
                     log.warn("Access denied for endpoint: {}", req.getRequestURI());
-
                     res.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     res.setContentType("application/json");
-
+                    res.setCharacterEncoding("UTF-8");
                     ErrorResponse error = ErrorResponse.builder()
                             .status(HttpServletResponse.SC_FORBIDDEN)
                             .message("Access Denied")
@@ -86,7 +80,7 @@ public class SecurityConfig {
             );
 
         http.addFilterBefore(gatewayValidationFilter, UsernamePasswordAuthenticationFilter.class);
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtAuthenticationFilter, GatewayValidationFilter.class);
 
         return http.build();
     }

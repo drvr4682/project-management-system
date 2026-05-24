@@ -62,6 +62,16 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!--
+            Redis — required for the JWT blocklist check in JwtAuthenticationFilter.
+            The gateway is the first hop for every request; it must reject blocklisted
+            tokens before proxying to any downstream service.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- LOMBOK -->
         <dependency>
             <groupId>org.projectlombok</groupId>

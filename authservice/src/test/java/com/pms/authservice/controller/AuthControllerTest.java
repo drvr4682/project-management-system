@@ -151,7 +151,7 @@ class AuthControllerTest {
                 .role("USER")
                 .build();
 
-        Mockito.when(refreshTokenService.rotate(Mockito.any())).thenReturn(mockResponse);
+        Mockito.when(authService.refresh(Mockito.any())).thenReturn(mockResponse);
 
         mockMvc.perform(post("/api/v1/auth/refresh")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -180,13 +180,14 @@ class AuthControllerTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void shouldReturn204OnSuccessfulLogout() throws Exception {
+    void shouldReturn200OnSuccessfulLogout() throws Exception {
 
-        // filters are disabled (addFilters = false) so we can hit the endpoint directly
-        Mockito.doNothing().when(authService).logout(Mockito.any());
+        Mockito.doNothing().when(authService).logout(Mockito.any(), Mockito.any());
 
         mockMvc.perform(post("/api/v1/auth/logout")
+                .header("Authorization", "Bearer some-token")
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Logged out successfully"));
     }
 }

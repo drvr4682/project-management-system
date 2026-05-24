@@ -68,6 +68,19 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!--
+            Redis — optional at the common-library level.
+            Services that need the JWT blocklist (authservice, apigateway)
+            must declare spring-boot-starter-data-redis in their own pom.xml.
+            Services that don't use Redis (projectservice, taskservice) can
+            leave it out; JwtAuthenticationFilter accepts a null redisTemplate.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

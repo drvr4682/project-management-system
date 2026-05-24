@@ -9,14 +9,17 @@ import com.pms.common.security.JwtUtil;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 @Configuration
 public class FilterConfig {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter(
-            JwtUtil jwtUtil, ObjectMapper objectMapper) {
-        return new JwtAuthenticationFilter(jwtUtil, objectMapper);
+            JwtUtil jwtUtil,
+            ObjectMapper objectMapper,
+            StringRedisTemplate redisTemplate) {
+        return new JwtAuthenticationFilter(jwtUtil, objectMapper, redisTemplate);
     }
 
     @Bean

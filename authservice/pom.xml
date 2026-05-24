@@ -45,6 +45,16 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
+        <!--
+            Redis — required for the JWT blocklist.
+            On logout, the token's jti is written to Redis with a TTL equal to
+            the remaining token lifetime so the gateway rejects it immediately.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>

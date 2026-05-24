@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +27,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper;
+    private final StringRedisTemplate redisTemplate;
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, ObjectMapper objectMapper) {
+        this(jwtUtil, objectMapper, null);
+    }
 
     @Override
     protected void doFilterInternal(
@@ -49,6 +55,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
+            if (redisTemplate != null) {
+                String jti = jwtUtil.extractJti(token);
+                if (jti != null) {
+                    try {
+                        String blockedKey = "blocklist:jti:" + jti;
+                        Boolean blocked = redisTemplate.hasKey(blockedKey);
+                        if (Boolean.TRUE.equals(blocked)) {
+                            log.warn("[JwtAuthFilter] Blocklisted token used | jti={}", jti);
+                            writeUnauthorized(response, request, "Token has been revoked");
+                            return;
+                        }
+                    } catch (Exception redisEx) {
+                        log.warn("[JwtAuthFilter] Redis blocklist check failed ({}), " +
+                                "allowing request to proceed | path={}",
+                                redisEx.getMessage(), request.getRequestURI());
+                    }
+                }
+            }
+
             String email = jwtUtil.extractUsername(token);
             String role  = jwtUtil.extractRole(token);
 
@@ -56,7 +81,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 email,
-                                token,   // credential = raw token, propagated by FeignConfig
+                                token,
                                 List.of(new SimpleGrantedAuthority("ROLE_" + role))
                         );
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -83,10 +108,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.equals("/actuator/health")
                 || path.equals("/actuator/info");
     }
-
-    // -------------------------------------------------------------------------
-    // Helper
-    // -------------------------------------------------------------------------
 
     private void writeUnauthorized(
             HttpServletResponse response,
