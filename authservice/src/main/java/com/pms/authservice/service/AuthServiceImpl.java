@@ -54,6 +54,8 @@ public class AuthServiceImpl implements AuthService {
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
+    private final java.util.concurrent.ConcurrentHashMap<String, java.time.LocalDateTime> resendCooldowns = new java.util.concurrent.ConcurrentHashMap<>();
+
     // =========================================================================
     // REGISTER
     // =========================================================================
@@ -217,26 +219,36 @@ public class AuthServiceImpl implements AuthService {
 
         String email = request.getEmail().trim().toLowerCase();
 
+        // 1. Enforce 60-second cooldown protection
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime lastSent = resendCooldowns.get(email);
+        if (lastSent != null && lastSent.plusSeconds(60).isAfter(now)) {
+            log.warn("[Auth] Resend verification cooldown active for email: {}", email);
+            throw new EmailVerificationException("Please wait 60 seconds before requesting another verification email.");
+        }
+
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException(
                         "No account found with email: " + email));
 
         if (user.isEmailVerified()) {
-            // Already verified — silent success (don't leak state)
-            log.info("[Auth] Resend requested for already-verified account: {}", email);
-            return;
+            log.warn("[Auth] Resend verification requested for already-verified email: {}", email);
+            throw new EmailVerificationException("Email is already verified");
         }
 
-        // Issue a fresh token using VerificationService
+        // 2. Issue a fresh token using VerificationService
         VerificationToken newToken = verificationService.createVerificationToken(user);
 
-        // Build verification link
+        // 3. Build verification link
         String verificationLink = baseUrl + "/api/v1/auth/verify?token=" + newToken.getToken();
 
-        // Send email
+        // 4. Send email
         emailService.sendVerificationEmail(user.getEmail(), user.getName(), verificationLink);
 
-        log.info("[Auth] Verification email resent to: {}", email);
+        // 5. Update cooldown timestamp
+        resendCooldowns.put(email, now);
+
+        log.info("[Auth] Verification email successfully resent to: {}", email);
     }
 
     // =========================================================================

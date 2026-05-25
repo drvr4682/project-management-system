@@ -401,7 +401,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void shouldResendVerificationEmailSilentlyIfAlreadyVerified() {
+    void shouldRejectResendVerificationEmailIfAlreadyVerified() {
         ResendVerificationRequest request = new ResendVerificationRequest();
         request.setEmail("test@mail.com");
 
@@ -414,9 +414,36 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("test@mail.com")).thenReturn(Optional.of(user));
 
-        authService.resendVerificationEmail(request);
+        assertThrows(EmailVerificationException.class, () -> authService.resendVerificationEmail(request));
 
         verify(verificationService, never()).createVerificationToken(any());
         verify(emailService, never()).sendVerificationEmail(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void shouldRejectResendVerificationEmailIfCooldownActive() {
+        ResendVerificationRequest request = new ResendVerificationRequest();
+        request.setEmail("cooldown@mail.com");
+
+        User user = User.builder()
+                .id(1L)
+                .name("Test")
+                .email("cooldown@mail.com")
+                .emailVerified(false)
+                .build();
+
+        VerificationToken mockToken = VerificationToken.builder()
+                .token("new-token")
+                .user(user)
+                .build();
+
+        when(userRepository.findByEmail("cooldown@mail.com")).thenReturn(Optional.of(user));
+        when(verificationService.createVerificationToken(user)).thenReturn(mockToken);
+
+        // First attempt succeeds and sets cooldown
+        authService.resendVerificationEmail(request);
+
+        // Second attempt fails due to active cooldown
+        assertThrows(EmailVerificationException.class, () -> authService.resendVerificationEmail(request));
     }
 }

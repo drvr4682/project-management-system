@@ -31,8 +31,8 @@ public class VerificationServiceImpl implements VerificationService {
     public VerificationToken createVerificationToken(User user) {
         log.info("[Verification] Generating a new verification token for user ID: {}", user.getId());
 
-        // Delete any existing token for this user first to avoid unique constraint violations
-        verificationTokenRepository.deleteByUserId(user.getId());
+        // Invalidate any older unused tokens for this user (keeps audit history in DB)
+        verificationTokenRepository.invalidateUnusedTokensByUserId(user.getId());
 
         String tokenValue = UUID.randomUUID().toString();
         LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(tokenExpiryMinutes);

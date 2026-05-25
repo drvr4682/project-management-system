@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,11 +79,11 @@ class VerificationTokenRepositoryTest {
 
         verificationTokenRepository.save(token);
 
-        Optional<VerificationToken> result =
+        List<VerificationToken> result =
                 verificationTokenRepository.findByUserId(user.getId());
 
-        assertThat(result).isPresent();
-        assertThat(result.get().getToken())
+        assertThat(result).isNotEmpty();
+        assertThat(result.get(0).getToken())
                 .isEqualTo("another-token");
     }
 }
