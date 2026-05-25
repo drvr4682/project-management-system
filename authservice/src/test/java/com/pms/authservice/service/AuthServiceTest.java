@@ -10,7 +10,8 @@ import com.pms.authservice.entity.VerificationToken;
 import com.pms.authservice.exception.EmailVerificationException;
 import com.pms.authservice.exception.UserAlreadyExistsException;
 import com.pms.authservice.repository.UserRepository;
-import com.pms.authservice.repository.VerificationTokenRepository;
+import com.pms.authservice.service.email.EmailService;
+import com.pms.authservice.service.verification.VerificationService;
 import com.pms.common.security.JwtUtil;
 
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ import static org.mockito.Mockito.*;
 class AuthServiceTest {
 
     private final UserRepository              userRepository              = Mockito.mock(UserRepository.class);
-    private final VerificationTokenRepository verificationTokenRepository = Mockito.mock(VerificationTokenRepository.class);
+    private final VerificationService         verificationService         = Mockito.mock(VerificationService.class);
     private final PasswordEncoder             passwordEncoder             = Mockito.mock(PasswordEncoder.class);
     private final JwtUtil                     jwtUtil                     = Mockito.mock(JwtUtil.class);
     private final AuthenticationManager       authenticationManager       = Mockito.mock(AuthenticationManager.class);
@@ -43,7 +44,7 @@ class AuthServiceTest {
     private final ValueOperations<String, String> valueOps                = Mockito.mock(ValueOperations.class);
 
     private final AuthService authService = new AuthServiceImpl(
-            userRepository, verificationTokenRepository, passwordEncoder, jwtUtil,
+            userRepository, verificationService, passwordEncoder, jwtUtil,
             authenticationManager, refreshTokenService, redisTemplate, emailService);
 
     // -------------------------------------------------------------------------
@@ -70,7 +71,13 @@ class AuthServiceTest {
                 .role(Role.USER)
                 .build();
 
+        VerificationToken mockToken = VerificationToken.builder()
+                .token("dummy-token")
+                .user(savedUser)
+                .build();
+
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(verificationService.createVerificationToken(any(User.class))).thenReturn(mockToken);
 
         var response = authService.register(request);
 
@@ -78,7 +85,7 @@ class AuthServiceTest {
         assertEquals(1L, response.getId());
         assertEquals("test@mail.com", response.getEmail());
 
-        verify(verificationTokenRepository, times(1)).save(any(VerificationToken.class));
+        verify(verificationService, times(1)).createVerificationToken(any(User.class));
         verify(emailService, times(1)).sendVerificationEmail(eq("test@mail.com"), eq("Test"), anyString());
     }
 
@@ -216,7 +223,73 @@ class AuthServiceTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void shouldThrowWhenLoginUnverified() {
+    void shouldGenerateVerificationToken() {
+        // Registering a user successfully generates the token via VerificationService
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Test");
+        request.setEmail("test@mail.com");
+        request.setPassword("Test@123");
+        request.setRole(Role.USER);
+
+        when(userRepository.existsByEmail("test@mail.com")).thenReturn(false);
+        when(passwordEncoder.encode("Test@123")).thenReturn("hashed");
+
+        User savedUser = User.builder()
+                .id(1L)
+                .name("Test")
+                .email("test@mail.com")
+                .password("hashed")
+                .role(Role.USER)
+                .build();
+
+        VerificationToken mockToken = VerificationToken.builder()
+                .token("generated-uuid-token")
+                .user(savedUser)
+                .build();
+
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(verificationService.createVerificationToken(any(User.class))).thenReturn(mockToken);
+
+        authService.register(request);
+
+        verify(verificationService, times(1)).createVerificationToken(any(User.class));
+    }
+
+    @Test
+    void shouldSendVerificationEmail() {
+        // Registering a user successfully sends the verification email
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Test");
+        request.setEmail("test@mail.com");
+        request.setPassword("Test@123");
+        request.setRole(Role.USER);
+
+        when(userRepository.existsByEmail("test@mail.com")).thenReturn(false);
+        when(passwordEncoder.encode("Test@123")).thenReturn("hashed");
+
+        User savedUser = User.builder()
+                .id(1L)
+                .name("Test")
+                .email("test@mail.com")
+                .password("hashed")
+                .role(Role.USER)
+                .build();
+
+        VerificationToken mockToken = VerificationToken.builder()
+                .token("generated-uuid-token")
+                .user(savedUser)
+                .build();
+
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(verificationService.createVerificationToken(any(User.class))).thenReturn(mockToken);
+
+        authService.register(request);
+
+        verify(emailService, times(1)).sendVerificationEmail(eq("test@mail.com"), eq("Test"), anyString());
+    }
+
+    @Test
+    void shouldBlockLoginBeforeVerification() {
         LoginRequest request = new LoginRequest();
         request.setEmail("test@mail.com");
         request.setPassword("Test@123");
@@ -226,7 +299,7 @@ class AuthServiceTest {
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
-                .emailVerified(false)
+                .emailVerified(false) // Unverified!
                 .build();
 
         when(userRepository.findByEmail("test@mail.com")).thenReturn(Optional.of(user));
@@ -236,75 +309,69 @@ class AuthServiceTest {
     }
 
     @Test
-    void shouldVerifyEmailSuccessfully() {
-        String token = "valid-token";
+    void shouldAllowLoginAfterVerification() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@mail.com");
+        request.setPassword("Test@123");
+
         User user = User.builder()
                 .id(1L)
                 .email("test@mail.com")
-                .emailVerified(false)
+                .password("hashed")
+                .role(Role.USER)
+                .emailVerified(true) // Verified!
+                .enabled(true)
                 .build();
 
-        VerificationToken vToken = VerificationToken.builder()
-                .token(token)
-                .user(user)
-                .expiryDate(LocalDateTime.now().plusHours(24))
-                .used(false)
-                .build();
+        when(userRepository.findByEmail("test@mail.com")).thenReturn(Optional.of(user));
+        when(authenticationManager.authenticate(any())).thenReturn(null);
+        when(jwtUtil.generateToken(anyString(), anyString())).thenReturn("access-token");
+        when(refreshTokenService.createRefreshToken("test@mail.com")).thenReturn("refresh-token");
 
-        when(verificationTokenRepository.findByToken(token)).thenReturn(Optional.of(vToken));
+        LoginResponse response = authService.login(request);
 
+        assertNotNull(response);
+        assertEquals("access-token", response.getToken());
+    }
+
+    @Test
+    void shouldVerifyUserSuccessfully() {
+        String token = "valid-token-uuid";
         authService.verifyEmail(token);
-
-        assertTrue(user.isEmailVerified());
-        assertTrue(vToken.isUsed());
-        verify(userRepository, times(1)).save(user);
-        verify(verificationTokenRepository, times(1)).save(vToken);
+        verify(verificationService, times(1)).validateVerificationToken(token);
     }
 
     @Test
-    void shouldThrowWhenVerifyEmailWithExpiredToken() {
-        String token = "expired-token";
-        User user = User.builder()
-                .id(1L)
-                .email("test@mail.com")
-                .emailVerified(false)
-                .build();
+    void shouldRejectExpiredVerificationToken() {
+        String token = "expired-token-uuid";
+        doThrow(new com.pms.authservice.exception.ExpiredVerificationTokenException("Verification link has expired"))
+                .when(verificationService).validateVerificationToken(token);
 
-        VerificationToken vToken = VerificationToken.builder()
-                .token(token)
-                .user(user)
-                .expiryDate(LocalDateTime.now().minusHours(1))
-                .used(false)
-                .build();
-
-        when(verificationTokenRepository.findByToken(token)).thenReturn(Optional.of(vToken));
-
-        assertThrows(EmailVerificationException.class, () -> authService.verifyEmail(token));
-        assertFalse(user.isEmailVerified());
-        verify(userRepository, never()).save(any());
+        assertThrows(com.pms.authservice.exception.ExpiredVerificationTokenException.class, 
+                () -> authService.verifyEmail(token));
     }
 
     @Test
-    void shouldThrowWhenVerifyEmailWithAlreadyUsedToken() {
-        String token = "used-token";
-        User user = User.builder()
-                .id(1L)
-                .email("test@mail.com")
-                .emailVerified(false)
-                .build();
+    void shouldRejectInvalidVerificationToken() {
+        String token = "invalid-token-uuid";
+        doThrow(new com.pms.authservice.exception.InvalidVerificationTokenException("Invalid verification token"))
+                .when(verificationService).validateVerificationToken(token);
 
-        VerificationToken vToken = VerificationToken.builder()
-                .token(token)
-                .user(user)
-                .expiryDate(LocalDateTime.now().plusHours(24))
-                .used(true)
-                .build();
+        assertThrows(com.pms.authservice.exception.InvalidVerificationTokenException.class, 
+                () -> authService.verifyEmail(token));
+    }
 
-        when(verificationTokenRepository.findByToken(token)).thenReturn(Optional.of(vToken));
+    @Test
+    void shouldThrowWhenLoginDisabled() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@mail.com");
+        request.setPassword("Test@123");
 
-        assertThrows(EmailVerificationException.class, () -> authService.verifyEmail(token));
-        assertFalse(user.isEmailVerified());
-        verify(userRepository, never()).save(any());
+        org.springframework.security.core.AuthenticationException disabledEx = 
+                new org.springframework.security.authentication.DisabledException("User is disabled");
+        when(authenticationManager.authenticate(any())).thenThrow(disabledEx);
+
+        assertThrows(org.springframework.security.core.AuthenticationException.class, () -> authService.login(request));
     }
 
     @Test
@@ -319,13 +386,18 @@ class AuthServiceTest {
                 .emailVerified(false)
                 .build();
 
+        VerificationToken mockToken = VerificationToken.builder()
+                .token("new-token")
+                .user(user)
+                .build();
+
         when(userRepository.findByEmail("test@mail.com")).thenReturn(Optional.of(user));
+        when(verificationService.createVerificationToken(user)).thenReturn(mockToken);
 
         authService.resendVerificationEmail(request);
 
-        verify(verificationTokenRepository, times(1)).deleteByUserId(1L);
-        verify(verificationTokenRepository, times(1)).save(any(VerificationToken.class));
-        verify(emailService, times(1)).sendResendVerificationEmail(eq("test@mail.com"), eq("Test"), anyString());
+        verify(verificationService, times(1)).createVerificationToken(user);
+        verify(emailService, times(1)).sendVerificationEmail(eq("test@mail.com"), eq("Test"), anyString());
     }
 
     @Test
@@ -344,46 +416,7 @@ class AuthServiceTest {
 
         authService.resendVerificationEmail(request);
 
-        verify(verificationTokenRepository, never()).deleteByUserId(anyLong());
-        verify(verificationTokenRepository, never()).save(any());
-        verify(emailService, never()).sendResendVerificationEmail(anyString(), anyString(), anyString());
-    }
-
-    @Test
-    void shouldRejectExpiredVerificationToken() {
-        String token = "expired-token-uuid";
-        User user = User.builder()
-                .id(1L)
-                .email("test@mail.com")
-                .emailVerified(false)
-                .enabled(false)
-                .build();
-
-        VerificationToken vToken = VerificationToken.builder()
-                .token(token)
-                .user(user)
-                .expiryDate(LocalDateTime.now().minusHours(2)) // expiry in past
-                .used(false)
-                .build();
-
-        when(verificationTokenRepository.findByToken(token)).thenReturn(Optional.of(vToken));
-
-        assertThrows(EmailVerificationException.class, () -> authService.verifyEmail(token));
-        assertFalse(user.isEmailVerified());
-        assertFalse(user.isEnabled());
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void shouldThrowWhenLoginDisabled() {
-        LoginRequest request = new LoginRequest();
-        request.setEmail("test@mail.com");
-        request.setPassword("Test@123");
-
-        org.springframework.security.core.AuthenticationException disabledEx = 
-                new org.springframework.security.authentication.DisabledException("User is disabled");
-        when(authenticationManager.authenticate(any())).thenThrow(disabledEx);
-
-        assertThrows(org.springframework.security.core.AuthenticationException.class, () -> authService.login(request));
+        verify(verificationService, never()).createVerificationToken(any());
+        verify(emailService, never()).sendVerificationEmail(anyString(), anyString(), anyString());
     }
 }

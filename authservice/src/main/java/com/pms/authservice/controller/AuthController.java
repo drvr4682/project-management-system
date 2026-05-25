@@ -92,8 +92,8 @@ public class AuthController {
     // EMAIL VERIFICATION — verify link click
     // =========================================================================
 
-    @GetMapping("/verify-email")
-    public ResponseEntity<Map<String, String>> verifyEmail(
+    @GetMapping("/verify")
+    public ResponseEntity<Map<String, String>> verify(
             @RequestParam("token") String token) {
 
         authService.verifyEmail(token);

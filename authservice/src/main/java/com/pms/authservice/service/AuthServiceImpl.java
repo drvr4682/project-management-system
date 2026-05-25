@@ -14,7 +14,8 @@ import com.pms.authservice.exception.InvalidCredentialsException;
 import com.pms.authservice.exception.UserAlreadyExistsException;
 import com.pms.authservice.exception.UserNotFoundException;
 import com.pms.authservice.repository.UserRepository;
-import com.pms.authservice.repository.VerificationTokenRepository;
+import com.pms.authservice.service.email.EmailService;
+import com.pms.authservice.service.verification.VerificationService;
 import com.pms.common.security.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository              userRepository;
-    private final VerificationTokenRepository verificationTokenRepository;
+    private final VerificationService         verificationService;
     private final PasswordEncoder             passwordEncoder;
     private final JwtUtil                     jwtUtil;
     private final AuthenticationManager       authenticationManager;
@@ -49,6 +50,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${app.email-verification.token-expiry-minutes:1440}")
     private long verificationTokenExpiryMinutes;
+
+    @Value("${app.base-url:http://localhost:8080}")
+    private String baseUrl;
 
     // =========================================================================
     // REGISTER
@@ -77,25 +81,17 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepository.save(user);
 
-        // 2. Create a VerificationToken record (separate lifecycle from user)
-        String tokenValue = UUID.randomUUID().toString();
-        LocalDateTime expiry = LocalDateTime.now()
-                .plusMinutes(verificationTokenExpiryMinutes);
+        // 2. Create a VerificationToken record
+        VerificationToken vToken = verificationService.createVerificationToken(savedUser);
 
-        VerificationToken vToken = VerificationToken.builder()
-                .token(tokenValue)
-                .user(savedUser)
-                .expiryDate(expiry)
-                .used(false)
-                .build();
+        // 3. Build verification URL
+        String verificationLink = baseUrl + "/api/v1/auth/verify?token=" + vToken.getToken();
 
-        verificationTokenRepository.save(vToken);
-
-        // 3. Send verification email (async — does not block registration response)
+        // 4. Send verification email
         emailService.sendVerificationEmail(
                 savedUser.getEmail(),
                 savedUser.getName(),
-                tokenValue
+                verificationLink
         );
 
         log.info("[Auth] Registered new user (unverified): {} | role: {}",
@@ -207,44 +203,8 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void verifyEmail(String token) {
-
-        if (token == null || token.isBlank()) {
-            throw new EmailVerificationException("Verification token is missing");
-        }
-
-        // Look up the token in its own table — not on the User entity
-        VerificationToken vToken = verificationTokenRepository.findByToken(token)
-                .orElseThrow(() ->
-                        new EmailVerificationException("Invalid or expired verification token"));
-
-        User user = vToken.getUser();
-
-        // Idempotent — if already verified just succeed silently
-        if (user.isEmailVerified()) {
-            log.info("[Auth] Email already verified for user: {}", user.getEmail());
-            return;
-        }
-
-        if (vToken.isUsed()) {
-            throw new EmailVerificationException(
-                    "This verification link has already been used.");
-        }
-
-        if (vToken.isExpired()) {
-            throw new EmailVerificationException(
-                    "Verification link has expired. Please request a new one.");
-        }
-
-        // Mark user as verified and enabled
-        user.setEmailVerified(true);
-        user.setEnabled(true);
-        userRepository.save(user);
-
-        // Mark token as used (single-use, cannot be replayed)
-        vToken.setUsed(true);
-        verificationTokenRepository.save(vToken);
-
-        log.info("[Auth] Email verified successfully for user: {}", user.getEmail());
+        log.info("[Auth] Verification request received for token: {}", token);
+        verificationService.validateVerificationToken(token);
     }
 
     // =========================================================================
@@ -267,24 +227,14 @@ public class AuthServiceImpl implements AuthService {
             return;
         }
 
-        // Delete any existing (old / expired) token for this user
-        verificationTokenRepository.deleteByUserId(user.getId());
+        // Issue a fresh token using VerificationService
+        VerificationToken newToken = verificationService.createVerificationToken(user);
 
-        // Issue a fresh token
-        String newTokenValue = UUID.randomUUID().toString();
-        LocalDateTime newExpiry = LocalDateTime.now()
-                .plusMinutes(verificationTokenExpiryMinutes);
+        // Build verification link
+        String verificationLink = baseUrl + "/api/v1/auth/verify?token=" + newToken.getToken();
 
-        VerificationToken newToken = VerificationToken.builder()
-                .token(newTokenValue)
-                .user(user)
-                .expiryDate(newExpiry)
-                .used(false)
-                .build();
-
-        verificationTokenRepository.save(newToken);
-
-        emailService.sendResendVerificationEmail(user.getEmail(), user.getName(), newTokenValue);
+        // Send email
+        emailService.sendVerificationEmail(user.getEmail(), user.getName(), verificationLink);
 
         log.info("[Auth] Verification email resent to: {}", email);
     }

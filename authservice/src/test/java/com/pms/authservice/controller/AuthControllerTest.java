@@ -195,14 +195,14 @@ class AuthControllerTest {
     }
 
     // -------------------------------------------------------------------------
-    // GET /api/v1/auth/verify-email
+    // GET /api/v1/auth/verify
     // -------------------------------------------------------------------------
 
     @Test
     void shouldVerifyEmailSuccessfully() throws Exception {
         Mockito.doNothing().when(authService).verifyEmail("valid-token");
 
-        mockMvc.perform(get("/api/v1/auth/verify-email")
+        mockMvc.perform(get("/api/v1/auth/verify")
                 .param("token", "valid-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Email verified successfully. You can now log in."));
@@ -213,7 +213,7 @@ class AuthControllerTest {
         Mockito.doThrow(new EmailVerificationException("Invalid or expired verification token"))
                 .when(authService).verifyEmail("invalid-token");
 
-        mockMvc.perform(get("/api/v1/auth/verify-email")
+        mockMvc.perform(get("/api/v1/auth/verify")
                 .param("token", "invalid-token"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Invalid or expired verification token"));

@@ -74,7 +74,7 @@ public class SecurityConfig {
                         "/api/v1/auth/refresh",
                         "/api/v1/auth/health",
                         // email verification (GET — user clicks link from email client)
-                        "/api/v1/auth/verify-email",
+                        "/api/v1/auth/verify/**",
                         // resend verification link
                         "/api/v1/auth/resend-verification",
                         // password reset flow

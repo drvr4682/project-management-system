@@ -82,6 +82,30 @@ public class GlobalExceptionHandler {
                 HttpStatus.FORBIDDEN);
     }
 
+    @ExceptionHandler(InvalidVerificationTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidVerificationToken(
+            InvalidVerificationTokenException ex, HttpServletRequest request) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 400, request.getRequestURI()),
+                HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ExpiredVerificationTokenException.class)
+    public ResponseEntity<ErrorResponse> handleExpiredVerificationToken(
+            ExpiredVerificationTokenException ex, HttpServletRequest request) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 400, request.getRequestURI()),
+                HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(EmailSendingException.class)
+    public ResponseEntity<ErrorResponse> handleEmailSending(
+            EmailSendingException ex, HttpServletRequest request) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 500, request.getRequestURI()),
+                HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleInvalidPayload(
             HttpMessageNotReadableException ex, HttpServletRequest request) {
