@@ -7,7 +7,9 @@ import com.pms.authservice.dto.RefreshTokenRequest;
 import com.pms.authservice.dto.RefreshTokenResponse;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
+import com.pms.authservice.dto.ResendVerificationRequest;
 import com.pms.authservice.entity.Role;
+import com.pms.authservice.exception.EmailVerificationException;
 import com.pms.authservice.security.CustomUserDetailsService;
 import com.pms.authservice.service.AuthService;
 import com.pms.authservice.service.RefreshTokenService;
@@ -23,6 +25,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -189,5 +192,60 @@ class AuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Logged out successfully"));
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /api/v1/auth/verify-email
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldVerifyEmailSuccessfully() throws Exception {
+        Mockito.doNothing().when(authService).verifyEmail("valid-token");
+
+        mockMvc.perform(get("/api/v1/auth/verify-email")
+                .param("token", "valid-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Email verified successfully. You can now log in."));
+    }
+
+    @Test
+    void shouldFailVerifyEmailWhenServiceThrows() throws Exception {
+        Mockito.doThrow(new EmailVerificationException("Invalid or expired verification token"))
+                .when(authService).verifyEmail("invalid-token");
+
+        mockMvc.perform(get("/api/v1/auth/verify-email")
+                .param("token", "invalid-token"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Invalid or expired verification token"));
+    }
+
+    // -------------------------------------------------------------------------
+    // POST /api/v1/auth/resend-verification
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldResendVerificationEmailSuccessfully() throws Exception {
+        ResendVerificationRequest request = new ResendVerificationRequest();
+        request.setEmail("test@test.com");
+
+        Mockito.doNothing().when(authService).resendVerificationEmail(Mockito.any());
+
+        mockMvc.perform(post("/api/v1/auth/resend-verification")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("If an unverified account exists for that email, "
+                           + "a new verification link has been sent."));
+    }
+
+    @Test
+    void shouldFailResendVerificationWhenEmailInvalid() throws Exception {
+        ResendVerificationRequest request = new ResendVerificationRequest();
+        request.setEmail("invalid-email-format");
+
+        mockMvc.perform(post("/api/v1/auth/resend-verification")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
     }
 }

@@ -6,6 +6,7 @@ import com.pms.authservice.dto.RefreshTokenRequest;
 import com.pms.authservice.dto.RefreshTokenResponse;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
+import com.pms.authservice.dto.ResendVerificationRequest;
 import com.pms.authservice.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -15,10 +16,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -31,9 +34,9 @@ public class AuthController {
 
     private final AuthService authService;
 
-    // -------------------------------------------------------------------------
-    // Register
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    // REGISTER
+    // =========================================================================
 
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(
@@ -44,9 +47,9 @@ public class AuthController {
                 .body(authService.register(request));
     }
 
-    // -------------------------------------------------------------------------
-    // Login
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    // LOGIN
+    // =========================================================================
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
@@ -55,9 +58,9 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    // -------------------------------------------------------------------------
-    // Refresh
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    // TOKEN REFRESH
+    // =========================================================================
 
     @PostMapping("/refresh")
     public ResponseEntity<RefreshTokenResponse> refresh(
@@ -65,6 +68,10 @@ public class AuthController {
 
         return ResponseEntity.ok(authService.refresh(request));
     }
+
+    // =========================================================================
+    // LOGOUT
+    // =========================================================================
 
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(
@@ -79,5 +86,34 @@ public class AuthController {
         authService.logout(userEmail, accessToken);
 
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+    }
+
+    // =========================================================================
+    // EMAIL VERIFICATION — verify link click
+    // =========================================================================
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<Map<String, String>> verifyEmail(
+            @RequestParam("token") String token) {
+
+        authService.verifyEmail(token);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Email verified successfully. You can now log in."));
+    }
+
+    // =========================================================================
+    // EMAIL VERIFICATION — resend link
+    // =========================================================================
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Map<String, String>> resendVerification(
+            @Valid @RequestBody ResendVerificationRequest request) {
+
+        authService.resendVerificationEmail(request);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "If an unverified account exists for that email, "
+                           + "a new verification link has been sent."));
     }
 }

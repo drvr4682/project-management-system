@@ -72,25 +72,22 @@ public class SecurityConfig {
                         "/api/v1/auth/register",
                         "/api/v1/auth/login",
                         "/api/v1/auth/refresh",
-                        "/api/v1/auth/health"
+                        "/api/v1/auth/health",
+                        // email verification (GET — user clicks link from email client)
+                        "/api/v1/auth/verify-email",
+                        // resend verification link
+                        "/api/v1/auth/resend-verification",
+                        // password reset flow
+                        "/api/v1/auth/forgot-password",
+                        "/api/v1/auth/reset-password"
                 ).permitAll()
                 .requestMatchers("/internal/**").permitAll()
                 .anyRequest().authenticated()
             );
 
-        /*
-         * FIX: Correct filter order — GatewayValidationFilter must run first so that
-         * direct callers without the gateway secret are rejected before JWT parsing.
-         *
-         * Previously both filters used addFilterBefore(UsernamePasswordAuthenticationFilter)
-         * which made registration order non-deterministic; the last-registered one ran
-         * first, meaning JWT was validated before the gateway secret check.
-         *
-         * Correct chain:  GatewayValidationFilter → JwtAuthenticationFilter → ...
-         */
-        http.addFilterBefore(gatewayValidationFilter,   UsernamePasswordAuthenticationFilter.class);
-        http.addFilterBefore(jwtAuthenticationFilter,   GatewayValidationFilter.class);
-        http.addFilterBefore(internalServiceFilter,     GatewayValidationFilter.class);
+        http.addFilterBefore(gatewayValidationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtAuthenticationFilter, GatewayValidationFilter.class);
+        http.addFilterBefore(internalServiceFilter, GatewayValidationFilter.class);
 
         return http.build();
     }

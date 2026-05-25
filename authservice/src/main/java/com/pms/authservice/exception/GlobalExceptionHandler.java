@@ -66,6 +66,22 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(
+            UserNotFoundException ex, HttpServletRequest request) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 404, request.getRequestURI()),
+                HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(EmailVerificationException.class)
+    public ResponseEntity<ErrorResponse> handleEmailVerification(
+            EmailVerificationException ex, HttpServletRequest request) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 403, request.getRequestURI()),
+                HttpStatus.FORBIDDEN);
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleInvalidPayload(
             HttpMessageNotReadableException ex, HttpServletRequest request) {
@@ -110,15 +126,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(
                 buildResponse("Invalid username or password", 401, request.getRequestURI()),
                 HttpStatus.UNAUTHORIZED
-        );
-    }
-
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleUserNotFound(
-            UserNotFoundException ex, HttpServletRequest request) {
-        return new ResponseEntity<>(
-                buildResponse(ex.getMessage(), 404, request.getRequestURI()),
-                HttpStatus.NOT_FOUND
         );
     }
 

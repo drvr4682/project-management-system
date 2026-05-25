@@ -48,4 +48,22 @@ class CustomUserDetailsServiceTest {
                 () -> service.loadUserByUsername("missing@mail.com")
         );
     }
+
+    @Test
+    void shouldReturnDisabledUserDetailsWhenUserNotEnabled() {
+        User user = User.builder()
+                .id(1L)
+                .email("disabled@mail.com")
+                .password("hashed")
+                .role(Role.USER)
+                .enabled(false)
+                .build();
+
+        Mockito.when(userRepository.findByEmail("disabled@mail.com"))
+                .thenReturn(Optional.of(user));
+
+        var result = service.loadUserByUsername("disabled@mail.com");
+
+        assertFalse(result.isEnabled(), "User details must be disabled when user is not enabled");
+    }
 }

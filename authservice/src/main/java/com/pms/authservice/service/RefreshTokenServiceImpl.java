@@ -53,21 +53,6 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     // -------------------------------------------------------------------------
     // Rotate  (validate → revoke old → issue new access + refresh tokens)
     // -------------------------------------------------------------------------
-    //
-    // noRollbackFor = InvalidRefreshTokenException.class
-    //
-    // WHY this is required:
-    //   rotate() is @Transactional (REQUIRED). When a reuse attack is detected,
-    //   revokeAllByUserEmail() issues a bulk UPDATE inside this transaction.
-    //   Then InvalidRefreshTokenException (a RuntimeException) is thrown.
-    //   Spring's default behaviour for @Transactional is to ROLLBACK on any
-    //   RuntimeException — which rolls back the bulk UPDATE too, leaving the
-    //   attacker's token family still active in the DB.
-    //
-    //   noRollbackFor tells Spring: "when THIS specific exception escapes,
-    //   commit what has already run instead of rolling it back."
-    //   The revocation UPDATE commits, the exception still propagates to the
-    //   caller, and the HTTP layer returns 401 — exactly the correct outcome.
 
     @Override
     @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
@@ -79,8 +64,6 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
                 .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token not found"));
 
         if (stored.isRevoked()) {
-            // Reuse of a revoked token — possible replay attack.
-            // Revoke the entire token family for this user with a single bulk UPDATE.
             log.warn("[RefreshToken] Reuse detected for user: {}. Revoking all tokens.",
                     stored.getUserEmail());
             int revoked = refreshTokenRepository.revokeAllByUserEmail(stored.getUserEmail());

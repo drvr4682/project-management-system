@@ -44,8 +44,12 @@ public class SecurityConfig {
                             "/test/public",
                             "/api/v1/auth/login",
                             "/api/v1/auth/register",
-                            "/api/v1/auth/refresh",   // no JWT — caller only has the refresh token
+                            "/api/v1/auth/refresh",
                             "/api/v1/auth/health",
+                            "/api/v1/auth/verify-email",
+                            "/api/v1/auth/resend-verification",
+                            "/api/v1/auth/forgot-password",
+                            "/api/v1/auth/reset-password",
                             "/api/v1/projects/health",
                             "/api/v1/tasks/health",
                             "/actuator/health",
