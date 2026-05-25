@@ -74,6 +74,15 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <!--
+            Required at runtime so the JVM can load JwtAuthenticationFilter from common,
+            which declares StringRedisTemplate as a field. This service does not connect
+            to Redis — the redisTemplate is passed as null via FilterConfig.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
 
         <!-- Lombok -->
         <dependency>
