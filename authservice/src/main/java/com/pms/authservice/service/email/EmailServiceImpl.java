@@ -1,16 +1,13 @@
 package com.pms.authservice.service.email;
 
-import com.pms.authservice.exception.EmailSendingException;
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-
-import java.io.UnsupportedEncodingException;
 
 @Slf4j
 @Service
@@ -22,6 +19,7 @@ public class EmailServiceImpl implements EmailService {
     @Value("${spring.mail.username}")
     private String fromAddress;
 
+    @Async
     @Override
     public void sendVerificationEmail(String to, String name, String verificationLink) {
         log.info("[Email] Preparing plain text verification email for: {}", to);
@@ -44,12 +42,12 @@ public class EmailServiceImpl implements EmailService {
 
             mailSender.send(message);
             log.info("[Email] Successfully sent verification email to: {}", to);
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            log.error("[Email] Error occurred while sending email to {}: {}", to, e.getMessage(), e);
-            throw new EmailSendingException("Failed to send verification email: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("[Email] Failed to send verification email to {}: {}", to, e.getMessage(), e);
         }
     }
 
+    @Async
     @Override
     public void sendPasswordResetEmail(String to, String name, String resetLink) {
         log.info("[Email] Preparing plain text password reset email for: {}", to);
@@ -72,9 +70,8 @@ public class EmailServiceImpl implements EmailService {
 
             mailSender.send(message);
             log.info("[Email] Successfully sent password reset email to: {}", to);
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            log.error("[Email] Error occurred while sending password reset email to {}: {}", to, e.getMessage(), e);
-            throw new EmailSendingException("Failed to send password reset email: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("[Email] Failed to send password reset email to {}: {}", to, e.getMessage(), e);
         }
     }
 }

@@ -54,7 +54,7 @@ public class AuthServiceImpl implements AuthService {
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
-    private final java.util.concurrent.ConcurrentHashMap<String, java.time.LocalDateTime> resendCooldowns = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<String, LocalDateTime> resendCooldowns = new java.util.concurrent.ConcurrentHashMap<>();
 
     // =========================================================================
     // REGISTER
@@ -220,8 +220,8 @@ public class AuthServiceImpl implements AuthService {
         String email = request.getEmail().trim().toLowerCase();
 
         // 1. Enforce 60-second cooldown protection
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        java.time.LocalDateTime lastSent = resendCooldowns.get(email);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime lastSent = resendCooldowns.get(email);
         if (lastSent != null && lastSent.plusSeconds(60).isAfter(now)) {
             log.warn("[Auth] Resend verification cooldown active for email: {}", email);
             throw new EmailVerificationException("Please wait 60 seconds before requesting another verification email.");
