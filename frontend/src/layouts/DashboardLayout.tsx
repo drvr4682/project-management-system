@@ -23,20 +23,44 @@ export const DashboardLayout: React.FC = () => {
             </Link>
             <nav className="hidden md:flex items-center space-x-4">
               <Link
+                to="/dashboard"
+                className="text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Dashboard
+              </Link>
+              <Link
                 to="/projects"
                 className="text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
               >
                 Projects
               </Link>
+              <Link
+                to="/my-tasks"
+                className="text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                My Tasks
+              </Link>
             </nav>
           </div>
 
           <div className="flex items-center space-x-3">
-            <Link to="/projects" className="md:hidden">
-              <Button variant="ghost" size="sm">
-                Projects
-              </Button>
-            </Link>
+            <div className="md:hidden flex items-center space-x-1">
+              <Link to="/dashboard">
+                <Button variant="ghost" size="sm" className="px-2">
+                  Dashboard
+                </Button>
+              </Link>
+              <Link to="/projects">
+                <Button variant="ghost" size="sm" className="px-2">
+                  Projects
+                </Button>
+              </Link>
+              <Link to="/my-tasks">
+                <Button variant="ghost" size="sm" className="px-2">
+                  My Tasks
+                </Button>
+              </Link>
+            </div>
             <Button variant="outline" size="sm" onClick={handleLogout}>
               Sign Out
             </Button>

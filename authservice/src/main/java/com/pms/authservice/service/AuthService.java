@@ -7,6 +7,8 @@ import com.pms.authservice.dto.RefreshTokenResponse;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
 import com.pms.authservice.dto.ResendVerificationRequest;
+import com.pms.authservice.dto.UserSummaryDTO;
+import java.util.List;
 
 public interface AuthService {
 
@@ -23,4 +25,6 @@ public interface AuthService {
     void resendVerificationEmail(ResendVerificationRequest request);
 
     boolean userExists(String email);
+
+    List<UserSummaryDTO> searchUsers(String query);
 }

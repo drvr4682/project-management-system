@@ -9,6 +9,7 @@ import { EmptyTasksState } from '../components/EmptyTasksState'
 import { DeleteTaskDialog } from '../components/DeleteTaskDialog'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PageHeader } from '@/components/ui/PageHeader'
 import type { TaskDto } from '../types/taskTypes'
 import type { ProjectDto } from '@/features/projects/types/projectTypes'
 
@@ -98,33 +99,28 @@ export const TasksPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumbs and Actions */}
-      <div className="space-y-2">
+      {/* Breadcrumbs */}
+      <div>
         <Link
           to={`/projects/${parsedProjectId}`}
-          className="inline-flex items-center text-sm font-bold text-muted-foreground hover:text-foreground transition-colors group"
+          className="inline-flex items-center text-sm font-bold text-muted-foreground hover:text-foreground transition-colors group mb-3"
         >
           <ArrowLeft size={16} className="mr-1 group-hover:-translate-x-0.5 transition-transform" />
           <span>Back to Project Overview</span>
         </Link>
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-              {project ? `${project.name} Tasks` : 'Project Tasks'}
-            </h1>
-            <p className="text-muted-foreground text-sm font-medium mt-1">
-              Organize, assign, and outline active milestones and workspace due dates.
-            </p>
-          </div>
-
-          <Link to={`/tasks/create?projectId=${parsedProjectId}`}>
-            <Button className="flex items-center space-x-2 w-full md:w-auto shadow-md">
-              <Plus size={18} />
-              <span>Create Task</span>
-            </Button>
-          </Link>
-        </div>
+        <PageHeader
+          title={project ? `${project.name} Tasks` : 'Project Tasks'}
+          subtitle="Organize, assign, and outline active milestones and workspace due dates."
+          actions={
+            <Link to={`/tasks/create?projectId=${parsedProjectId}`}>
+              <Button className="flex items-center space-x-2 w-full md:w-auto shadow-md rounded-xl font-bold">
+                <Plus size={18} />
+                <span>Create Task</span>
+              </Button>
+            </Link>
+          }
+        />
       </div>
 
       {/* Filter, Search & Sorting Controls */}

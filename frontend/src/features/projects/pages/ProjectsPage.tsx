@@ -8,6 +8,7 @@ import { EmptyProjectsState } from '../components/EmptyProjectsState'
 import { DeleteProjectDialog } from '../components/DeleteProjectDialog'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PageHeader } from '@/components/ui/PageHeader'
 import type { ProjectDto } from '../types/projectTypes'
 
 export const ProjectsPage: React.FC = () => {
@@ -70,24 +71,18 @@ export const ProjectsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            My Projects
-          </h1>
-          <p className="text-muted-foreground text-sm font-medium mt-1">
-            Create, view, and manage your active team workspaces ({totalElements} total).
-          </p>
-        </div>
-
-        <Link to="/projects/create">
-          <Button className="flex items-center space-x-2 w-full md:w-auto shadow-md">
-            <Plus size={18} />
-            <span>Create Project</span>
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="My Projects"
+        subtitle={`Create, view, and manage your active team workspaces (${totalElements} total).`}
+        actions={
+          <Link to="/projects/create">
+            <Button className="flex items-center space-x-2 w-full md:w-auto shadow-md rounded-xl font-bold">
+              <Plus size={18} />
+              <span>Create Project</span>
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Filter and Search Bar */}
       <form

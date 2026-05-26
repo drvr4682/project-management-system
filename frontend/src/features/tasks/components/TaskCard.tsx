@@ -1,10 +1,11 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Edit2, Trash2, Calendar, User, ChevronRight } from 'lucide-react'
+import { Edit2, Trash2, Calendar, ChevronRight } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { TaskStatusBadge } from './TaskStatusBadge'
 import { TaskPriorityBadge } from './TaskPriorityBadge'
+import AssigneeBadge from '@/features/collaboration/components/AssigneeBadge'
 import type { TaskDto } from '../types/taskTypes'
 
 interface TaskCardProps {
@@ -47,17 +48,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onDeleteClick }) => {
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="pb-3 text-[11px] text-muted-foreground space-y-1.5 mt-auto">
+      <CardContent className="pb-3 text-[11px] text-muted-foreground space-y-2 mt-auto">
         <div className="flex items-center space-x-2 font-medium">
           <Calendar size={13} className="text-muted-foreground/80" />
           <span>Due: {formatDueDate(task.dueDate)}</span>
         </div>
-        {task.assignedTo && (
-          <div className="flex items-center space-x-2 font-medium">
-            <User size={13} className="text-muted-foreground/80" />
-            <span>Assigned: {task.assignedTo}</span>
-          </div>
-        )}
+        <div className="flex items-center space-x-2">
+          <span className="font-semibold text-[10px] text-muted-foreground/75 shrink-0 select-none">Assignee:</span>
+          <AssigneeBadge assigneeId={task.assignedTo} />
+        </div>
       </CardContent>
 
       <CardFooter className="pt-3 border-t border-border/50 flex items-center justify-between space-x-2">

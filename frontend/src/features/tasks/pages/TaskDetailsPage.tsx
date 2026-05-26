@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Calendar, User, FileText, Trash2, Edit2, Folder, MessageSquare, Paperclip } from 'lucide-react'
+import { ArrowLeft, Calendar, FileText, Trash2, Edit2, Folder, MessageSquare, Paperclip } from 'lucide-react'
 import { toast } from 'sonner'
 import { taskApi } from '../api/taskApi'
 import { useTasks } from '../hooks/useTasks'
@@ -10,6 +10,11 @@ import { Button } from '@/components/ui/Button'
 import { TaskStatusBadge } from '../components/TaskStatusBadge'
 import { TaskPriorityBadge } from '../components/TaskPriorityBadge'
 import { DeleteTaskDialog } from '../components/DeleteTaskDialog'
+import { useCollaboration } from '@/features/collaboration/hooks/useCollaboration'
+import AssigneeBadge from '@/features/collaboration/components/AssigneeBadge'
+import AssignTaskDialog from '@/features/collaboration/components/AssignTaskDialog'
+import { useAppSelector } from '@/hooks/store'
+import { selectAuth } from '@/features/auth/store/authSlice'
 import type { TaskDto } from '../types/taskTypes'
 import type { ProjectDto } from '@/features/projects/types/projectTypes'
 
@@ -19,6 +24,8 @@ export const TaskDetailsPage: React.FC = () => {
   const navigate = useNavigate()
 
   const { deleteTask } = useTasks()
+  const { user } = useAppSelector(selectAuth)
+  const { members, assignTask, unassignTask, fetchMembers, isLoading: isAssigning } = useCollaboration()
 
   const [task, setTask] = useState<TaskDto | null>(null)
   const [project, setProject] = useState<ProjectDto | null>(null)
@@ -26,6 +33,7 @@ export const TaskDetailsPage: React.FC = () => {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showAssignDialog, setShowAssignDialog] = useState(false)
 
   // Fetch task and project info on mount
   useEffect(() => {
@@ -43,6 +51,9 @@ export const TaskDetailsPage: React.FC = () => {
         // Load project reference details
         const fetchedProject = await projectApi.getById(fetchedTask.projectId)
         setProject(fetchedProject)
+
+        // Load project members for assignment selectors
+        await fetchMembers(fetchedTask.projectId)
       } catch (e: any) {
         const msg = e.response?.data?.message || 'Failed to fetch task details.'
         setFetchError(msg)
@@ -53,7 +64,7 @@ export const TaskDetailsPage: React.FC = () => {
     }
 
     loadData()
-  }, [taskId])
+  }, [taskId, fetchMembers])
 
   const handleDeleteConfirm = async () => {
     if (!task) return
@@ -68,6 +79,24 @@ export const TaskDetailsPage: React.FC = () => {
     } finally {
       setIsDeleting(false)
       setShowDeleteDialog(false)
+    }
+  }
+
+  const handleAssignTask = async (assigneeEmail: string) => {
+    try {
+      const updated = await assignTask(task!.id, assigneeEmail)
+      setTask(updated)
+    } catch (e: any) {
+      // hook handles toast
+    }
+  }
+
+  const handleUnassignTask = async () => {
+    try {
+      const updated = await unassignTask(task!.id)
+      setTask(updated)
+    } catch (e: any) {
+      // hook handles toast
     }
   }
 
@@ -215,14 +244,16 @@ export const TaskDetailsPage: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <span className="text-[10px] text-muted-foreground uppercase font-extrabold tracking-wider block">
                         Assigned Member
                       </span>
-                      <div className="flex items-center space-x-2 text-foreground font-semibold text-sm">
-                        <User size={15} className="text-primary/70" />
-                        <span>{task.assignedTo || 'Unassigned'}</span>
-                      </div>
+                      <AssigneeBadge
+                        assigneeId={task.assignedTo}
+                        interactive={project?.owner === user?.email || user?.role === 'ADMIN'}
+                        onClick={() => setShowAssignDialog(true)}
+                        className="w-full text-left"
+                      />
                     </div>
 
                     <div className="space-y-1">
@@ -254,6 +285,18 @@ export const TaskDetailsPage: React.FC = () => {
         onConfirm={handleDeleteConfirm}
         taskTitle={task?.title || ''}
         isLoading={isDeleting}
+      />
+
+      {/* Assignee Assignment Dialog */}
+      <AssignTaskDialog
+        isOpen={showAssignDialog}
+        onClose={() => setShowAssignDialog(false)}
+        onAssign={handleAssignTask}
+        onUnassign={handleUnassignTask}
+        taskTitle={task?.title || ''}
+        currentAssignee={task?.assignedTo}
+        members={members}
+        isLoading={isAssigning}
       />
     </div>
   )

@@ -11,6 +11,7 @@ export const taskApi = {
     projectId: number
     status?: string
     priority?: string
+    assignedTo?: string
     search?: string
     page?: number
     size?: number

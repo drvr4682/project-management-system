@@ -7,6 +7,9 @@ import com.pms.authservice.dto.RefreshTokenResponse;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
 import com.pms.authservice.dto.ResendVerificationRequest;
+import com.pms.authservice.dto.UserSummaryDTO;
+import java.util.List;
+import java.util.stream.Collectors;
 import com.pms.authservice.entity.User;
 import com.pms.authservice.entity.VerificationToken;
 import com.pms.authservice.exception.EmailVerificationException;
@@ -263,5 +266,21 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public boolean userExists(String email) {
         return userRepository.existsByEmail(email);
+    }
+
+    @Override
+    public List<UserSummaryDTO> searchUsers(String query) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        return userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(query, query)
+                .stream()
+                .filter(User::isEnabled)
+                .map(user -> UserSummaryDTO.builder()
+                        .id(user.getId())
+                        .name(user.getName())
+                        .email(user.getEmail())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

@@ -9,8 +9,10 @@ import com.pms.authservice.dto.RegisterResponse;
 import com.pms.authservice.dto.ResendVerificationRequest;
 import com.pms.authservice.dto.ForgotPasswordRequest;
 import com.pms.authservice.dto.ResetPasswordRequest;
+import com.pms.authservice.dto.UserSummaryDTO;
 import com.pms.authservice.service.AuthService;
 import com.pms.authservice.service.password.PasswordResetService;
+import java.util.List;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -147,5 +149,16 @@ public class AuthController {
 
         return ResponseEntity.ok(Map.of(
                 "message", "Password has been reset successfully. You can now log in with your new password."));
+    }
+
+    // =========================================================================
+    // SEARCH USERS
+    // =========================================================================
+
+    @GetMapping("/users")
+    public ResponseEntity<List<UserSummaryDTO>> searchUsers(
+            @RequestParam(value = "query", defaultValue = "") String query) {
+        log.info("[Auth] Search users with query: {}", query);
+        return ResponseEntity.ok(authService.searchUsers(query));
     }
 }

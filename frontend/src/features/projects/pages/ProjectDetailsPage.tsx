@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/Button'
 import { useAppSelector } from '@/hooks/store'
 import { selectAuth } from '@/features/auth/store/authSlice'
 import { DeleteProjectDialog } from '../components/DeleteProjectDialog'
+import { collaborationApi } from '@/features/collaboration/api/collaborationApi'
+import type { ProjectMemberDto } from '@/features/collaboration/types/collaborationTypes'
+import UserAvatar from '@/features/collaboration/components/UserAvatar'
 import type { ProjectDto } from '../types/projectTypes'
 
 export const ProjectDetailsPage: React.FC = () => {
@@ -23,12 +26,12 @@ export const ProjectDetailsPage: React.FC = () => {
   const [project, setProject] = useState<ProjectDto | null>(null)
   const [isFetching, setIsFetching] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
-  
+  const [projectMembers, setProjectMembers] = useState<ProjectMemberDto[]>([])
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [activeTab, setActiveTab] = useState<'tasks' | 'members' | 'activity'>('tasks')
 
-  // Fetch project details on mount
+  // Fetch project details and members on mount to check access
   useEffect(() => {
     if (isNaN(projectId)) {
       setFetchError('Invalid project ID')
@@ -36,10 +39,26 @@ export const ProjectDetailsPage: React.FC = () => {
       return
     }
 
-    const fetchDetails = async () => {
+    const fetchDetailsAndCheckAccess = async () => {
       try {
-        const fetched = await projectApi.getById(projectId)
-        setProject(fetched)
+        const fetchedProject = await projectApi.getById(projectId)
+        
+        // Fetch membership roster
+        const membersList = await collaborationApi.getMembers(projectId)
+        
+        // Access control check
+        const isOwner = fetchedProject.owner === user?.email
+        const isSystemAdmin = user?.role === 'ADMIN'
+        const isProjectMember = membersList.some(m => m.userId === user?.email)
+        
+        if (!isOwner && !isSystemAdmin && !isProjectMember) {
+          toast.error('Access Denied. You are not a member of this project.')
+          navigate('/unauthorized')
+          return
+        }
+
+        setProject(fetchedProject)
+        setProjectMembers(membersList)
       } catch (e: any) {
         const msg = e.response?.data?.message || 'Failed to fetch project details.'
         setFetchError(msg)
@@ -49,8 +68,8 @@ export const ProjectDetailsPage: React.FC = () => {
       }
     }
 
-    fetchDetails()
-  }, [projectId])
+    fetchDetailsAndCheckAccess()
+  }, [projectId, user, navigate])
 
   const handleDeleteConfirm = async () => {
     if (isNaN(projectId)) return
@@ -233,11 +252,53 @@ export const ProjectDetailsPage: React.FC = () => {
                     )}
 
                     {activeTab === 'members' && (
-                      <div className="space-y-3">
-                        <h4 className="text-lg font-bold text-foreground">Team Management Integration</h4>
-                        <p className="text-muted-foreground text-sm font-medium max-w-md mx-auto">
-                          Add, search, and assign project members, roles, and fine-grained permissions to this workspace soon.
-                        </p>
+                      <div className="space-y-4 py-4">
+                        <div className="flex flex-col sm:flex-row items-center justify-between border-b border-border/50 pb-4 mb-4 gap-4">
+                          <div className="text-left w-full sm:w-auto">
+                            <h4 className="text-base font-bold text-foreground">Project Roster ({projectMembers.length} active)</h4>
+                            <p className="text-muted-foreground text-xs font-semibold mt-0.5">
+                              View active collaborators and manage workspace invitations.
+                            </p>
+                          </div>
+                          <Link to={`/projects/${project.id}/members`} className="w-full sm:w-auto">
+                            <Button size="sm" className="flex items-center space-x-1.5 font-semibold w-full">
+                              <Users size={14} />
+                              <span>Manage Members</span>
+                            </Button>
+                          </Link>
+                        </div>
+
+                        {projectMembers.length === 0 ? (
+                          <div className="text-center py-6 text-muted-foreground text-xs font-semibold">
+                            No team members added to this workspace. Only you can view it.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            {projectMembers.slice(0, 6).map((member) => (
+                              <div
+                                key={member.userId}
+                                className="flex items-center space-x-2.5 p-3.5 border border-border/80 rounded-xl bg-background/50 hover:border-primary/20 transition-all text-left"
+                              >
+                                <UserAvatar nameOrEmail={member.userId} size="xs" />
+                                <div className="min-w-0">
+                                  <div className="text-xs font-bold text-foreground truncate max-w-[120px]" title={member.userId}>
+                                    {member.userId}
+                                  </div>
+                                  <div className="text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground mt-0.5">
+                                    {member.role.toLowerCase()}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {projectMembers.length > 6 && (
+                          <div className="text-center pt-2">
+                            <Link to={`/projects/${project.id}/members`} className="text-xs text-primary font-bold hover:underline">
+                              View all project members...
+                            </Link>
+                          </div>
+                        )}
                       </div>
                     )}
 
