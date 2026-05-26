@@ -54,6 +54,9 @@ public class AuthServiceImpl implements AuthService {
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
+    @Value("${app.frontend-base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
+
     private final java.util.concurrent.ConcurrentHashMap<String, LocalDateTime> resendCooldowns = new java.util.concurrent.ConcurrentHashMap<>();
 
     // =========================================================================
@@ -86,8 +89,8 @@ public class AuthServiceImpl implements AuthService {
         // 2. Create a VerificationToken record
         VerificationToken vToken = verificationService.createVerificationToken(savedUser);
 
-        // 3. Build verification URL
-        String verificationLink = baseUrl + "/api/v1/auth/verify?token=" + vToken.getToken();
+        // 3. Build verification URL pointing to the frontend
+        String verificationLink = frontendBaseUrl + "/verify-email?token=" + vToken.getToken();
 
         // 4. Send verification email
         emailService.sendVerificationEmail(
@@ -150,6 +153,8 @@ public class AuthServiceImpl implements AuthService {
                 .refreshToken(refreshToken)
                 .email(user.getEmail())
                 .role(user.getRole().name())
+                .id(user.getId())
+                .name(user.getName())
                 .build();
     }
 
@@ -239,8 +244,8 @@ public class AuthServiceImpl implements AuthService {
         // 2. Issue a fresh token using VerificationService
         VerificationToken newToken = verificationService.createVerificationToken(user);
 
-        // 3. Build verification link
-        String verificationLink = baseUrl + "/api/v1/auth/verify?token=" + newToken.getToken();
+        // 3. Build verification link pointing to the frontend
+        String verificationLink = frontendBaseUrl + "/verify-email?token=" + newToken.getToken();
 
         // 4. Send email
         emailService.sendVerificationEmail(user.getEmail(), user.getName(), verificationLink);

@@ -40,6 +40,9 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
+    @Value("${app.frontend-base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
+
     @Override
     @Transactional
     public void handleForgotPassword(ForgotPasswordRequest request) {
@@ -78,8 +81,8 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         passwordResetTokenRepository.saveAndFlush(resetToken);
 
-        // 5. Send plain text email
-        String resetLink = baseUrl + "/api/v1/auth/reset-password?token=" + tokenValue;
+        // 5. Send plain text email pointing to the frontend
+        String resetLink = frontendBaseUrl + "/reset-password?token=" + tokenValue;
         emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink);
 
         // 6. Record cooldown
