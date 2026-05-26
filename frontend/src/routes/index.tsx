@@ -1,7 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { PublicRoute } from './PublicRoute'
-import { LoginPage } from '@/features/auth/pages/LoginPage'
-import { RegisterPage } from '@/features/auth/pages/RegisterPage'
+import { UnifiedAuthPage } from '@/features/auth/pages/UnifiedAuthPage'
 import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage'
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
@@ -26,11 +25,11 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/login',
-        element: <LoginPage />,
+        element: <UnifiedAuthPage />,
       },
       {
         path: '/register',
-        element: <RegisterPage />,
+        element: <UnifiedAuthPage />,
       },
       {
         path: '/forgot-password',

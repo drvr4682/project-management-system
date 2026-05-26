@@ -1,16 +1,19 @@
 import React from 'react'
-import { useSearchParams, Link, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { motion } from 'framer-motion'
 import { authApi } from '../api/authApi'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card'
 import { Label } from '@/components/ui/Label'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { AuthLayout } from '../components/AuthLayout'
-import { Logo } from '@/components/branding/Logo'
+import { AuthSidePanel } from '../components/AuthSidePanel'
+import { AuthCard } from '../components/AuthCard'
+import { AuthHeader } from '../components/AuthHeader'
+import { AuthFooter } from '../components/AuthFooter'
 
 const resetPasswordSchema = z
   .object({
@@ -77,83 +80,128 @@ export const ResetPasswordPage: React.FC = () => {
     }
   }
 
+  const sidePanel = (
+    <AuthSidePanel
+      title="New Credentials"
+      subtitle="Set up your new secure password below to regain full access to your collaborative workspace."
+      ctaLabel="Back to safety?"
+      ctaText="Sign In"
+      ctaLink="/login"
+    />
+  )
+
   return (
-    <AuthLayout>
-      <Card className="border border-border bg-card/85 backdrop-blur-lg shadow-xl">
-        <CardHeader className="space-y-1 text-center flex flex-col items-center">
-          <Logo size="lg" showText={false} className="mb-2" />
-          <CardTitle className="text-3xl font-extrabold tracking-tight">Reset Password</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Enter your new password below
-          </CardDescription>
-        </CardHeader>
+    <AuthLayout sidePanel={sidePanel}>
+      <AuthCard>
+        <AuthHeader
+          title="Reset Password"
+          subtitle="Enter your new secure password details below."
+        />
 
         {!token ? (
-          <CardContent className="space-y-4">
-            <Alert variant="destructive">
-              <AlertDescription>
+          <div className="space-y-4">
+            <Alert variant="destructive" className="rounded-xl border border-destructive/20 bg-destructive/5">
+              <AlertDescription className="text-xs font-semibold">
                 Reset token is missing in the URL query parameters. Please make sure to copy/paste the entire link from your email.
               </AlertDescription>
             </Alert>
-          </CardContent>
+            <AuthFooter
+              backLinkText="Return to Login"
+              backLinkTo="/login"
+            />
+          </div>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              {apiError && (
-                <Alert variant="destructive">
-                  <AlertDescription>{apiError}</AlertDescription>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {apiError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Alert variant="destructive" className="rounded-xl border border-destructive/20 bg-destructive/5">
+                  <AlertDescription className="text-xs font-semibold">{apiError}</AlertDescription>
                 </Alert>
-              )}
+              </motion.div>
+            )}
 
-              {apiSuccess && (
-                <Alert>
-                  <AlertDescription className="text-emerald-500 font-semibold">{apiSuccess}</AlertDescription>
+            {apiSuccess && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Alert className="rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                  <AlertDescription className="text-xs text-emerald-500 font-bold">{apiSuccess}</AlertDescription>
                 </Alert>
+              </motion.div>
+            )}
+
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.15 }}
+              className="space-y-1.5"
+            >
+              <Label htmlFor="password" className="text-xs font-bold text-foreground">
+                New Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                error={!!errors.password}
+                className="rounded-xl h-10 border-border/80 text-sm focus-visible:ring-primary/30"
+                {...register('password')}
+              />
+              {errors.password && (
+                <p className="text-[10px] text-destructive font-semibold">{errors.password.message}</p>
               )}
+            </motion.div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">New Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  error={!!errors.password}
-                  {...register('password')}
-                />
-                {errors.password && (
-                  <p className="text-xs text-destructive font-semibold">{errors.password.message}</p>
-                )}
-              </div>
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="space-y-1.5"
+            >
+              <Label htmlFor="confirmPassword" className="text-xs font-bold text-foreground">
+                Confirm New Password
+              </Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                error={!!errors.confirmPassword}
+                className="rounded-xl h-10 border-border/80 text-sm focus-visible:ring-primary/30"
+                {...register('confirmPassword')}
+              />
+              {errors.confirmPassword && (
+                <p className="text-[10px] text-destructive font-semibold">{errors.confirmPassword.message}</p>
+              )}
+            </motion.div>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  error={!!errors.confirmPassword}
-                  {...register('confirmPassword')}
-                />
-                {errors.confirmPassword && (
-                  <p className="text-xs text-destructive font-semibold">{errors.confirmPassword.message}</p>
-                )}
-              </div>
-            </CardContent>
-
-            <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full" isLoading={isLoading}>
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.25 }}
+              className="pt-2"
+            >
+              <Button
+                type="submit"
+                className="w-full h-10 rounded-xl font-bold bg-primary hover:bg-primary/95 text-sm shadow-md shadow-primary/20 transition-all duration-300"
+                isLoading={isLoading}
+              >
                 Reset Password
               </Button>
-            </CardFooter>
+            </motion.div>
+
+            <AuthFooter
+              backLinkText="Back to Login"
+              backLinkTo="/login"
+            />
           </form>
         )}
-
-        <div className="pb-6 text-sm text-center text-muted-foreground border-t border-border/50 pt-4">
-          <Link to="/login" className="text-primary hover:underline font-semibold">
-            Back to Sign In
-          </Link>
-        </div>
-      </Card>
+      </AuthCard>
     </AuthLayout>
   )
 }
+
+export default ResetPasswordPage

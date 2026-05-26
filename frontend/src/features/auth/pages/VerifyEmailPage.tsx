@@ -1,16 +1,19 @@
 import React from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 import { authApi } from '../api/authApi'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card'
 import { Label } from '@/components/ui/Label'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { AuthLayout } from '../components/AuthLayout'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import { Logo } from '@/components/branding/Logo'
+import { AuthSidePanel } from '../components/AuthSidePanel'
+import { AuthCard } from '../components/AuthCard'
+import { AuthHeader } from '../components/AuthHeader'
+import { AuthFooter } from '../components/AuthFooter'
 
 const resendSchema = z.object({
   email: z.string().email('Please enter a valid email address').min(1, 'Email is required'),
@@ -75,32 +78,47 @@ export const VerifyEmailPage: React.FC = () => {
     }
   }
 
-  return (
-    <AuthLayout>
-      <Card className="border border-border bg-card/85 backdrop-blur-lg shadow-xl text-center">
-        <CardHeader className="space-y-1 flex flex-col items-center">
-          <Logo size="lg" showText={false} className="mb-2" />
-          <CardTitle className="text-3xl font-extrabold tracking-tight">Email Verification</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Verifying your registration details with the server
-          </CardDescription>
-        </CardHeader>
+  const sidePanel = (
+    <AuthSidePanel
+      title="Email Validation"
+      subtitle="Confirm your registration details to unlock your DRVRHub dashboard metrics and collaboration hubs."
+      ctaLabel="Back to safety?"
+      ctaText="Sign In"
+      ctaLink="/login"
+    />
+  )
 
-        <CardContent className="space-y-6">
+  return (
+    <AuthLayout sidePanel={sidePanel}>
+      <AuthCard>
+        <AuthHeader
+          title="Email Verification"
+          subtitle="Verifying your registration details with the server."
+        />
+
+        <div className="space-y-6">
           {verificationStatus === 'verifying' && (
-            <div className="flex flex-col items-center justify-center py-6 space-y-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-6 space-y-4"
+            >
               <div className="relative w-12 h-12">
                 <div className="absolute w-full h-full border-4 border-primary/20 rounded-full"></div>
                 <div className="absolute w-full h-full border-4 border-t-primary rounded-full animate-spin"></div>
               </div>
-              <p className="text-sm font-medium text-muted-foreground">
+              <p className="text-sm font-semibold text-muted-foreground">
                 Verifying your token. Please wait...
               </p>
-            </div>
+            </motion.div>
           )}
 
           {verificationStatus === 'success' && (
-            <div className="space-y-4 py-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-4 py-4 text-center"
+            >
               <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
                 <svg
                   className="w-8 h-8 text-emerald-500"
@@ -112,12 +130,16 @@ export const VerifyEmailPage: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <p className="text-emerald-500 font-semibold">{successMessage}</p>
-            </div>
+              <p className="text-emerald-500 font-bold text-sm">{successMessage}</p>
+            </motion.div>
           )}
 
           {verificationStatus === 'failed' && (
-            <div className="space-y-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-4"
+            >
               <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
                 <svg
                   className="w-8 h-8 text-destructive"
@@ -129,49 +151,56 @@ export const VerifyEmailPage: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
+
               {errorMessage && (
-                <Alert variant="destructive">
-                  <AlertDescription>{errorMessage}</AlertDescription>
+                <Alert variant="destructive" className="rounded-xl border border-destructive/20 bg-destructive/5 text-left">
+                  <AlertDescription className="text-xs font-semibold">{errorMessage}</AlertDescription>
                 </Alert>
               )}
 
               {successMessage && (
-                <Alert>
-                  <AlertDescription className="text-emerald-500 font-semibold">{successMessage}</AlertDescription>
+                <Alert className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-left">
+                  <AlertDescription className="text-xs text-emerald-500 font-bold">{successMessage}</AlertDescription>
                 </Alert>
               )}
 
-              <div className="border-t border-border pt-4 text-left">
-                <h4 className="text-sm font-bold text-foreground mb-2">Resend Verification Email</h4>
+              <div className="border-t border-border/60 pt-4 text-left">
+                <h4 className="text-xs font-bold text-foreground mb-2">Resend Verification Email</h4>
                 <form onSubmit={handleSubmit(onResend)} className="space-y-3">
                   <div className="space-y-1">
-                    <Label htmlFor="email" className="text-xs">Email Address</Label>
+                    <Label htmlFor="email" className="text-xs font-bold text-foreground">Email Address</Label>
                     <Input
                       id="email"
                       type="email"
                       placeholder="you@example.com"
                       error={!!errors.email}
+                      className="rounded-xl h-10 border-border/80 text-sm focus-visible:ring-primary/30"
                       {...register('email')}
                     />
                     {errors.email && (
-                      <p className="text-xs text-destructive font-semibold">{errors.email.message}</p>
+                      <p className="text-[10px] text-destructive font-semibold">{errors.email.message}</p>
                     )}
                   </div>
-                  <Button type="submit" size="sm" className="w-full" isLoading={resendLoading}>
+                  <Button
+                    type="submit"
+                    className="w-full h-10 rounded-xl font-bold bg-primary hover:bg-primary/95 text-sm shadow-md"
+                    isLoading={resendLoading}
+                  >
                     Send Link
                   </Button>
                 </form>
               </div>
-            </div>
+            </motion.div>
           )}
-        </CardContent>
+        </div>
 
-        <CardFooter className="justify-center border-t border-border/50 pt-4">
-          <Link to="/login" className="text-sm text-primary hover:underline font-semibold">
-            Return to Login
-          </Link>
-        </CardFooter>
-      </Card>
+        <AuthFooter
+          backLinkText="Return to Login"
+          backLinkTo="/login"
+        />
+      </AuthCard>
     </AuthLayout>
   )
 }
+
+export default VerifyEmailPage

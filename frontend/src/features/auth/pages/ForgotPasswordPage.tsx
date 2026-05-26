@@ -2,15 +2,17 @@ import React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { authApi } from '../api/authApi'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card'
 import { Label } from '@/components/ui/Label'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { AuthLayout } from '../components/AuthLayout'
-import { Logo } from '@/components/branding/Logo'
+import { AuthSidePanel } from '../components/AuthSidePanel'
+import { AuthCard } from '../components/AuthCard'
+import { AuthHeader } from '../components/AuthHeader'
+import { AuthFooter } from '../components/AuthFooter'
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address').min(1, 'Email is required'),
@@ -47,59 +49,92 @@ export const ForgotPasswordPage: React.FC = () => {
     }
   }
 
+  const sidePanel = (
+    <AuthSidePanel
+      title="Password Recovery"
+      subtitle="No worries! Enter your registered email address and we will dispatch a secure link to reset your credentials."
+      ctaLabel="Remember your credentials?"
+      ctaText="Sign In"
+      ctaLink="/login"
+    />
+  )
+
   return (
-    <AuthLayout>
-      <Card className="border border-border bg-card/85 backdrop-blur-lg shadow-xl">
-        <CardHeader className="space-y-1 text-center flex flex-col items-center">
-          <Logo size="lg" showText={false} className="mb-2" />
-          <CardTitle className="text-3xl font-extrabold tracking-tight">Forgot Password</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Enter your email to receive a password reset link
-          </CardDescription>
-        </CardHeader>
+    <AuthLayout sidePanel={sidePanel}>
+      <AuthCard>
+        <AuthHeader
+          title="Forgot Password"
+          subtitle="Enter your email to receive a secure recovery link."
+        />
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            {apiError && (
-              <Alert variant="destructive">
-                <AlertDescription>{apiError}</AlertDescription>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {apiError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Alert variant="destructive" className="rounded-xl border border-destructive/20 bg-destructive/5">
+                <AlertDescription className="text-xs font-semibold">{apiError}</AlertDescription>
               </Alert>
-            )}
+            </motion.div>
+          )}
 
-            {apiSuccess && (
-              <Alert>
-                <AlertDescription className="text-emerald-500 font-semibold">{apiSuccess}</AlertDescription>
+          {apiSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Alert className="rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                <AlertDescription className="text-xs text-emerald-500 font-bold">{apiSuccess}</AlertDescription>
               </Alert>
+            </motion.div>
+          )}
+
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+            className="space-y-1.5"
+          >
+            <Label htmlFor="email" className="text-xs font-bold text-foreground">
+              Email Address
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              error={!!errors.email}
+              className="rounded-xl h-10 border-border/80 text-sm focus-visible:ring-primary/30"
+              {...register('email')}
+            />
+            {errors.email && (
+              <p className="text-[10px] text-destructive font-semibold">{errors.email.message}</p>
             )}
+          </motion.div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                error={!!errors.email}
-                {...register('email')}
-              />
-              {errors.email && (
-                <p className="text-xs text-destructive font-semibold">{errors.email.message}</p>
-              )}
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" isLoading={isLoading}>
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="pt-2"
+          >
+            <Button
+              type="submit"
+              className="w-full h-10 rounded-xl font-bold bg-primary hover:bg-primary/95 text-sm shadow-md shadow-primary/20 transition-all duration-300"
+              isLoading={isLoading}
+            >
               Send Reset Link
             </Button>
-            <div className="text-sm text-center text-muted-foreground">
-              Remember your password?{' '}
-              <Link to="/login" className="text-primary hover:underline font-semibold">
-                Sign in
-              </Link>
-            </div>
-          </CardFooter>
+          </motion.div>
         </form>
-      </Card>
+
+        <AuthFooter
+          backLinkText="Back to Sign In"
+          backLinkTo="/login"
+        />
+      </AuthCard>
     </AuthLayout>
   )
 }
+
+export default ForgotPasswordPage

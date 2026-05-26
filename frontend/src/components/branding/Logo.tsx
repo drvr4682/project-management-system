@@ -4,12 +4,14 @@ interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | number
   showText?: boolean
   className?: string
+  light?: boolean
 }
 
 export const Logo: React.FC<LogoProps> = ({
   size = 'md',
   showText = true,
   className = '',
+  light = false,
 }) => {
   const getDimensions = () => {
     switch (size) {
@@ -27,12 +29,16 @@ export const Logo: React.FC<LogoProps> = ({
 
   return (
     <div className={`flex items-center space-x-2 select-none ${className}`}>
-      {/* Reverted back to the old simple box-style logo featuring 'D' for DRVRHub */}
-      <div className={`${boxSize} rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-extrabold ${letterStyle}`}>
+      {/* Box logo with dynamic colors based on light background/side panel context */}
+      <div className={`${boxSize} rounded-lg flex items-center justify-center font-extrabold ${letterStyle} ${
+        light ? 'bg-white text-violet-600 shadow-sm' : 'bg-primary text-primary-foreground'
+      }`}>
         D
       </div>
       {showText && (
-        <span className={`font-bold text-foreground tracking-tight ${textStyle}`}>
+        <span className={`font-bold tracking-tight ${textStyle} ${
+          light ? 'text-white' : 'text-foreground'
+        }`}>
           DRVRHub
         </span>
       )}
@@ -40,4 +46,4 @@ export const Logo: React.FC<LogoProps> = ({
   )
 }
 
-export default Logo
+export default Logo;
