@@ -9,6 +9,7 @@ import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
 import { HomePage } from '@/pages/HomePage'
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage'
 import { projectRoutes } from '@/features/projects/routes/projectRoutes'
+import { taskRoutes } from '@/features/tasks/routes/taskRoutes'
 
 export const router = createBrowserRouter([
   // Protected Routes
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
     ],
   },
   ...projectRoutes,
+  ...taskRoutes,
   {
     path: '/unauthorized',
     element: <UnauthorizedPage />,

@@ -213,11 +213,22 @@ export const ProjectDetailsPage: React.FC = () => {
 
                   <div className="p-8 text-center py-16">
                     {activeTab === 'tasks' && (
-                      <div className="space-y-3">
-                        <h4 className="text-lg font-bold text-foreground">Task Board Coming Soon</h4>
-                        <p className="text-muted-foreground text-sm font-medium max-w-md mx-auto">
-                          Task cards, deadlines, assignee selectors, and drag-and-drop workflow status columns will be integrated in the upcoming Sprint.
+                      <div className="space-y-4 py-6">
+                        <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2">
+                          <LayoutList size={24} />
+                        </div>
+                        <h4 className="text-xl font-bold text-foreground">Project Tasks Board</h4>
+                        <p className="text-muted-foreground text-sm font-medium max-w-md mx-auto leading-relaxed">
+                          Manage, filter, and track all your active task deliverables, priorities, and milestones for <strong>{project.name}</strong>.
                         </p>
+                        <div className="pt-2">
+                          <Link to={`/projects/${project.id}/tasks`}>
+                            <Button className="flex items-center space-x-2 mx-auto font-semibold shadow-md">
+                              <LayoutList size={16} />
+                              <span>Open Tasks Board</span>
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
                     )}
 

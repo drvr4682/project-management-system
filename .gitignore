@@ -12,6 +12,3 @@ target/
 
 # Env
 .env
-
-application-dev.properties
-application-test.properties
