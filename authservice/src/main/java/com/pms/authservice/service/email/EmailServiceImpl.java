@@ -49,4 +49,32 @@ public class EmailServiceImpl implements EmailService {
             throw new EmailSendingException("Failed to send verification email: " + e.getMessage());
         }
     }
+
+    @Override
+    public void sendPasswordResetEmail(String to, String name, String resetLink) {
+        log.info("[Email] Preparing plain text password reset email for: {}", to);
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+
+            helper.setFrom(fromAddress, "PMS App Support");
+            helper.setTo(to);
+            helper.setSubject("PMS — Reset your password");
+
+            String body = "Hello " + name + ",\n\n"
+                    + "Use the link below to reset your password:\n\n"
+                    + resetLink + "\n\n"
+                    + "This link expires in 30 minutes.\n\n"
+                    + "Best regards,\n"
+                    + "PMS App Support";
+
+            helper.setText(body, false); // false = plain text
+
+            mailSender.send(message);
+            log.info("[Email] Successfully sent password reset email to: {}", to);
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            log.error("[Email] Error occurred while sending password reset email to {}: {}", to, e.getMessage(), e);
+            throw new EmailSendingException("Failed to send password reset email: " + e.getMessage());
+        }
+    }
 }

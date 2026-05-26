@@ -1,8 +1,8 @@
 {
 	"info": {
 		"_postman_id": "0d6ee942-fa30-4e38-9580-be3e7c80eb7c",
-		"name": "Email Verification API",
-		"description": "Production-hardened Postman collection for validating user registration, email verification endpoints, blocked login behavior, token reuse/expiration rejection, and resend cooldown protections.",
+		"name": "Email Verification & Password Reset API",
+		"description": "Production-hardened Postman collection for validating user registration, email verification endpoints, blocked login behavior, token reuse/expiration rejection, resend cooldown protections, forgot password flows, anti-enumeration security, and password resets.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -74,7 +74,7 @@
 						"login"
 					]
 				},
-				"description": "Attempts to log in before verifying the email. This should be blocked by Spring Security / Authentication Manager, returning a 401 Unauthorized or 403 Forbidden with a clear message indicating verification is required."
+				"description": "Attempts to log in before verifying the email. This should be blocked by Spring Security / Authentication Manager, returning a 401 Unauthorized response."
 			},
 			"response": []
 		},
@@ -175,6 +175,78 @@
 					]
 				},
 				"description": "Requests a new verification email for an unverified account. This will invalidate any previously generated unused tokens (setting used=true), create a new UUID token, send a new email, and enforce a 60-second cooldown protection on subsequent requests."
+			},
+			"response": []
+		},
+		{
+			"name": "6. Forgot Password",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"jane.doe@example.com\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/auth/forgot-password",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"auth",
+						"forgot-password"
+					]
+				},
+				"description": "Requests a password reset link. Anti-enumeration security: Always returns 200 OK with message: 'If the account exists, a password reset link has been sent.', regardless of whether the email exists or cooldown is active. Enforces a 60-second cooldown per email."
+			},
+			"response": []
+		},
+		{
+			"name": "7. Reset Password",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"token\": \"YOUR_RESET_TOKEN_HERE\",\n  \"newPassword\": \"NewSecurePass123!\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/auth/reset-password",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"auth",
+						"reset-password"
+					]
+				},
+				"description": "Submits the password reset token and new password. Performs validation, hashes the new password, updates the user account, invalidates the token (setting used=true), and revokes all older refresh tokens to force active sessions to re-authenticate."
 			},
 			"response": []
 		}

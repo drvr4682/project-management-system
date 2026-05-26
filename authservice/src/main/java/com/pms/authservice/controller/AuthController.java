@@ -7,7 +7,10 @@ import com.pms.authservice.dto.RefreshTokenResponse;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
 import com.pms.authservice.dto.ResendVerificationRequest;
+import com.pms.authservice.dto.ForgotPasswordRequest;
+import com.pms.authservice.dto.ResetPasswordRequest;
 import com.pms.authservice.service.AuthService;
+import com.pms.authservice.service.password.PasswordResetService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +36,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
     // =========================================================================
     // REGISTER
@@ -115,5 +119,33 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
                 "message", "If an unverified account exists for that email, "
                            + "a new verification link has been sent."));
+    }
+
+    // =========================================================================
+    // FORGOT PASSWORD
+    // =========================================================================
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+
+        passwordResetService.handleForgotPassword(request);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "If the account exists, a password reset link has been sent."));
+    }
+
+    // =========================================================================
+    // RESET PASSWORD
+    // =========================================================================
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+
+        passwordResetService.handleResetPassword(request);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Password has been reset successfully. You can now log in with your new password."));
     }
 }

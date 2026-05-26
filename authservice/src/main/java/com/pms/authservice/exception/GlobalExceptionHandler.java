@@ -98,6 +98,22 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(InvalidPasswordResetTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPasswordResetToken(
+            InvalidPasswordResetTokenException ex, HttpServletRequest request) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 400, request.getRequestURI()),
+                HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ExpiredPasswordResetTokenException.class)
+    public ResponseEntity<ErrorResponse> handleExpiredPasswordResetToken(
+            ExpiredPasswordResetTokenException ex, HttpServletRequest request) {
+        return new ResponseEntity<>(
+                buildResponse(ex.getMessage(), 400, request.getRequestURI()),
+                HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(EmailSendingException.class)
     public ResponseEntity<ErrorResponse> handleEmailSending(
             EmailSendingException ex, HttpServletRequest request) {

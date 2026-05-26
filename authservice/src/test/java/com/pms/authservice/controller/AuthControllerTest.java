@@ -13,6 +13,7 @@ import com.pms.authservice.exception.EmailVerificationException;
 import com.pms.authservice.security.CustomUserDetailsService;
 import com.pms.authservice.service.AuthService;
 import com.pms.authservice.service.RefreshTokenService;
+import com.pms.authservice.service.password.PasswordResetService;
 import com.pms.common.security.JwtUtil;
 
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,9 @@ class AuthControllerTest {
 
     @MockBean
     private CustomUserDetailsService userDetailsService;
+
+    @MockBean
+    private PasswordResetService passwordResetService;
 
     // -------------------------------------------------------------------------
     // POST /api/v1/auth/register
