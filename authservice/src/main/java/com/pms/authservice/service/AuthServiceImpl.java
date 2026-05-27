@@ -8,6 +8,7 @@ import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
 import com.pms.authservice.dto.ResendVerificationRequest;
 import com.pms.authservice.dto.UserSummaryDTO;
+import com.pms.authservice.dto.ChangePasswordRequest;
 import java.util.List;
 import java.util.stream.Collectors;
 import com.pms.authservice.entity.User;
@@ -271,7 +272,15 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public List<UserSummaryDTO> searchUsers(String query) {
         if (query == null || query.isBlank()) {
-            return List.of();
+            return userRepository.findAll()
+                    .stream()
+                    .filter(User::isEnabled)
+                    .map(user -> UserSummaryDTO.builder()
+                            .id(user.getId())
+                            .name(user.getName())
+                            .email(user.getEmail())
+                            .build())
+                    .collect(Collectors.toList());
         }
         return userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(query, query)
                 .stream()
@@ -282,5 +291,29 @@ public class AuthServiceImpl implements AuthService {
                         .email(user.getEmail())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String email, ChangePasswordRequest request) {
+        log.info("[Auth] Password change request for user: {}", email);
+        try {
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new InvalidCredentialsException("User session is invalid"));
+
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                log.warn("[Auth] Current password mismatch for user: {}", email);
+                throw new InvalidCredentialsException("Current password does not match");
+            }
+
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            userRepository.save(user);
+            log.info("[Auth] Password updated successfully for user: {}", email);
+        } catch (InvalidCredentialsException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("[Auth] Database or runtime error during password change for user: {}", email, e);
+            throw new InvalidCredentialsException("Unable to update password. Please try again.");
+        }
     }
 }

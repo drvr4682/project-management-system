@@ -10,6 +10,7 @@ import com.pms.authservice.dto.ResendVerificationRequest;
 import com.pms.authservice.dto.ForgotPasswordRequest;
 import com.pms.authservice.dto.ResetPasswordRequest;
 import com.pms.authservice.dto.UserSummaryDTO;
+import com.pms.authservice.dto.ChangePasswordRequest;
 import com.pms.authservice.service.AuthService;
 import com.pms.authservice.service.password.PasswordResetService;
 import java.util.List;
@@ -149,6 +150,19 @@ public class AuthController {
 
         return ResponseEntity.ok(Map.of(
                 "message", "Password has been reset successfully. You can now log in with your new password."));
+    }
+
+    // =========================================================================
+    // CHANGE PASSWORD (AUTHENTICATED)
+    // =========================================================================
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @AuthenticationPrincipal String userEmail,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        log.info("[Auth] Received change password request for user: {}", userEmail);
+        authService.changePassword(userEmail, request);
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully."));
     }
 
     // =========================================================================
