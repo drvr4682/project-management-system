@@ -8,8 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.util.ReflectionTestUtils;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class InternalServiceFilterTest {
@@ -18,8 +16,7 @@ class InternalServiceFilterTest {
 
     @BeforeEach
     void setUp() {
-        filter = new InternalServiceFilter(new ObjectMapper());
-        ReflectionTestUtils.setField(filter, "internalSecret", "testinternalkey");
+        filter = new InternalServiceFilter("testinternalkey", new ObjectMapper());
     }
 
     @Test

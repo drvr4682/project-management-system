@@ -33,8 +33,10 @@ public class FilterConfig {
     }
 
     @Bean
-    public InternalServiceFilter internalServiceFilter(ObjectMapper objectMapper) {
-        return new InternalServiceFilter(objectMapper);
+    public InternalServiceFilter internalServiceFilter(
+            @Value("${internal.secret}") String internalSecret,
+            ObjectMapper objectMapper) {
+        return new InternalServiceFilter(internalSecret, objectMapper);
     }
 
     @Bean

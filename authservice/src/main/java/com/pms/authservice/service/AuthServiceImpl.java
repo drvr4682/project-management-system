@@ -17,6 +17,7 @@ import com.pms.authservice.exception.EmailVerificationException;
 import com.pms.authservice.exception.InvalidCredentialsException;
 import com.pms.authservice.exception.UserAlreadyExistsException;
 import com.pms.authservice.exception.UserNotFoundException;
+import com.pms.authservice.exception.TooManyRequestsException;
 import com.pms.authservice.repository.UserRepository;
 import com.pms.authservice.service.email.EmailService;
 import com.pms.authservice.service.verification.VerificationService;
@@ -126,6 +127,34 @@ public class AuthServiceImpl implements AuthService {
                 ? null
                 : request.getEmail().trim().toLowerCase();
 
+        // 0. Enforce rate limiting per email (Primary: Redis, Fallback: none/passthrough)
+        if (email != null) {
+            String rateLimitKey = "rate:limit:login:" + email;
+            boolean isBlocked = false;
+            try {
+                String val = redisTemplate.opsForValue().get(rateLimitKey);
+                if (val != null && Integer.parseInt(val) >= 5) {
+                    isBlocked = true;
+                }
+            } catch (Exception e) {
+                log.warn("[Auth] Redis is down or unavailable for rate limiting. Bypassing check: {}", e.getMessage());
+            }
+
+            if (isBlocked) {
+                log.warn("[Auth] Login rate limit exceeded for email: {}", email);
+                throw new TooManyRequestsException("Too many login attempts. Please try again in 1 minute.");
+            }
+
+            try {
+                Long count = redisTemplate.opsForValue().increment(rateLimitKey);
+                if (count != null && count == 1) {
+                    redisTemplate.expire(rateLimitKey, 60, TimeUnit.SECONDS);
+                }
+            } catch (Exception e) {
+                log.warn("[Auth] Redis is down. Unable to increment rate limit counter for: {}", email);
+            }
+        }
+
         // 1. Authenticate credentials
         try {
             authenticationManager.authenticate(
@@ -151,6 +180,16 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
 
         log.info("[Auth] Login successful: {}", user.getEmail());
+
+        // 5. Clear rate limit counter on successful login
+        if (email != null) {
+            String rateLimitKey = "rate:limit:login:" + email;
+            try {
+                redisTemplate.delete(rateLimitKey);
+            } catch (Exception e) {
+                log.warn("[Auth] Redis is down. Unable to clear rate limit counter for: {}", email);
+            }
+        }
 
         return LoginResponse.builder()
                 .token(accessToken)
@@ -228,10 +267,24 @@ public class AuthServiceImpl implements AuthService {
 
         String email = request.getEmail().trim().toLowerCase();
 
-        // 1. Enforce 60-second cooldown protection
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime lastSent = resendCooldowns.get(email);
-        if (lastSent != null && lastSent.plusSeconds(60).isAfter(now)) {
+        // 1. Enforce 60-second cooldown protection (Primary: Redis, Fallback: In-memory)
+        String key = "cooldown:resend:" + email;
+        boolean hasCooldown = false;
+        try {
+            hasCooldown = Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        } catch (Exception e) {
+            log.warn("[Auth] Redis is down or unavailable. Falling back to in-memory check: {}", e.getMessage());
+        }
+
+        // Secondary check: if Redis is not active or mock returns false, verify the local fallback map
+        if (!hasCooldown) {
+            LocalDateTime lastSent = resendCooldowns.get(email);
+            if (lastSent != null && lastSent.plusSeconds(60).isAfter(LocalDateTime.now())) {
+                hasCooldown = true;
+            }
+        }
+
+        if (hasCooldown) {
             log.warn("[Auth] Resend verification cooldown active for email: {}", email);
             throw new EmailVerificationException("Please wait 60 seconds before requesting another verification email.");
         }
@@ -254,8 +307,13 @@ public class AuthServiceImpl implements AuthService {
         // 4. Send email
         emailService.sendVerificationEmail(user.getEmail(), user.getName(), verificationLink);
 
-        // 5. Update cooldown timestamp
-        resendCooldowns.put(email, now);
+        // 5. Update cooldown timestamp (Primary: Redis, Fallback: In-memory)
+        try {
+            redisTemplate.opsForValue().set(key, "1", 60, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("[Auth] Redis is down. Persisting cooldown in-memory for email: {}", email);
+            resendCooldowns.put(email, LocalDateTime.now());
+        }
 
         log.info("[Auth] Verification email successfully resent to: {}", email);
     }

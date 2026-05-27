@@ -19,6 +19,9 @@ public class EmailServiceImpl implements EmailService {
     @Value("${spring.mail.username}")
     private String fromAddress;
 
+    @Value("${app.password-reset.token-expiry-minutes:15}")
+    private int passwordResetExpiryMinutes;
+
     @Async
     @Override
     public void sendVerificationEmail(String to, String name, String verificationLink) {
@@ -62,7 +65,7 @@ public class EmailServiceImpl implements EmailService {
             String body = "Hello " + name + ",\n\n"
                     + "Use the link below to reset your password:\n\n"
                     + resetLink + "\n\n"
-                    + "This link expires in 30 minutes.\n\n"
+                    + "This link expires in " + passwordResetExpiryMinutes + " minutes.\n\n"
                     + "Best regards,\n"
                     + "PMS App Support";
 

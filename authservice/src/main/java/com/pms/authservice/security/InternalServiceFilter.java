@@ -8,22 +8,22 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
 @Slf4j
-@RequiredArgsConstructor
 public class InternalServiceFilter extends OncePerRequestFilter {
 
-    @Value("${internal.secret}")
-    private String internalSecret;
-
+    private final String internalSecret;
     private final ObjectMapper objectMapper;
+
+    public InternalServiceFilter(String internalSecret, ObjectMapper objectMapper) {
+        this.internalSecret = internalSecret;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     protected void doFilterInternal(

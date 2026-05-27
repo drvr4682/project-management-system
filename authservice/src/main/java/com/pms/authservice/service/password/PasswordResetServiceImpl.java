@@ -13,13 +13,13 @@ import com.pms.authservice.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -31,8 +31,8 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
-
-    private final ConcurrentHashMap<String, LocalDateTime> forgotPasswordCooldowns = new ConcurrentHashMap<>();
+    private final StringRedisTemplate redisTemplate;
+    private final java.util.concurrent.ConcurrentHashMap<String, LocalDateTime> forgotPasswordCooldowns = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Value("${app.password-reset.token-expiry-minutes:30}")
     private long tokenExpiryMinutes;
@@ -47,11 +47,25 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     @Transactional
     public void handleForgotPassword(ForgotPasswordRequest request) {
         String email = request.getEmail().trim().toLowerCase();
-        LocalDateTime now = LocalDateTime.now();
 
-        // 1. Enforce 60-second cooldown protection
-        LocalDateTime lastSent = forgotPasswordCooldowns.get(email);
-        if (lastSent != null && lastSent.plusSeconds(60).isAfter(now)) {
+        // 1. Enforce 60-second cooldown protection (Primary: Redis, Fallback: In-memory)
+        String key = "cooldown:forgot-password:" + email;
+        boolean hasCooldown = false;
+        try {
+            hasCooldown = Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        } catch (Exception e) {
+            log.warn("[PasswordReset] Redis is down or unavailable. Falling back to in-memory check: {}", e.getMessage());
+        }
+
+        // Secondary check: if Redis is not active or mock returns false, verify local fallback map
+        if (!hasCooldown) {
+            LocalDateTime lastSent = forgotPasswordCooldowns.get(email);
+            if (lastSent != null && lastSent.plusSeconds(60).isAfter(LocalDateTime.now())) {
+                hasCooldown = true;
+            }
+        }
+
+        if (hasCooldown) {
             // Anti-enumeration: do NOT send email, do NOT throw an exception, return generic success
             log.warn("[PasswordReset] Cooldown active for forgot password request: {}", email);
             return;
@@ -63,7 +77,12 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             // Anti-enumeration: do NOT throw exception, return generic success
             log.info("[PasswordReset] Forgot password requested for non-existent email: {}", email);
             // Save request timestamp to protect against mapping enumeration timing attacks
-            forgotPasswordCooldowns.put(email, now);
+            try {
+                redisTemplate.opsForValue().set(key, "1", 60, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (Exception e) {
+                log.warn("[PasswordReset] Redis is down. Persisting cooldown in-memory for email: {}", email);
+                forgotPasswordCooldowns.put(email, LocalDateTime.now());
+            }
             return;
         }
 
@@ -85,8 +104,13 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         String resetLink = frontendBaseUrl + "/reset-password?token=" + tokenValue;
         emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink);
 
-        // 6. Record cooldown
-        forgotPasswordCooldowns.put(email, now);
+        // 6. Record cooldown (Primary: Redis, Fallback: In-memory)
+        try {
+            redisTemplate.opsForValue().set(key, "1", 60, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("[PasswordReset] Redis is down. Persisting cooldown in-memory for email: {}", email);
+            forgotPasswordCooldowns.put(email, LocalDateTime.now());
+        }
         log.info("[PasswordReset] Password reset email sent to: {}", email);
     }
 
@@ -130,6 +154,14 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
     public void clearCooldowns() {
         forgotPasswordCooldowns.clear();
-        log.info("[PasswordReset] Cooldowns map cleared successfully.");
+        try {
+            java.util.Set<String> keys = redisTemplate.keys("cooldown:forgot-password:*");
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+            }
+        } catch (Exception e) {
+            log.warn("[PasswordReset] Redis is down. Failed to clear cooldown keys: {}", e.getMessage());
+        }
+        log.info("[PasswordReset] Cooldowns cleared successfully.");
     }
 }

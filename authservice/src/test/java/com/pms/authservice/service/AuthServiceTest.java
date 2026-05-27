@@ -9,6 +9,7 @@ import com.pms.authservice.entity.User;
 import com.pms.authservice.entity.VerificationToken;
 import com.pms.authservice.exception.EmailVerificationException;
 import com.pms.authservice.exception.UserAlreadyExistsException;
+import com.pms.authservice.exception.TooManyRequestsException;
 import com.pms.authservice.repository.UserRepository;
 import com.pms.authservice.service.email.EmailService;
 import com.pms.authservice.service.verification.VerificationService;
@@ -444,5 +445,48 @@ class AuthServiceTest {
 
         // Second attempt fails due to active cooldown
         assertThrows(EmailVerificationException.class, () -> authService.resendVerificationEmail(request));
+    }
+
+    @Test
+    void shouldThrowTooManyRequestsWhenLoginRateLimitExceeded() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("ratelimit@mail.com");
+        request.setPassword("Test@123");
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get("rate:limit:login:ratelimit@mail.com")).thenReturn("5");
+
+        assertThrows(TooManyRequestsException.class, () -> authService.login(request));
+    }
+
+    @Test
+    void shouldIncrementRateLimitCounterAndSetExpiryOnFirstLoginAttempt() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@mail.com");
+        request.setPassword("Test@123");
+
+        User user = User.builder()
+                .id(1L)
+                .email("test@mail.com")
+                .password("hashed")
+                .role(Role.USER)
+                .emailVerified(true)
+                .build();
+
+        when(userRepository.findByEmail("test@mail.com")).thenReturn(Optional.of(user));
+        when(authenticationManager.authenticate(any())).thenReturn(null);
+        when(jwtUtil.generateToken(anyString(), anyString())).thenReturn("access-token");
+        when(refreshTokenService.createRefreshToken("test@mail.com")).thenReturn("refresh-token");
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get("rate:limit:login:test@mail.com")).thenReturn(null);
+        when(valueOps.increment("rate:limit:login:test@mail.com")).thenReturn(1L);
+
+        LoginResponse response = authService.login(request);
+
+        assertNotNull(response);
+        verify(valueOps).increment("rate:limit:login:test@mail.com");
+        verify(redisTemplate).expire("rate:limit:login:test@mail.com", 60, java.util.concurrent.TimeUnit.SECONDS);
+        verify(redisTemplate).delete("rate:limit:login:test@mail.com");
     }
 }
