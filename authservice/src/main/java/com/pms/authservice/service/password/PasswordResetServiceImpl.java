@@ -102,7 +102,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         // 5. Send plain text email pointing to the frontend
         String resetLink = frontendBaseUrl + "/reset-password?token=" + tokenValue;
-        emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink);
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getUserName(), resetLink);
 
         // 6. Record cooldown (Primary: Redis, Fallback: In-memory)
         try {

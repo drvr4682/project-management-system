@@ -9,11 +9,9 @@ import com.pms.authservice.dto.RegisterResponse;
 import com.pms.authservice.dto.ResendVerificationRequest;
 import com.pms.authservice.dto.ForgotPasswordRequest;
 import com.pms.authservice.dto.ResetPasswordRequest;
-import com.pms.authservice.dto.UserSummaryDTO;
 import com.pms.authservice.dto.ChangePasswordRequest;
 import com.pms.authservice.service.AuthService;
 import com.pms.authservice.service.password.PasswordResetService;
-import java.util.List;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -163,16 +161,5 @@ public class AuthController {
         log.info("[Auth] Received change password request for user: {}", userEmail);
         authService.changePassword(userEmail, request);
         return ResponseEntity.ok(Map.of("message", "Password changed successfully."));
-    }
-
-    // =========================================================================
-    // SEARCH USERS
-    // =========================================================================
-
-    @GetMapping("/users")
-    public ResponseEntity<List<UserSummaryDTO>> searchUsers(
-            @RequestParam(value = "query", defaultValue = "") String query) {
-        log.info("[Auth] Search users with query: {}", query);
-        return ResponseEntity.ok(authService.searchUsers(query));
     }
 }

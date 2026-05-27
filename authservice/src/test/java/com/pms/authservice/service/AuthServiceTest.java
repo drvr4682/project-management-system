@@ -65,7 +65,7 @@ class AuthServiceTest {
 
         User savedUser = User.builder()
                 .id(1L)
-                .name("Test")
+                .userName("Test")
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -236,7 +236,7 @@ class AuthServiceTest {
 
         User savedUser = User.builder()
                 .id(1L)
-                .name("Test")
+                .userName("Test")
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -269,7 +269,7 @@ class AuthServiceTest {
 
         User savedUser = User.builder()
                 .id(1L)
-                .name("Test")
+                .userName("Test")
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -381,7 +381,7 @@ class AuthServiceTest {
 
         User user = User.builder()
                 .id(1L)
-                .name("Test")
+                .userName("Test")
                 .email("test@mail.com")
                 .emailVerified(false)
                 .build();
@@ -407,7 +407,7 @@ class AuthServiceTest {
 
         User user = User.builder()
                 .id(1L)
-                .name("Test")
+                .userName("Test")
                 .email("test@mail.com")
                 .emailVerified(true)
                 .build();
@@ -427,7 +427,7 @@ class AuthServiceTest {
 
         User user = User.builder()
                 .id(1L)
-                .name("Test")
+                .userName("Test")
                 .email("cooldown@mail.com")
                 .emailVerified(false)
                 .build();

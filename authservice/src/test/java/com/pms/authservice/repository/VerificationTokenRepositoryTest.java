@@ -29,7 +29,7 @@ class VerificationTokenRepositoryTest {
 
         User user = userRepository.save(
                 User.builder()
-                        .name("john")
+                        .userName("john")
                         .email("john@example.com")
                         .password("password")
                         .role(Role.USER)
@@ -62,7 +62,7 @@ class VerificationTokenRepositoryTest {
 
         User user = userRepository.save(
                 User.builder()
-                        .name("mike")
+                        .userName("mike")
                         .email("mike@example.com")
                         .password("password")
                         .role(Role.USER)

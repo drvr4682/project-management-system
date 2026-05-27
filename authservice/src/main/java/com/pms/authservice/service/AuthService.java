@@ -7,9 +7,7 @@ import com.pms.authservice.dto.RefreshTokenResponse;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
 import com.pms.authservice.dto.ResendVerificationRequest;
-import com.pms.authservice.dto.UserSummaryDTO;
 import com.pms.authservice.dto.ChangePasswordRequest;
-import java.util.List;
 
 public interface AuthService {
 
@@ -27,7 +25,6 @@ public interface AuthService {
 
     boolean userExists(String email);
 
-    List<UserSummaryDTO> searchUsers(String query);
 
     void changePassword(String email, ChangePasswordRequest request);
 }

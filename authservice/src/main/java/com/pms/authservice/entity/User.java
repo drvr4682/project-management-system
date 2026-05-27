@@ -32,7 +32,7 @@ public class User {
     private Long id;
 
     @Column(nullable = false, length = 100)
-    private String name;
+    private String userName;
 
     @Column(nullable = false, unique = true, length = 150)
     private String email;

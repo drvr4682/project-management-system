@@ -33,7 +33,7 @@ class RefreshTokenRepositoryTest {
     @BeforeEach
     void setUp() {
         savedUser = userRepository.save(User.builder()
-                .name("Test User")
+                .userName("Test User")
                 .email("test@example.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -114,7 +114,7 @@ class RefreshTokenRepositoryTest {
     void shouldNotRevokeTokensForOtherUsers() {
 
         User otherUser = userRepository.save(User.builder()
-                .name("Other User")
+                .userName("Other User")
                 .email("other@example.com")
                 .password("hashed")
                 .role(Role.USER)

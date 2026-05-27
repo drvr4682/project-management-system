@@ -78,7 +78,7 @@ class PasswordResetIntegrationTest {
 
         // Create a verified and enabled user to test reset password flow
         verifiedUser = User.builder()
-                .name("John Reset")
+                .userName("John Reset")
                 .email("john.reset@test.com")
                 .password("$2a$10$nCoFshq5wO.V.306sE198.g4z4R083lZcQW3d0G6D9w6c.yC2.K2C") // encrypted "Password123!"
                 .role(Role.USER)
@@ -242,7 +242,7 @@ class PasswordResetIntegrationTest {
 
         // Create direct Bob user to test bulk invalidation in database isolation
         User anotherUser = User.builder()
-                .name("Bob Invalidator")
+                .userName("Bob Invalidator")
                 .email("bob.invalidate@test.com")
                 .password("hash")
                 .role(Role.USER)

@@ -7,10 +7,7 @@ import com.pms.authservice.dto.RefreshTokenResponse;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
 import com.pms.authservice.dto.ResendVerificationRequest;
-import com.pms.authservice.dto.UserSummaryDTO;
 import com.pms.authservice.dto.ChangePasswordRequest;
-import java.util.List;
-import java.util.stream.Collectors;
 import com.pms.authservice.entity.User;
 import com.pms.authservice.entity.VerificationToken;
 import com.pms.authservice.exception.EmailVerificationException;
@@ -81,7 +78,7 @@ public class AuthServiceImpl implements AuthService {
 
         // 1. Persist user — no token fields on the entity
         User user = User.builder()
-                .name(request.getName().trim())
+                .userName(request.getName().trim())
                 .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
@@ -100,7 +97,7 @@ public class AuthServiceImpl implements AuthService {
         // 4. Send verification email
         emailService.sendVerificationEmail(
                 savedUser.getEmail(),
-                savedUser.getName(),
+                savedUser.getUserName(),
                 verificationLink
         );
 
@@ -109,7 +106,7 @@ public class AuthServiceImpl implements AuthService {
 
         return RegisterResponse.builder()
                 .id(savedUser.getId())
-                .name(savedUser.getName())
+                .name(savedUser.getUserName())
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole().name())
                 .build();
@@ -197,7 +194,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .id(user.getId())
-                .name(user.getName())
+                .name(user.getUserName())
                 .build();
     }
 
@@ -305,7 +302,7 @@ public class AuthServiceImpl implements AuthService {
         String verificationLink = frontendBaseUrl + "/verify-email?token=" + newToken.getToken();
 
         // 4. Send email
-        emailService.sendVerificationEmail(user.getEmail(), user.getName(), verificationLink);
+        emailService.sendVerificationEmail(user.getEmail(), user.getUserName(), verificationLink);
 
         // 5. Update cooldown timestamp (Primary: Redis, Fallback: In-memory)
         try {
@@ -325,30 +322,6 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public boolean userExists(String email) {
         return userRepository.existsByEmail(email);
-    }
-
-    @Override
-    public List<UserSummaryDTO> searchUsers(String query) {
-        if (query == null || query.isBlank()) {
-            return userRepository.findAll()
-                    .stream()
-                    .filter(User::isEnabled)
-                    .map(user -> UserSummaryDTO.builder()
-                            .id(user.getId())
-                            .name(user.getName())
-                            .email(user.getEmail())
-                            .build())
-                    .collect(Collectors.toList());
-        }
-        return userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(query, query)
-                .stream()
-                .filter(User::isEnabled)
-                .map(user -> UserSummaryDTO.builder()
-                        .id(user.getId())
-                        .name(user.getName())
-                        .email(user.getEmail())
-                        .build())
-                .collect(Collectors.toList());
     }
 
     @Override
