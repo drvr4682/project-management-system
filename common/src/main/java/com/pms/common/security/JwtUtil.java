@@ -46,9 +46,9 @@ public class JwtUtil {
     }
 
     // Token generation
-    public String generateToken(String email, String role) {
+    public String generateToken(String subject, String role) {
         return Jwts.builder()
-                .setSubject(email)
+                .setSubject(subject)
                 .claim("role", role)
                 .claim("jti", java.util.UUID.randomUUID().toString())
                 .setIssuedAt(new Date())

@@ -12,3 +12,14 @@ target/
 
 # Env
 .env
+
+# Node.js / Frontend
+node_modules/
+frontend/dist/
+frontend/build/
+.env.local
+.env.*.local
+*.tsbuildinfo
+package-lock.json
+pnpm-lock.yaml
+yarn.lock

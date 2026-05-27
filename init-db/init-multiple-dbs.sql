@@ -1,3 +1,4 @@
 CREATE DATABASE auth_db;
 CREATE DATABASE project_db;
 CREATE DATABASE task_db;
+CREATE DATABASE user_db;

@@ -18,7 +18,7 @@ public class SecurityUtils {
 
     public String getCurrentUser() {
 
-        String gatewayUser = request.getHeader("X-Authenticated-User");
+        String gatewayUser = request.getHeader("X-User-Id");
         if (gatewayUser != null && !gatewayUser.isBlank()) {
             return gatewayUser;
         }
@@ -45,7 +45,7 @@ public class SecurityUtils {
     }
 
     public String getCurrentRole() {
-        return request.getHeader("X-Authenticated-Role");
+        return request.getHeader("X-User-Role");
     }
 
     public String getCorrelationId() {

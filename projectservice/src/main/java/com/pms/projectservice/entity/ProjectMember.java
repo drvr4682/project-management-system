@@ -29,7 +29,7 @@ public class ProjectMember {
     private Long projectId;
 
     @Column(name = "user_id", nullable = false)
-    private String userId;
+    private java.util.UUID userId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

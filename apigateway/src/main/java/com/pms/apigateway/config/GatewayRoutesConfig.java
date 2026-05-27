@@ -28,6 +28,9 @@ public class GatewayRoutesConfig {
     @Value("${services.task.url}")
     private String taskServiceUrl;
 
+    @Value("${services.user.url}")
+    private String userServiceUrl;
+
     @Value("${gateway.secret}")
     private String gatewaySecret;
 
@@ -44,7 +47,7 @@ public class GatewayRoutesConfig {
                         )
                         .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
                         .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
-                        .filter(propagateCorrelationId())
+                        .filter(injectAuthHeaders())
                         .build();
 
         RouterFunction<ServerResponse> projectRoute =
@@ -55,7 +58,7 @@ public class GatewayRoutesConfig {
                         )
                         .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
                         .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
-                        .filter(propagateCorrelationId())
+                        .filter(injectAuthHeaders())
                         .build();
 
         RouterFunction<ServerResponse> adminRoute =
@@ -66,7 +69,7 @@ public class GatewayRoutesConfig {
                         )
                         .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
                         .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
-                        .filter(propagateCorrelationId())
+                        .filter(injectAuthHeaders())
                         .build();
 
         RouterFunction<ServerResponse> taskRoute =
@@ -77,27 +80,67 @@ public class GatewayRoutesConfig {
                         )
                         .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
                         .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
-                        .filter(propagateCorrelationId())
+                        .filter(injectAuthHeaders())
+                        .build();
+
+        RouterFunction<ServerResponse> userRoute =
+                GatewayRouterFunctions.route("user-service")
+                        .route(
+                                path("/api/v1/users/**"),
+                                HandlerFunctions.http(userServiceUrl)
+                        )
+                        .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
+                        .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
+                        .filter(injectAuthHeaders())
+                        .build();
+
+        RouterFunction<ServerResponse> socialLinksRoute =
+                GatewayRouterFunctions.route("social-links-service")
+                        .route(
+                                path("/api/v1/social-links/**"),
+                                HandlerFunctions.http(userServiceUrl)
+                        )
+                        .before(addRequestHeader("X-Gateway", "API-GATEWAY"))
+                        .before(addRequestHeader("X-Gateway-Secret", gatewaySecret))
+                        .filter(injectAuthHeaders())
                         .build();
 
         return authRoute
                 .and(projectRoute)
                 .and(adminRoute)
-                .and(taskRoute);
+                .and(taskRoute)
+                .and(userRoute)
+                .and(socialLinksRoute);
     }
 
     private org.springframework.web.servlet.function.HandlerFilterFunction<ServerResponse, ServerResponse>
-            propagateCorrelationId() {
+            injectAuthHeaders() {
 
         return (request, next) -> {
+            org.springframework.security.core.Authentication auth =
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+
+            ServerRequest.Builder builder = ServerRequest.from(request);
+
+            if (auth != null && auth.isAuthenticated() && !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+                String userId = auth.getName();
+                String role = auth.getAuthorities().stream()
+                        .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                        .map(r -> r.replace("ROLE_", ""))
+                        .findFirst()
+                        .orElse("USER");
+
+                builder.header("X-User-Id", userId);
+                builder.header("X-User-Role", role);
+                log.debug("Injected downstream headers: X-User-Id={}, X-User-Role={}", userId, role);
+            }
+
             String correlationId = request.headers().firstHeader("X-Correlation-Id");
             if (correlationId != null && !correlationId.isBlank()) {
-                ServerRequest mutated = ServerRequest.from(request)
-                        .header("X-Correlation-Id", correlationId)
-                        .build();
-                return next.handle(mutated);
+                builder.header("X-Correlation-Id", correlationId);
             }
-            return next.handle(request);
+
+            return next.handle(builder.build());
         };
     }
 }

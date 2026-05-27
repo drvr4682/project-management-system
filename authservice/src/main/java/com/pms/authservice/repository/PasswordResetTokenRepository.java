@@ -14,7 +14,7 @@ public interface PasswordResetTokenRepository extends JpaRepository<PasswordRese
 
     Optional<PasswordResetToken> findByToken(String token);
 
-    List<PasswordResetToken> findByUserId(Long userId);
+    List<PasswordResetToken> findByUserId(java.util.UUID userId);
 
     @Modifying(clearAutomatically = true)
     @Query("""
@@ -23,7 +23,7 @@ public interface PasswordResetTokenRepository extends JpaRepository<PasswordRese
         WHERE p.user.id = :userId
         AND p.used = false
     """)
-    int invalidateUnusedTokensByUserId(@Param("userId") Long userId);
+    int invalidateUnusedTokensByUserId(@Param("userId") java.util.UUID userId);
 
     @Modifying(clearAutomatically = true)
     @Query("""

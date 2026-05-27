@@ -21,7 +21,7 @@ class CustomUserDetailsServiceTest {
     void shouldLoadUserByEmail() {
 
         User user = User.builder()
-                .id(1L)
+                .id(java.util.UUID.randomUUID())
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -52,7 +52,7 @@ class CustomUserDetailsServiceTest {
     @Test
     void shouldReturnDisabledUserDetailsWhenUserNotEnabled() {
         User user = User.builder()
-                .id(1L)
+                .id(java.util.UUID.randomUUID())
                 .email("disabled@mail.com")
                 .password("hashed")
                 .role(Role.USER)

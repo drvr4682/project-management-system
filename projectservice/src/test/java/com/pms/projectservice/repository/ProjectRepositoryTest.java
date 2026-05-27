@@ -24,6 +24,8 @@ class ProjectRepositoryTest {
     @Autowired
     private ProjectRepository projectRepository;
 
+    private static final java.util.UUID OWNER_ID = java.util.UUID.randomUUID();
+
     @Test
     @DisplayName("Should save project successfully")
     void shouldSaveProjectSuccessfully() {
@@ -31,7 +33,7 @@ class ProjectRepositoryTest {
         Project project = Project.builder()
                 .name("PMS Backend")
                 .description("Backend system")
-                .ownerId("admin@test.com")
+                .ownerId(OWNER_ID)
                 .status(ProjectStatus.ACTIVE)
                 .build();
 
@@ -49,14 +51,14 @@ class ProjectRepositoryTest {
         Project activeProject = Project.builder()
                 .name("Active Project")
                 .description("Active Desc")
-                .ownerId("admin@test.com")
+                .ownerId(OWNER_ID)
                 .status(ProjectStatus.ACTIVE)
                 .build();
 
         Project completedProject = Project.builder()
                 .name("Completed Project")
                 .description("Completed Desc")
-                .ownerId("admin@test.com")
+                .ownerId(OWNER_ID)
                 .status(ProjectStatus.COMPLETED)
                 .build();
 
@@ -84,14 +86,14 @@ class ProjectRepositoryTest {
         Project project1 = Project.builder()
                 .name("Task Management System")
                 .description("Desc")
-                .ownerId("admin@test.com")
+                .ownerId(OWNER_ID)
                 .status(ProjectStatus.ACTIVE)
                 .build();
 
         Project project2 = Project.builder()
                 .name("Inventory System")
                 .description("Desc")
-                .ownerId("admin@test.com")
+                .ownerId(OWNER_ID)
                 .status(ProjectStatus.ACTIVE)
                 .build();
 
@@ -117,14 +119,14 @@ class ProjectRepositoryTest {
         Project project1 = Project.builder()
                 .name("Backend API")
                 .description("Desc")
-                .ownerId("admin@test.com")
+                .ownerId(OWNER_ID)
                 .status(ProjectStatus.ACTIVE)
                 .build();
 
         Project project2 = Project.builder()
                 .name("Backend Admin")
                 .description("Desc")
-                .ownerId("admin@test.com")
+                .ownerId(OWNER_ID)
                 .status(ProjectStatus.COMPLETED)
                 .build();
 

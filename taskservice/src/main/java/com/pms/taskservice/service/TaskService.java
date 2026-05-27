@@ -53,7 +53,7 @@ public class TaskService {
 
     /** Only the task creator or a project admin (validated via ProjectService) may modify. */
     private void requireEditAccess(Task task, String currentUser) {
-        if (currentUser.equals(task.getCreatedBy())) {
+        if (java.util.UUID.fromString(currentUser).equals(task.getCreatedBy())) {
             return; // creator always has edit access
         }
         // Delegate admin check to ProjectService
@@ -77,8 +77,8 @@ public class TaskService {
                         ? task.getDueDate().toInstant(ZoneOffset.UTC).toEpochMilli()
                         : null)
                 .projectId(task.getProjectId())
-                .createdBy(task.getCreatedBy())
-                .assignedTo(task.getAssignedTo())
+                .createdBy(task.getCreatedBy() != null ? task.getCreatedBy().toString() : null)
+                .assignedTo(task.getAssignedTo() != null ? task.getAssignedTo().toString() : null)
                 .createdAt(task.getCreatedAt() != null
                         ? task.getCreatedAt().toInstant(ZoneOffset.UTC).toEpochMilli()
                         : null)
@@ -130,7 +130,7 @@ public class TaskService {
                 .priority(priority)
                 .dueDate(request.getDueDate())
                 .projectId(request.getProjectId())
-                .createdBy(currentUser)
+                .createdBy(java.util.UUID.fromString(currentUser))
                 .build();
 
         Task saved = taskRepository.save(task);
@@ -228,11 +228,11 @@ public class TaskService {
         if (hasAssignee) {
             if (hasStatus) {
                 return taskRepository
-                        .findByProjectIdAndAssignedToAndStatus(projectId, assignedTo, taskStatus, pageable)
+                        .findByProjectIdAndAssignedToAndStatus(projectId, java.util.UUID.fromString(assignedTo), taskStatus, pageable)
                         .map(this::mapToResponse);
             }
             return taskRepository
-                    .findByProjectIdAndAssignedTo(projectId, assignedTo, pageable)
+                    .findByProjectIdAndAssignedTo(projectId, java.util.UUID.fromString(assignedTo), pageable)
                     .map(this::mapToResponse);
         }
 
@@ -382,7 +382,7 @@ public class TaskService {
             throw new IllegalArgumentException("Assignee user does not exist");
         }
 
-        task.setAssignedTo(request.getAssigneeId());
+        task.setAssignedTo(java.util.UUID.fromString(request.getAssigneeId()));
 
         Task saved = taskRepository.save(task);
 

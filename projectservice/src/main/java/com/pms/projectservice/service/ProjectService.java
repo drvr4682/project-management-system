@@ -70,7 +70,7 @@ public class ProjectService {
         Project project = Project.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .ownerId(currentUser)
+                .ownerId(java.util.UUID.fromString(currentUser))
                 .status(status)
                 .build();
 
@@ -81,7 +81,7 @@ public class ProjectService {
         // Automatically add the creator as project ADMIN
         ProjectMember member = ProjectMember.builder()
                 .projectId(saved.getId())
-                .userId(currentUser)
+                .userId(java.util.UUID.fromString(currentUser))
                 .role(ProjectRole.ADMIN)
                 .build();
 
@@ -205,7 +205,7 @@ public class ProjectService {
         Pageable pageable = PageRequest.of(page, size, sort);
 
         List<Long> accessibleProjectIds =
-                projectMemberRepository.findByUserId(currentUser)
+                projectMemberRepository.findByUserId(java.util.UUID.fromString(currentUser))
                         .stream()
                         .map(ProjectMember::getProjectId)
                         .distinct()
@@ -286,7 +286,7 @@ public class ProjectService {
                 .id(project.getId())
                 .name(project.getName())
                 .description(project.getDescription())
-                .owner(project.getOwnerId())
+                .owner(project.getOwnerId() != null ? project.getOwnerId().toString() : null)
                 .status(project.getStatus() != null ? project.getStatus().name() : null)
                 .createdAt(project.getCreatedAt() != null
                         ? project.getCreatedAt().toInstant(ZoneOffset.UTC).toEpochMilli()

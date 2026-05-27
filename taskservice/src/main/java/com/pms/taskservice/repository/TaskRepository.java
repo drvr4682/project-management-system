@@ -19,7 +19,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     Page<Task> findByProjectIdAndPriority(Long projectId, TaskPriority priority, Pageable pageable);
 
     // --- Filter by assignee only ---
-    Page<Task> findByProjectIdAndAssignedTo(Long projectId, String assignedTo, Pageable pageable);
+    Page<Task> findByProjectIdAndAssignedTo(Long projectId, java.util.UUID assignedTo, Pageable pageable);
 
     // --- Search by title only ---
     Page<Task> findByProjectIdAndTitleContainingIgnoreCase(Long projectId, String title, Pageable pageable);
@@ -42,7 +42,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     // --- assignee + status ---
     Page<Task> findByProjectIdAndAssignedToAndStatus(
-            Long projectId, String assignedTo, TaskStatus status, Pageable pageable);
+            Long projectId, java.util.UUID assignedTo, TaskStatus status, Pageable pageable);
 
     // Delete all tasks for a project (cascade on project delete)
     void deleteByProjectId(Long projectId);

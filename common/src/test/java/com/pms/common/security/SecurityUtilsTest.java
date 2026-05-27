@@ -38,16 +38,16 @@ class SecurityUtilsTest {
 
     // getCurrentUser
     @Test
-    @DisplayName("Returns gateway header value when X-Authenticated-User is present")
+    @DisplayName("Returns gateway header value when X-User-Id is present")
     void getCurrentUser_gatewayHeaderPresent_returnsHeader() {
-        when(request.getHeader("X-Authenticated-User")).thenReturn("gateway@test.com");
-        assertThat(securityUtils.getCurrentUser()).isEqualTo("gateway@test.com");
+        when(request.getHeader("X-User-Id")).thenReturn("gateway-uuid-123");
+        assertThat(securityUtils.getCurrentUser()).isEqualTo("gateway-uuid-123");
     }
 
     @Test
     @DisplayName("Falls back to SecurityContext when gateway header is absent")
     void getCurrentUser_noGatewayHeader_fallsBackToSecurityContext() {
-        when(request.getHeader("X-Authenticated-User")).thenReturn(null);
+        when(request.getHeader("X-User-Id")).thenReturn(null);
 
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(
@@ -64,7 +64,7 @@ class SecurityUtilsTest {
     @Test
     @DisplayName("Returns null when principal is anonymousUser string")
     void getCurrentUser_anonymousUser_returnsNull() {
-        when(request.getHeader("X-Authenticated-User")).thenReturn(null);
+        when(request.getHeader("X-User-Id")).thenReturn(null);
 
         AnonymousAuthenticationToken anonAuth = new AnonymousAuthenticationToken(
                 "key", "anonymousUser",
@@ -80,15 +80,15 @@ class SecurityUtilsTest {
     @Test
     @DisplayName("Returns null when no authentication exists at all")
     void getCurrentUser_noAuth_returnsNull() {
-        when(request.getHeader("X-Authenticated-User")).thenReturn(null);
+        when(request.getHeader("X-User-Id")).thenReturn(null);
         assertThat(securityUtils.getCurrentUser()).isNull();
     }
 
     // getCurrentRole / getCorrelationId
     @Test
-    @DisplayName("getCurrentRole returns X-Authenticated-Role header value")
+    @DisplayName("getCurrentRole returns X-User-Role header value")
     void getCurrentRole_returnsHeader() {
-        when(request.getHeader("X-Authenticated-Role")).thenReturn("ADMIN");
+        when(request.getHeader("X-User-Role")).thenReturn("ADMIN");
         assertThat(securityUtils.getCurrentRole()).isEqualTo("ADMIN");
     }
 

@@ -76,9 +76,9 @@ class PasswordResetIntegrationTest {
             ((PasswordResetServiceImpl) passwordResetService).clearCooldowns();
         }
 
-        // Create a verified and enabled user to test reset password flow
         verifiedUser = User.builder()
-                .userName("John Reset")
+                .firstName("John")
+                .surname("Reset")
                 .email("john.reset@test.com")
                 .password("$2a$10$nCoFshq5wO.V.306sE198.g4z4R083lZcQW3d0G6D9w6c.yC2.K2C") // encrypted "Password123!"
                 .role(Role.USER)
@@ -240,9 +240,9 @@ class PasswordResetIntegrationTest {
         PasswordResetToken token1 = tokens1.get(0);
         assertThat(token1.isUsed()).isFalse();
 
-        // Create direct Bob user to test bulk invalidation in database isolation
         User anotherUser = User.builder()
-                .userName("Bob Invalidator")
+                .firstName("Bob")
+                .surname("Invalidator")
                 .email("bob.invalidate@test.com")
                 .password("hash")
                 .role(Role.USER)

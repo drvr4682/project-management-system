@@ -42,7 +42,10 @@ class TaskServiceTest {
     @InjectMocks
     private TaskService taskService;
 
-    private static final String CURRENT_USER = "user@example.com";
+    private static final String CURRENT_USER = "e5a31a61-9cbf-4bfb-b654-e67d4b9f36f1";
+    private static final String OTHER_USER   = "f8af7f79-8994-481e-99bf-2f78b498912c";
+    private static final String ASSIGNEE     = "6fbe36c0-0381-45df-922e-e47bb37f3ad5";
+    private static final String GHOST        = "da6cd3a7-e17f-4702-861c-8ad621f3791a";
     private static final Long   PROJECT_ID   = 1L;
     private static final Long   TASK_ID      = 10L;
 
@@ -148,7 +151,7 @@ class TaskServiceTest {
 
     @Test
     void updateTask_byNonCreatorNonAdmin_throws() {
-        Task task = buildTask(TASK_ID, "Title", "other@example.com");
+        Task task = buildTask(TASK_ID, "Title", OTHER_USER);
         when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
 
         // non-creator, not admin — validateProjectAdmin throws AccessDeniedException
@@ -194,12 +197,12 @@ class TaskServiceTest {
     void assignTask_success() {
         Task task = buildTask(TASK_ID, "Title", CURRENT_USER);
         when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
-        when(authValidationComponent.validateUser("assignee@example.com"))
+        when(authValidationComponent.validateUser(ASSIGNEE))
                 .thenReturn("User exists");
         when(taskRepository.save(any(Task.class))).thenReturn(task);
 
         AssignTaskRequestDTO request = new AssignTaskRequestDTO();
-        request.setAssigneeId("assignee@example.com");
+        request.setAssigneeId(ASSIGNEE);
 
         TaskResponseDTO response = taskService.assignTask(TASK_ID, request);
 
@@ -211,11 +214,11 @@ class TaskServiceTest {
     void assignTask_assigneeNotFound_throws() {
         Task task = buildTask(TASK_ID, "Title", CURRENT_USER);
         when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
-        when(authValidationComponent.validateUser("ghost@example.com"))
+        when(authValidationComponent.validateUser(GHOST))
                 .thenReturn("not found"); // simulate unexpected response
 
         AssignTaskRequestDTO request = new AssignTaskRequestDTO();
-        request.setAssigneeId("ghost@example.com");
+        request.setAssigneeId(GHOST);
 
         assertThatThrownBy(() -> taskService.assignTask(TASK_ID, request))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -229,7 +232,7 @@ class TaskServiceTest {
     @Test
     void removeAssignee_success() {
         Task task = buildTask(TASK_ID, "Title", CURRENT_USER);
-        task.setAssignedTo("assignee@example.com");
+        task.setAssignedTo(java.util.UUID.fromString(ASSIGNEE));
         when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
         when(taskRepository.save(any(Task.class))).thenReturn(task);
 
@@ -250,7 +253,7 @@ class TaskServiceTest {
                 .status(TaskStatus.TODO)
                 .priority(TaskPriority.MEDIUM)
                 .projectId(PROJECT_ID)
-                .createdBy(createdBy)
+                .createdBy(java.util.UUID.fromString(createdBy))
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();

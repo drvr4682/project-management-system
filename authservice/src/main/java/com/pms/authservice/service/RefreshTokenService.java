@@ -5,9 +5,9 @@ import com.pms.authservice.dto.RefreshTokenResponse;
 
 public interface RefreshTokenService {
 
-    String createRefreshToken(String userEmail);
+    String createRefreshToken(java.util.UUID userId);
 
     RefreshTokenResponse rotate(RefreshTokenRequest request);
 
-    void revokeAll(String userEmail);
+    void revokeAll(java.util.UUID userId);
 }

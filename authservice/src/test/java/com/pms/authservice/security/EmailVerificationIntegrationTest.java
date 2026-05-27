@@ -57,6 +57,9 @@ class EmailVerificationIntegrationTest {
     @MockBean
     private EmailService emailService;
 
+    @MockBean
+    private com.pms.authservice.client.UserFeignClient userFeignClient;
+
     @Value("${gateway.secret}")
     private String gatewaySecret;
 
@@ -72,7 +75,8 @@ class EmailVerificationIntegrationTest {
         // A. Register User & Assert Token Generation
         // ---------------------------------------------------------
         RegisterRequest registerReq = new RegisterRequest();
-        registerReq.setName("Jane Hardened");
+        registerReq.setFirstName("Jane");
+        registerReq.setSurname("Hardened");
         registerReq.setEmail("jane.hardened@test.com");
         registerReq.setPassword("Password123!");
         registerReq.setRole(Role.USER);
@@ -176,7 +180,8 @@ class EmailVerificationIntegrationTest {
     void shouldResendVerificationAndInvalidateOldTokensWithCooldown() throws Exception {
         // Register user first
         RegisterRequest registerReq = new RegisterRequest();
-        registerReq.setName("Resend Guy");
+        registerReq.setFirstName("Resend");
+        registerReq.setSurname("Guy");
         registerReq.setEmail("resend.guy@test.com");
         registerReq.setPassword("Password123!");
         registerReq.setRole(Role.USER);

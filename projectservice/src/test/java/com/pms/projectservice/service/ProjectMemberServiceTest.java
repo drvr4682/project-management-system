@@ -55,10 +55,19 @@ class ProjectMemberServiceTest {
     @InjectMocks
     private ProjectMemberService projectMemberService;
 
+    private static final String ADMIN_STR = "e5a31a61-9cbf-4bfb-b654-e67d4b9f36f1";
+    private static final java.util.UUID ADMIN_UUID = java.util.UUID.fromString(ADMIN_STR);
+
+    private static final String MEMBER_STR = "f8af7f79-8994-481e-99bf-2f78b498912c";
+    private static final java.util.UUID MEMBER_UUID = java.util.UUID.fromString(MEMBER_STR);
+
+    private static final String MISSING_STR = "6fbe36c0-0381-45df-922e-e47bb37f3ad5";
+    private static final java.util.UUID MISSING_UUID = java.util.UUID.fromString(MISSING_STR);
+
     private final Project stubProject = Project.builder()
             .id(1L)
             .name("Test Project")
-            .ownerId("admin@test.com")
+            .ownerId(ADMIN_UUID)
             .status(ProjectStatus.ACTIVE)
             .build();
 
@@ -66,7 +75,7 @@ class ProjectMemberServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        when(securityUtils.getCurrentUser()).thenReturn("admin@test.com");
+        when(securityUtils.getCurrentUser()).thenReturn(ADMIN_STR);
         when(securityUtils.getCorrelationId()).thenReturn("corr-123");
         when(projectRepository.findById(1L)).thenReturn(Optional.of(stubProject));
         when(authValidationComponent.validateUser(anyString())).thenReturn("User exists");
@@ -76,15 +85,15 @@ class ProjectMemberServiceTest {
     @DisplayName("Should add member successfully")
     void shouldAddMemberSuccessfully() {
         AddMemberRequestDTO request = new AddMemberRequestDTO();
-        request.setUserId("member@test.com");
+        request.setUserId(MEMBER_STR);
         request.setRole("MEMBER");
 
-        doNothing().when(projectAccessService).validateAdmin(1L, "admin@test.com");
+        doNothing().when(projectAccessService).validateAdmin(1L, ADMIN_STR);
 
-        when(projectMemberRepository.findByProjectIdAndUserId(1L, "member@test.com"))
+        when(projectMemberRepository.findByProjectIdAndUserId(1L, MEMBER_UUID))
                 .thenReturn(Optional.empty());
 
-        when(authFeignClient.checkUser("member@test.com")).thenReturn("User exists");
+        when(authFeignClient.checkUser(MEMBER_STR)).thenReturn("User exists");
 
         String response = projectMemberService.addMember(1L, request);
 
@@ -92,23 +101,23 @@ class ProjectMemberServiceTest {
 
         verify(projectMemberRepository, times(1)).save(any(ProjectMember.class));
         verify(auditLogger, times(1))
-                .log("admin@test.com", "ADD_MEMBER", 1L, "member@test.com");
+                .log(ADMIN_STR, "ADD_MEMBER", 1L, MEMBER_STR);
     }
 
     @Test
     @DisplayName("Should throw exception when member already exists")
     void shouldThrowExceptionWhenMemberAlreadyExists() {
         AddMemberRequestDTO request = new AddMemberRequestDTO();
-        request.setUserId("member@test.com");
+        request.setUserId(MEMBER_STR);
         request.setRole("MEMBER");
 
-        doNothing().when(projectAccessService).validateAdmin(1L, "admin@test.com");
+        doNothing().when(projectAccessService).validateAdmin(1L, ADMIN_STR);
 
-        when(projectMemberRepository.findByProjectIdAndUserId(1L, "member@test.com"))
+        when(projectMemberRepository.findByProjectIdAndUserId(1L, MEMBER_UUID))
                 .thenReturn(Optional.of(ProjectMember.builder()
                         .id(1L)
                         .projectId(1L)
-                        .userId("member@test.com")
+                        .userId(MEMBER_UUID)
                         .role(ProjectRole.MEMBER)
                         .build()));
 
@@ -119,16 +128,16 @@ class ProjectMemberServiceTest {
     @Test
     @DisplayName("Should return all members")
     void shouldReturnAllMembers() {
-        when(projectAccessService.validateMember(1L, "admin@test.com"))
+        when(projectAccessService.validateMember(1L, ADMIN_STR))
                 .thenReturn(ProjectMember.builder()
                         .projectId(1L)
-                        .userId("admin@test.com")
+                        .userId(ADMIN_UUID)
                         .role(ProjectRole.ADMIN)
                         .build());
 
         List<ProjectMember> members = List.of(
-                ProjectMember.builder().userId("admin@test.com").role(ProjectRole.ADMIN).build(),
-                ProjectMember.builder().userId("member@test.com").role(ProjectRole.MEMBER).build()
+                ProjectMember.builder().userId(ADMIN_UUID).role(ProjectRole.ADMIN).build(),
+                ProjectMember.builder().userId(MEMBER_UUID).role(ProjectRole.MEMBER).build()
         );
 
         when(projectMemberRepository.findByProjectId(1L)).thenReturn(members);
@@ -142,13 +151,13 @@ class ProjectMemberServiceTest {
     @DisplayName("Should remove member successfully")
     void shouldRemoveMemberSuccessfully() {
         ProjectMember member = ProjectMember.builder()
-                .id(1L).projectId(1L).userId("member@test.com").role(ProjectRole.MEMBER).build();
+                .id(1L).projectId(1L).userId(MEMBER_UUID).role(ProjectRole.MEMBER).build();
 
-        doNothing().when(projectAccessService).validateAdmin(1L, "admin@test.com");
-        when(projectMemberRepository.findByProjectIdAndUserId(1L, "member@test.com"))
+        doNothing().when(projectAccessService).validateAdmin(1L, ADMIN_STR);
+        when(projectMemberRepository.findByProjectIdAndUserId(1L, MEMBER_UUID))
                 .thenReturn(Optional.of(member));
 
-        String response = projectMemberService.removeMember(1L, "member@test.com");
+        String response = projectMemberService.removeMember(1L, MEMBER_STR);
 
         assertEquals("Member removed successfully", response);
         verify(projectMemberRepository, times(1)).delete(member);
@@ -157,27 +166,27 @@ class ProjectMemberServiceTest {
     @Test
     @DisplayName("Should throw exception when member not found on remove")
     void shouldThrowExceptionWhenMemberNotFound() {
-        doNothing().when(projectAccessService).validateAdmin(1L, "admin@test.com");
-        when(projectMemberRepository.findByProjectIdAndUserId(1L, "missing@test.com"))
+        doNothing().when(projectAccessService).validateAdmin(1L, ADMIN_STR);
+        when(projectMemberRepository.findByProjectIdAndUserId(1L, MISSING_UUID))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-                () -> projectMemberService.removeMember(1L, "missing@test.com"));
+                () -> projectMemberService.removeMember(1L, MISSING_STR));
     }
 
     @Test
     @DisplayName("Should throw ServiceUnavailableException when AuthService is unavailable")
     void shouldThrowServiceUnavailableWhenAuthServiceUnavailable() {
         AddMemberRequestDTO request = new AddMemberRequestDTO();
-        request.setUserId("member@test.com");
+        request.setUserId(MEMBER_STR);
         request.setRole("MEMBER");
 
-        doNothing().when(projectAccessService).validateAdmin(1L, "admin@test.com");
-        when(projectMemberRepository.findByProjectIdAndUserId(1L, "member@test.com"))
+        doNothing().when(projectAccessService).validateAdmin(1L, ADMIN_STR);
+        when(projectMemberRepository.findByProjectIdAndUserId(1L, MEMBER_UUID))
                 .thenReturn(Optional.empty());
 
         // ✅ Throw exception from mocked component
-        when(authValidationComponent.validateUser("member@test.com"))
+        when(authValidationComponent.validateUser(MEMBER_STR))
                 .thenThrow(new ServiceUnavailableException("Auth service unavailable"));
 
         assertThrows(ServiceUnavailableException.class,
@@ -188,11 +197,11 @@ class ProjectMemberServiceTest {
     @DisplayName("Should throw IllegalArgumentException for invalid project role")
     void shouldThrowExceptionForInvalidProjectRole() {
         AddMemberRequestDTO request = new AddMemberRequestDTO();
-        request.setUserId("member@test.com");
+        request.setUserId(MEMBER_STR);
         request.setRole("SUPER_ADMIN");
 
-        doNothing().when(projectAccessService).validateAdmin(1L, "admin@test.com");
-        when(projectMemberRepository.findByProjectIdAndUserId(1L, "member@test.com"))
+        doNothing().when(projectAccessService).validateAdmin(1L, ADMIN_STR);
+        when(projectMemberRepository.findByProjectIdAndUserId(1L, MEMBER_UUID))
                 .thenReturn(Optional.empty());
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
@@ -205,7 +214,7 @@ class ProjectMemberServiceTest {
     @DisplayName("Should throw ResourceNotFoundException when project does not exist")
     void shouldThrowNotFoundWhenProjectDoesNotExist() {
         AddMemberRequestDTO request = new AddMemberRequestDTO();
-        request.setUserId("member@test.com");
+        request.setUserId(MEMBER_STR);
         request.setRole("MEMBER");
 
         when(projectRepository.findById(999L)).thenReturn(Optional.empty());

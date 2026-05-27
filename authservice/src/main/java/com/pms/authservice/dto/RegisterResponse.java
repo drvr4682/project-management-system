@@ -6,8 +6,9 @@ import lombok.Data;
 @Data
 @Builder
 public class RegisterResponse {
-    private Long id;
-    private String name;
+    private java.util.UUID id;
+    private String firstName;
+    private String surname;
     private String email;
     private String role;
 }

@@ -9,8 +9,8 @@ import com.pms.projectservice.entity.ProjectMember;
 
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
 
-    Optional<ProjectMember> findByProjectIdAndUserId(Long projectId, String userId);
+    Optional<ProjectMember> findByProjectIdAndUserId(Long projectId, java.util.UUID userId);
     List<ProjectMember> findByProjectId(Long projectId);
-    List<ProjectMember> findByUserId(String userId);
+    List<ProjectMember> findByUserId(java.util.UUID userId);
     void deleteByProjectId(Long projectId);
 }

@@ -38,11 +38,11 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     @Override
     @Transactional
-    public String createRefreshToken(String userEmail) {
+    public String createRefreshToken(java.util.UUID userId) {
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .token(UUID.randomUUID().toString())
-                .userEmail(userEmail)
+                .userId(userId)
                 .expiresAt(Instant.now().plusMillis(refreshExpirationMs))
                 .revoked(false)
                 .build();
@@ -65,10 +65,10 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
         if (stored.isRevoked()) {
             log.warn("[RefreshToken] Reuse detected for user: {}. Revoking all tokens.",
-                    stored.getUserEmail());
-            int revoked = refreshTokenRepository.revokeAllByUserEmail(stored.getUserEmail());
+                    stored.getUserId());
+            int revoked = refreshTokenRepository.revokeAllByUserId(stored.getUserId());
             log.warn("[RefreshToken] Revoked {} tokens for user: {}", revoked,
-                    stored.getUserEmail());
+                    stored.getUserId());
             throw new InvalidRefreshTokenException(
                     "Refresh token has already been used or revoked");
         }
@@ -83,14 +83,14 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         stored.setRevoked(true);
         refreshTokenRepository.saveAndFlush(stored);
 
-        String email = stored.getUserEmail();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
+        java.util.UUID userId = stored.getUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + userId));
 
-        String newAccessToken  = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        String newRefreshToken = createRefreshToken(user.getEmail());
+        String newAccessToken  = jwtUtil.generateToken(user.getId().toString(), user.getRole().name());
+        String newRefreshToken = createRefreshToken(user.getId());
 
-        log.debug("[RefreshToken] Rotated token for user: {}", email);
+        log.debug("[RefreshToken] Rotated token for user: {}", userId);
 
         return RefreshTokenResponse.builder()
                 .accessToken(newAccessToken)
@@ -106,8 +106,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     @Override
     @Transactional
-    public void revokeAll(String userEmail) {
-        int revoked = refreshTokenRepository.revokeAllByUserEmail(userEmail);
-        log.debug("[RefreshToken] Revoked {} tokens on logout for user: {}", revoked, userEmail);
+    public void revokeAll(java.util.UUID userId) {
+        int revoked = refreshTokenRepository.revokeAllByUserId(userId);
+        log.debug("[RefreshToken] Revoked {} tokens on logout for user: {}", revoked, userId);
     }
 }

@@ -21,8 +21,16 @@ public class ProjectAccessService {
     @Transactional(readOnly = true)
     public ProjectMember validateMember(Long projectId, String userId) {
 
+        java.util.UUID userUuid;
+        try {
+            userUuid = java.util.UUID.fromString(userId);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid UUID format for user: {}", userId);
+            throw new AccessDeniedException("User not part of project");
+        }
+
         return projectMemberRepository
-                .findByProjectIdAndUserId(projectId, userId)
+                .findByProjectIdAndUserId(projectId, userUuid)
                 .orElseThrow(() -> {
 
                     log.warn(

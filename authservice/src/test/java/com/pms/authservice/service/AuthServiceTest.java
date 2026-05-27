@@ -1,5 +1,6 @@
 package com.pms.authservice.service;
 
+import com.pms.authservice.client.UserFeignClient;
 import com.pms.authservice.dto.LoginRequest;
 import com.pms.authservice.dto.LoginResponse;
 import com.pms.authservice.dto.RegisterRequest;
@@ -23,6 +24,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -35,17 +37,16 @@ class AuthServiceTest {
     private final JwtUtil                     jwtUtil                     = Mockito.mock(JwtUtil.class);
     private final AuthenticationManager       authenticationManager       = Mockito.mock(AuthenticationManager.class);
     private final RefreshTokenService         refreshTokenService         = Mockito.mock(RefreshTokenService.class);
-
-    // AuthServiceImpl now depends on StringRedisTemplate for access-token blocklisting on logout.
     private final StringRedisTemplate         redisTemplate               = Mockito.mock(StringRedisTemplate.class);
     private final EmailService                emailService                = Mockito.mock(EmailService.class);
+    private final UserFeignClient             userFeignClient             = Mockito.mock(UserFeignClient.class);
 
     @SuppressWarnings("unchecked")
     private final ValueOperations<String, String> valueOps                = Mockito.mock(ValueOperations.class);
 
     private final AuthService authService = new AuthServiceImpl(
             userRepository, verificationService, passwordEncoder, jwtUtil,
-            authenticationManager, refreshTokenService, redisTemplate, emailService);
+            authenticationManager, refreshTokenService, redisTemplate, emailService, userFeignClient);
 
     // -------------------------------------------------------------------------
     // register
@@ -55,7 +56,8 @@ class AuthServiceTest {
     void shouldRegisterUserSuccessfully() {
 
         RegisterRequest request = new RegisterRequest();
-        request.setName("Test");
+        request.setFirstName("Test");
+        request.setSurname("User");
         request.setEmail("test@mail.com");
         request.setPassword("Test@123");
         request.setRole(Role.USER);
@@ -63,9 +65,11 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("test@mail.com")).thenReturn(false);
         when(passwordEncoder.encode("Test@123")).thenReturn("hashed");
 
+        UUID userUuid = UUID.randomUUID();
         User savedUser = User.builder()
-                .id(1L)
-                .userName("Test")
+                .id(userUuid)
+                .firstName("Test")
+                .surname("User")
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -77,23 +81,25 @@ class AuthServiceTest {
                 .build();
 
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
         when(verificationService.createVerificationToken(any(User.class))).thenReturn(mockToken);
 
         var response = authService.register(request);
 
         assertNotNull(response);
-        assertEquals(1L, response.getId());
+        assertEquals(userUuid, response.getId());
         assertEquals("test@mail.com", response.getEmail());
 
+        verify(userFeignClient, times(1)).createProfile(any());
         verify(verificationService, times(1)).createVerificationToken(any(User.class));
-        verify(emailService, times(1)).sendVerificationEmail(eq("test@mail.com"), eq("Test"), anyString());
+        verify(emailService, times(1)).sendVerificationEmail(eq("test@mail.com"), eq("Test User"), anyString());
     }
 
     @Test
     void shouldThrowWhenEmailAlreadyRegistered() {
 
         RegisterRequest request = new RegisterRequest();
-        request.setName("Test");
+        request.setFirstName("Test");
         request.setEmail("exists@mail.com");
         request.setPassword("Test@123");
         request.setRole(Role.USER);
@@ -115,8 +121,9 @@ class AuthServiceTest {
         request.setEmail("test@mail.com");
         request.setPassword("Test@123");
 
+        UUID userUuid = UUID.randomUUID();
         User user = User.builder()
-                .id(1L)
+                .id(userUuid)
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -126,7 +133,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail("test@mail.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any())).thenReturn(null);
         when(jwtUtil.generateToken(anyString(), anyString())).thenReturn("access-token");
-        when(refreshTokenService.createRefreshToken("test@mail.com")).thenReturn("refresh-token");
+        when(refreshTokenService.createRefreshToken(any(UUID.class))).thenReturn("refresh-token");
 
         LoginResponse response = authService.login(request);
 
@@ -144,8 +151,9 @@ class AuthServiceTest {
         request.setEmail("  TEST@MAIL.COM  ");
         request.setPassword("Test@123");
 
+        UUID userUuid = UUID.randomUUID();
         User user = User.builder()
-                .id(1L)
+                .id(userUuid)
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -155,7 +163,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail("test@mail.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any())).thenReturn(null);
         when(jwtUtil.generateToken(anyString(), anyString())).thenReturn("access-token");
-        when(refreshTokenService.createRefreshToken(anyString())).thenReturn("refresh-token");
+        when(refreshTokenService.createRefreshToken(any(UUID.class))).thenReturn("refresh-token");
 
         LoginResponse response = authService.login(request);
 
@@ -169,9 +177,10 @@ class AuthServiceTest {
     @Test
     void shouldRevokeAllRefreshTokensOnLogout() {
 
-        authService.logout("user@test.com", null);
+        UUID logoutId = UUID.randomUUID();
+        authService.logout(logoutId.toString(), null);
 
-        verify(refreshTokenService).revokeAll("user@test.com");
+        verify(refreshTokenService).revokeAll(logoutId);
     }
 
     @Test
@@ -186,10 +195,11 @@ class AuthServiceTest {
         when(jwtUtil.getExpirationMillis(accessToken)).thenReturn(300_000L);
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
 
-        authService.logout("user@test.com", accessToken);
+        UUID logoutId = UUID.randomUUID();
+        authService.logout(logoutId.toString(), accessToken);
 
         // Refresh tokens must be revoked in DB
-        verify(refreshTokenService).revokeAll("user@test.com");
+        verify(refreshTokenService).revokeAll(logoutId);
 
         // Access token JTI must be written to Redis blocklist
         verify(valueOps).set(
@@ -211,11 +221,12 @@ class AuthServiceTest {
         // Redis blows up
         when(redisTemplate.opsForValue()).thenThrow(new RuntimeException("Redis down"));
 
+        UUID logoutId = UUID.randomUUID();
         // Should not throw — logout must complete even if Redis fails
-        assertDoesNotThrow(() -> authService.logout("user@test.com", accessToken));
+        assertDoesNotThrow(() -> authService.logout(logoutId.toString(), accessToken));
 
         // Refresh tokens must still be revoked in DB
-        verify(refreshTokenService).revokeAll("user@test.com");
+        verify(refreshTokenService).revokeAll(logoutId);
     }
 
     // -------------------------------------------------------------------------
@@ -226,7 +237,7 @@ class AuthServiceTest {
     void shouldGenerateVerificationToken() {
         // Registering a user successfully generates the token via VerificationService
         RegisterRequest request = new RegisterRequest();
-        request.setName("Test");
+        request.setFirstName("Test");
         request.setEmail("test@mail.com");
         request.setPassword("Test@123");
         request.setRole(Role.USER);
@@ -234,9 +245,10 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("test@mail.com")).thenReturn(false);
         when(passwordEncoder.encode("Test@123")).thenReturn("hashed");
 
+        UUID userUuid = UUID.randomUUID();
         User savedUser = User.builder()
-                .id(1L)
-                .userName("Test")
+                .id(userUuid)
+                .firstName("Test")
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -248,6 +260,7 @@ class AuthServiceTest {
                 .build();
 
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
         when(verificationService.createVerificationToken(any(User.class))).thenReturn(mockToken);
 
         authService.register(request);
@@ -259,7 +272,7 @@ class AuthServiceTest {
     void shouldSendVerificationEmail() {
         // Registering a user successfully sends the verification email
         RegisterRequest request = new RegisterRequest();
-        request.setName("Test");
+        request.setFirstName("Test");
         request.setEmail("test@mail.com");
         request.setPassword("Test@123");
         request.setRole(Role.USER);
@@ -267,9 +280,10 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("test@mail.com")).thenReturn(false);
         when(passwordEncoder.encode("Test@123")).thenReturn("hashed");
 
+        UUID userUuid = UUID.randomUUID();
         User savedUser = User.builder()
-                .id(1L)
-                .userName("Test")
+                .id(userUuid)
+                .firstName("Test")
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -281,6 +295,7 @@ class AuthServiceTest {
                 .build();
 
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
         when(verificationService.createVerificationToken(any(User.class))).thenReturn(mockToken);
 
         authService.register(request);
@@ -294,8 +309,9 @@ class AuthServiceTest {
         request.setEmail("test@mail.com");
         request.setPassword("Test@123");
 
+        UUID userUuid = UUID.randomUUID();
         User user = User.builder()
-                .id(1L)
+                .id(userUuid)
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -314,8 +330,9 @@ class AuthServiceTest {
         request.setEmail("test@mail.com");
         request.setPassword("Test@123");
 
+        UUID userUuid = UUID.randomUUID();
         User user = User.builder()
-                .id(1L)
+                .id(userUuid)
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -326,7 +343,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail("test@mail.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any())).thenReturn(null);
         when(jwtUtil.generateToken(anyString(), anyString())).thenReturn("access-token");
-        when(refreshTokenService.createRefreshToken("test@mail.com")).thenReturn("refresh-token");
+        when(refreshTokenService.createRefreshToken(any(UUID.class))).thenReturn("refresh-token");
 
         LoginResponse response = authService.login(request);
 
@@ -379,9 +396,10 @@ class AuthServiceTest {
         ResendVerificationRequest request = new ResendVerificationRequest();
         request.setEmail("test@mail.com");
 
+        UUID userUuid = UUID.randomUUID();
         User user = User.builder()
-                .id(1L)
-                .userName("Test")
+                .id(userUuid)
+                .firstName("Test")
                 .email("test@mail.com")
                 .emailVerified(false)
                 .build();
@@ -405,9 +423,10 @@ class AuthServiceTest {
         ResendVerificationRequest request = new ResendVerificationRequest();
         request.setEmail("test@mail.com");
 
+        UUID userUuid = UUID.randomUUID();
         User user = User.builder()
-                .id(1L)
-                .userName("Test")
+                .id(userUuid)
+                .firstName("Test")
                 .email("test@mail.com")
                 .emailVerified(true)
                 .build();
@@ -425,9 +444,10 @@ class AuthServiceTest {
         ResendVerificationRequest request = new ResendVerificationRequest();
         request.setEmail("cooldown@mail.com");
 
+        UUID userUuid = UUID.randomUUID();
         User user = User.builder()
-                .id(1L)
-                .userName("Test")
+                .id(userUuid)
+                .firstName("Test")
                 .email("cooldown@mail.com")
                 .emailVerified(false)
                 .build();
@@ -465,8 +485,9 @@ class AuthServiceTest {
         request.setEmail("test@mail.com");
         request.setPassword("Test@123");
 
+        UUID userUuid = UUID.randomUUID();
         User user = User.builder()
-                .id(1L)
+                .id(userUuid)
                 .email("test@mail.com")
                 .password("hashed")
                 .role(Role.USER)
@@ -476,7 +497,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail("test@mail.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any())).thenReturn(null);
         when(jwtUtil.generateToken(anyString(), anyString())).thenReturn("access-token");
-        when(refreshTokenService.createRefreshToken("test@mail.com")).thenReturn("refresh-token");
+        when(refreshTokenService.createRefreshToken(any(UUID.class))).thenReturn("refresh-token");
 
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
         when(valueOps.get("rate:limit:login:test@mail.com")).thenReturn(null);

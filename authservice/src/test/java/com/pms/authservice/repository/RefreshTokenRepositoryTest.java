@@ -30,14 +30,19 @@ class RefreshTokenRepositoryTest {
 
     private User savedUser;
 
-    @BeforeEach
-    void setUp() {
-        savedUser = userRepository.save(User.builder()
-                .userName("Test User")
-                .email("test@example.com")
+    private User createTestUser(String email, String firstName, String surname) {
+        return userRepository.save(User.builder()
+                .firstName(firstName)
+                .surname(surname)
+                .email(email)
                 .password("hashed")
                 .role(Role.USER)
                 .build());
+    }
+
+    @BeforeEach
+    void setUp() {
+        savedUser = createTestUser("test@example.com", "Test", "User");
     }
 
     // -------------------------------------------------------------------------
@@ -51,7 +56,7 @@ class RefreshTokenRepositoryTest {
 
         refreshTokenRepository.save(RefreshToken.builder()
                 .token(tokenValue)
-                .userEmail(savedUser.getEmail())
+                .userId(savedUser.getId())
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .revoked(false)
                 .build());
@@ -60,7 +65,7 @@ class RefreshTokenRepositoryTest {
 
         assertTrue(found.isPresent());
         assertEquals(tokenValue, found.get().getToken());
-        assertEquals(savedUser.getEmail(), found.get().getUserEmail());
+        assertEquals(savedUser.getId(), found.get().getUserId());
     }
 
     @Test
@@ -72,7 +77,7 @@ class RefreshTokenRepositoryTest {
     }
 
     // -------------------------------------------------------------------------
-    // revokeAllByUserEmail
+    // revokeAllByUserId
     // -------------------------------------------------------------------------
 
     // @Transactional here ensures the bulk JPQL UPDATE and the subsequent
@@ -85,25 +90,25 @@ class RefreshTokenRepositoryTest {
 
         refreshTokenRepository.save(RefreshToken.builder()
                 .token(UUID.randomUUID().toString())
-                .userEmail(savedUser.getEmail())
+                .userId(savedUser.getId())
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .revoked(false)
                 .build());
 
         refreshTokenRepository.save(RefreshToken.builder()
                 .token(UUID.randomUUID().toString())
-                .userEmail(savedUser.getEmail())
+                .userId(savedUser.getId())
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .revoked(false)
                 .build());
 
         int updatedCount =
-                refreshTokenRepository.revokeAllByUserEmail(savedUser.getEmail());
+                refreshTokenRepository.revokeAllByUserId(savedUser.getId());
 
         assertEquals(2, updatedCount);
 
         refreshTokenRepository.findAll().stream()
-                .filter(token -> token.getUserEmail().equals(savedUser.getEmail()))
+                .filter(token -> token.getUserId().equals(savedUser.getId()))
                 .forEach(token -> assertTrue(
                         token.isRevoked(),
                         "All tokens for user should be revoked"
@@ -113,30 +118,25 @@ class RefreshTokenRepositoryTest {
     @Test
     void shouldNotRevokeTokensForOtherUsers() {
 
-        User otherUser = userRepository.save(User.builder()
-                .userName("Other User")
-                .email("other@example.com")
-                .password("hashed")
-                .role(Role.USER)
-                .build());
+        User otherUser = createTestUser("other@example.com", "Other", "User");
 
         String otherToken = UUID.randomUUID().toString();
 
         refreshTokenRepository.save(RefreshToken.builder()
                 .token(UUID.randomUUID().toString())
-                .userEmail(savedUser.getEmail())
+                .userId(savedUser.getId())
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .revoked(false)
                 .build());
 
         refreshTokenRepository.save(RefreshToken.builder()
                 .token(otherToken)
-                .userEmail(otherUser.getEmail())
+                .userId(otherUser.getId())
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .revoked(false)
                 .build());
 
-        refreshTokenRepository.revokeAllByUserEmail(savedUser.getEmail());
+        refreshTokenRepository.revokeAllByUserId(savedUser.getId());
 
         Optional<RefreshToken> other = refreshTokenRepository.findByToken(otherToken);
         assertTrue(other.isPresent());
@@ -150,13 +150,13 @@ class RefreshTokenRepositoryTest {
 
         refreshTokenRepository.save(RefreshToken.builder()
                 .token(tokenValue)
-                .userEmail(savedUser.getEmail())
+                .userId(savedUser.getId())
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .revoked(true)
                 .build());
 
         assertDoesNotThrow(() ->
-                refreshTokenRepository.revokeAllByUserEmail(savedUser.getEmail()));
+                refreshTokenRepository.revokeAllByUserId(savedUser.getId()));
     }
 
     // -------------------------------------------------------------------------
@@ -168,7 +168,7 @@ class RefreshTokenRepositoryTest {
 
         refreshTokenRepository.save(RefreshToken.builder()
                 .token(UUID.randomUUID().toString())
-                .userEmail(savedUser.getEmail())
+                .userId(savedUser.getId())
                 .expiresAt(Instant.now().minusSeconds(60))
                 .revoked(false)
                 .build());
@@ -177,7 +177,7 @@ class RefreshTokenRepositoryTest {
 
         refreshTokenRepository.save(RefreshToken.builder()
                 .token(activeTokenValue)
-                .userEmail(savedUser.getEmail())
+                .userId(savedUser.getId())
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .revoked(false)
                 .build());

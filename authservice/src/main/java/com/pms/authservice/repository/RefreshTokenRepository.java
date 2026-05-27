@@ -27,24 +27,17 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     @Query("""
             UPDATE RefreshToken r
             SET r.revoked = true
-            WHERE r.userEmail = :email
+            WHERE r.userId = :userId
             AND r.revoked = false
             """)
-    int revokeAllByUserEmail(@Param("email") String email);
+    int revokeAllByUserId(@Param("userId") java.util.UUID userId);
 
-    // Derived delete — Spring Data generates the correct DELETE SQL.
-    // @Modifying is required because it is a DML operation.
     @Modifying
     void deleteByExpiresAtBefore(Instant now);
 
-    // Native SQL COUNT — bypasses the Hibernate L1 identity cache ENTIRELY.
-    // Used in integration tests to assert the post-UPDATE DB state without
-    // needing @Transactional, entityManager.refresh(), or entityManager.clear().
-    // Unlike JPQL queries, native queries never return managed entity objects,
-    // so there is nothing in the cache to serve stale results from.
     @Query(
-        value = "SELECT COUNT(*) FROM refresh_tokens WHERE user_email = :email AND revoked = false",
+        value = "SELECT COUNT(*) FROM refresh_tokens WHERE user_id = :userId AND revoked = false",
         nativeQuery = true
     )
-    long countActiveTokensByUserEmail(@Param("email") String email);
+    long countActiveTokensByUserId(@Param("userId") java.util.UUID userId);
 }

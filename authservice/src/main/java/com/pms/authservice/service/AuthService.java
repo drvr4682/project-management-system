@@ -17,14 +17,14 @@ public interface AuthService {
 
     RefreshTokenResponse refresh(RefreshTokenRequest request);
 
-    void logout(String userEmail, String accessToken);
+    void logout(String userIdStr, String accessToken);
 
     void verifyEmail(String token);
 
     void resendVerificationEmail(ResendVerificationRequest request);
 
-    boolean userExists(String email);
+    boolean userExists(java.util.UUID id);
 
 
-    void changePassword(String email, ChangePasswordRequest request);
+    void changePassword(String userIdStr, ChangePasswordRequest request);
 }

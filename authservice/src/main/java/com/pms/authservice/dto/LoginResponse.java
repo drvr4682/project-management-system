@@ -12,6 +12,7 @@ public class LoginResponse {
     
     private String email;
     private String role;
-    private Long id;
-    private String name;
+    private java.util.UUID id;
+    private String firstName;
+    private String surname;
 }

@@ -102,7 +102,8 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         // 5. Send plain text email pointing to the frontend
         String resetLink = frontendBaseUrl + "/reset-password?token=" + tokenValue;
-        emailService.sendPasswordResetEmail(user.getEmail(), user.getUserName(), resetLink);
+        String fullName = user.getFirstName() + (user.getSurname() != null ? " " + user.getSurname() : "");
+        emailService.sendPasswordResetEmail(user.getEmail(), fullName, resetLink);
 
         // 6. Record cooldown (Primary: Redis, Fallback: In-memory)
         try {
@@ -143,10 +144,10 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         // Revoke active sessions / refresh tokens
         try {
-            refreshTokenService.revokeAll(user.getEmail());
-            log.info("[PasswordReset] Revoked all refresh tokens after password reset for user: {}", user.getEmail());
+            refreshTokenService.revokeAll(user.getId());
+            log.info("[PasswordReset] Revoked all refresh tokens after password reset for user ID: {}", user.getId());
         } catch (Exception e) {
-            log.warn("[PasswordReset] Failed to revoke refresh tokens for user {} after password reset: {}", user.getEmail(), e.getMessage());
+            log.warn("[PasswordReset] Failed to revoke refresh tokens for user ID {} after password reset: {}", user.getId(), e.getMessage());
         }
 
         log.info("[PasswordReset] Password reset completed successfully for user: {}", user.getEmail());

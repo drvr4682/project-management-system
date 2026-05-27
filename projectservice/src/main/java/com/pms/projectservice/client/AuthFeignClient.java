@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 )
 public interface AuthFeignClient {
     
-    @GetMapping("/internal/auth/users/{email}")
+    @GetMapping("/internal/auth/users/{userId}")
     String checkUser(
-        @PathVariable String email
+        @PathVariable("userId") String userId
     );
 }

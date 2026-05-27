@@ -70,7 +70,9 @@ public class SecurityConfig {
                     .requestMatchers(
                             "/api/v1/auth/change-password",
                             "/api/v1/projects/**",
-                            "/api/v1/tasks/**"
+                            "/api/v1/tasks/**",
+                            "/api/v1/users/**",
+                            "/api/v1/social-links/**"
                     ).hasAnyRole("USER", "ADMIN")
                     .anyRequest().authenticated()
             )

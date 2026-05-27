@@ -49,6 +49,7 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenService         refreshTokenService;
     private final StringRedisTemplate         redisTemplate;
     private final EmailService                emailService;
+    private final com.pms.authservice.client.UserFeignClient userFeignClient;
 
     @Value("${app.email-verification.token-expiry-minutes:1440}")
     private long verificationTokenExpiryMinutes;
@@ -78,7 +79,9 @@ public class AuthServiceImpl implements AuthService {
 
         // 1. Persist user — no token fields on the entity
         User user = User.builder()
-                .userName(request.getName().trim())
+                .id(java.util.UUID.randomUUID())
+                .firstName(request.getFirstName().trim())
+                .surname(request.getSurname() != null ? request.getSurname().trim() : null)
                 .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
@@ -86,18 +89,33 @@ public class AuthServiceImpl implements AuthService {
                 .enabled(false)
                 .build();
 
-        User savedUser = userRepository.save(user);
+        User savedUser = userRepository.saveAndFlush(user);
 
-        // 2. Create a VerificationToken record
+        // 2. Explicitly create profile in userservice via Feign
+        try {
+            userFeignClient.createProfile(com.pms.authservice.dto.InternalProfileCreationRequest.builder()
+                    .id(savedUser.getId())
+                    .firstName(savedUser.getFirstName())
+                    .surname(savedUser.getSurname())
+                    .build());
+        } catch (Exception ex) {
+            log.error("Failed to create profile in userservice for user: {} | Triggering compensation rollback", savedUser.getId(), ex);
+            userRepository.delete(savedUser);
+            userRepository.flush();
+            throw new RuntimeException("Profile creation failed, registration aborted: " + ex.getMessage(), ex);
+        }
+
+        // 3. Create a VerificationToken record
         VerificationToken vToken = verificationService.createVerificationToken(savedUser);
 
-        // 3. Build verification URL pointing to the frontend
+        // 4. Build verification URL pointing to the frontend
         String verificationLink = frontendBaseUrl + "/verify-email?token=" + vToken.getToken();
 
-        // 4. Send verification email
+        // 5. Send verification email
+        String fullName = savedUser.getFirstName() + (savedUser.getSurname() != null ? " " + savedUser.getSurname() : "");
         emailService.sendVerificationEmail(
                 savedUser.getEmail(),
-                savedUser.getUserName(),
+                fullName,
                 verificationLink
         );
 
@@ -106,7 +124,8 @@ public class AuthServiceImpl implements AuthService {
 
         return RegisterResponse.builder()
                 .id(savedUser.getId())
-                .name(savedUser.getUserName())
+                .firstName(savedUser.getFirstName())
+                .surname(savedUser.getSurname())
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole().name())
                 .build();
@@ -173,8 +192,8 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // 4. Issue tokens
-        String accessToken  = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        String refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
+        String accessToken  = jwtUtil.generateToken(user.getId().toString(), user.getRole().name());
+        String refreshToken = refreshTokenService.createRefreshToken(user.getId());
 
         log.info("[Auth] Login successful: {}", user.getEmail());
 
@@ -194,7 +213,8 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .id(user.getId())
-                .name(user.getUserName())
+                .firstName(user.getFirstName())
+                .surname(user.getSurname())
                 .build();
     }
 
@@ -213,7 +233,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void logout(String userEmail, String accessToken) {
+    public void logout(String userIdStr, String accessToken) {
 
         // Blocklist the access token in Redis so the gateway rejects it immediately
         if (accessToken != null && !accessToken.isBlank()) {
@@ -227,20 +247,27 @@ public class AuthServiceImpl implements AuthService {
                                 .set("blocklist:jti:" + jti, "revoked",
                                         remainingMs, TimeUnit.MILLISECONDS);
                         log.info("[Auth] Access token blocklisted | user: {} | jti: {} | ttl: {}ms",
-                                userEmail, jti, remainingMs);
+                                userIdStr, jti, remainingMs);
                     }
                 }
             } catch (Exception e) {
                 // Redis failure must not prevent logout from completing
                 log.warn("[Auth] Failed to blocklist access token for user {}: {}",
-                        userEmail, e.getMessage());
+                        userIdStr, e.getMessage());
             }
         }
 
         // Revoke all refresh tokens in DB
-        refreshTokenService.revokeAll(userEmail);
+        if (userIdStr != null) {
+            try {
+                java.util.UUID userId = java.util.UUID.fromString(userIdStr);
+                refreshTokenService.revokeAll(userId);
+            } catch (Exception ex) {
+                log.error("Failed to revoke refresh tokens for user ID: {}", userIdStr, ex);
+            }
+        }
 
-        log.info("[Auth] Logout complete for user: {}", userEmail);
+        log.info("[Auth] Logout complete for user: {}", userIdStr);
     }
 
     // =========================================================================
@@ -302,7 +329,8 @@ public class AuthServiceImpl implements AuthService {
         String verificationLink = frontendBaseUrl + "/verify-email?token=" + newToken.getToken();
 
         // 4. Send email
-        emailService.sendVerificationEmail(user.getEmail(), user.getUserName(), verificationLink);
+        String fullName = user.getFirstName() + (user.getSurname() != null ? " " + user.getSurname() : "");
+        emailService.sendVerificationEmail(user.getEmail(), fullName, verificationLink);
 
         // 5. Update cooldown timestamp (Primary: Redis, Fallback: In-memory)
         try {
@@ -320,30 +348,31 @@ public class AuthServiceImpl implements AuthService {
     // =========================================================================
 
     @Override
-    public boolean userExists(String email) {
-        return userRepository.existsByEmail(email);
+    public boolean userExists(java.util.UUID id) {
+        return userRepository.existsById(id);
     }
 
     @Override
     @Transactional
-    public void changePassword(String email, ChangePasswordRequest request) {
-        log.info("[Auth] Password change request for user: {}", email);
+    public void changePassword(String userIdStr, ChangePasswordRequest request) {
+        log.info("[Auth] Password change request for user: {}", userIdStr);
         try {
-            User user = userRepository.findByEmail(email)
+            java.util.UUID userId = java.util.UUID.fromString(userIdStr);
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new InvalidCredentialsException("User session is invalid"));
 
             if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-                log.warn("[Auth] Current password mismatch for user: {}", email);
+                log.warn("[Auth] Current password mismatch for user: {}", userIdStr);
                 throw new InvalidCredentialsException("Current password does not match");
             }
 
             user.setPassword(passwordEncoder.encode(request.getNewPassword()));
             userRepository.save(user);
-            log.info("[Auth] Password updated successfully for user: {}", email);
+            log.info("[Auth] Password updated successfully for user: {}", userIdStr);
         } catch (InvalidCredentialsException e) {
             throw e;
         } catch (Exception e) {
-            log.error("[Auth] Database or runtime error during password change for user: {}", email, e);
+            log.error("[Auth] Database or runtime error during password change for user: {}", userIdStr, e);
             throw new InvalidCredentialsException("Unable to update password. Please try again.");
         }
     }

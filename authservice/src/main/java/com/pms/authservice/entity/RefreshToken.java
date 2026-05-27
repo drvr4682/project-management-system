@@ -22,9 +22,9 @@ public class RefreshToken {
     @Column(nullable = false, unique = true)
     private String token;
 
-    // Owning user — stored as email to avoid a join when issuing a new access token
-    @Column(nullable = false)
-    private String userEmail;
+    // Owning user — stored as UUID
+    @Column(nullable = false, columnDefinition = "UUID")
+    private java.util.UUID userId;
 
     @Column(nullable = false)
     private Instant expiresAt;

@@ -22,20 +22,24 @@ class ProjectMemberRepositoryTest {
     @Autowired
     private ProjectMemberRepository projectMemberRepository;
 
+    private static final java.util.UUID USER_1 = java.util.UUID.randomUUID();
+    private static final java.util.UUID USER_2 = java.util.UUID.randomUUID();
+    private static final java.util.UUID USER_3 = java.util.UUID.randomUUID();
+
     @Test
     @DisplayName("Should save project member successfully")
     void shouldSaveProjectMemberSuccessfully() {
 
         ProjectMember member = ProjectMember.builder()
                 .projectId(1L)
-                .userId("user@test.com")
+                .userId(USER_1)
                 .role(ProjectRole.ADMIN)
                 .build();
 
         ProjectMember saved = projectMemberRepository.save(member);
 
         assertNotNull(saved.getId());
-        assertEquals("user@test.com", saved.getUserId());
+        assertEquals(USER_1, saved.getUserId());
         assertEquals(ProjectRole.ADMIN, saved.getRole());
     }
 
@@ -45,7 +49,7 @@ class ProjectMemberRepositoryTest {
 
         ProjectMember member = ProjectMember.builder()
                 .projectId(1L)
-                .userId("member@test.com")
+                .userId(USER_2)
                 .role(ProjectRole.MEMBER)
                 .build();
 
@@ -54,7 +58,7 @@ class ProjectMemberRepositoryTest {
         Optional<ProjectMember> found =
                 projectMemberRepository.findByProjectIdAndUserId(
                         1L,
-                        "member@test.com"
+                        USER_2
                 );
 
         assertTrue(found.isPresent());
@@ -70,19 +74,19 @@ class ProjectMemberRepositoryTest {
 
         ProjectMember member1 = ProjectMember.builder()
                 .projectId(100L)
-                .userId("admin@test.com")
+                .userId(USER_1)
                 .role(ProjectRole.ADMIN)
                 .build();
 
         ProjectMember member2 = ProjectMember.builder()
                 .projectId(100L)
-                .userId("user@test.com")
+                .userId(USER_2)
                 .role(ProjectRole.MEMBER)
                 .build();
 
         ProjectMember otherProjectMember = ProjectMember.builder()
                 .projectId(200L)
-                .userId("other@test.com")
+                .userId(USER_3)
                 .role(ProjectRole.VIEWER)
                 .build();
 
@@ -103,7 +107,7 @@ class ProjectMemberRepositoryTest {
         Optional<ProjectMember> result =
                 projectMemberRepository.findByProjectIdAndUserId(
                         999L,
-                        "missing@test.com"
+                        java.util.UUID.randomUUID()
                 );
 
         assertTrue(result.isEmpty());

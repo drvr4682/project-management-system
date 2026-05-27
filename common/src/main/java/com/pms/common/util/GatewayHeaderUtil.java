@@ -13,11 +13,11 @@ public class GatewayHeaderUtil {
     private final HttpServletRequest request;
 
     public String getAuthenticatedUser() {
-        return request.getHeader("X-Authenticated-User");
+        return request.getHeader("X-User-Id");
     }
 
     public String getAuthenticatedRole() {
-        return request.getHeader("X-Authenticated-Role");
+        return request.getHeader("X-User-Role");
     }
 
     public String getCorrelationId() {

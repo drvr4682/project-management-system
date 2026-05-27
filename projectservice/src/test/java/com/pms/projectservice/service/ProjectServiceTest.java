@@ -52,13 +52,16 @@ class ProjectServiceTest {
     @InjectMocks
     private ProjectService projectService;
 
+    private static final String ADMIN_STR = "e5a31a61-9cbf-4bfb-b654-e67d4b9f36f1";
+    private static final java.util.UUID ADMIN_UUID = java.util.UUID.fromString(ADMIN_STR);
+
     @BeforeEach
     void setUp() {
 
         MockitoAnnotations.openMocks(this);
 
         when(securityUtils.getCurrentUser())
-                .thenReturn("admin@test.com");
+                .thenReturn(ADMIN_STR);
 
         when(securityUtils.getCorrelationId())
                 .thenReturn("corr-123");
@@ -77,7 +80,7 @@ class ProjectServiceTest {
                 .id(1L)
                 .name("PMS Backend")
                 .description("Project Desc")
-                .ownerId("admin@test.com")
+                .ownerId(ADMIN_UUID)
                 .status(ProjectStatus.ACTIVE)
                 .build();
 
@@ -106,7 +109,7 @@ class ProjectServiceTest {
                 .id(1L)
                 .name("Backend API")
                 .description("Desc")
-                .ownerId("admin@test.com")
+                .ownerId(ADMIN_UUID)
                 .status(ProjectStatus.ACTIVE)
                 .build();
 
@@ -114,11 +117,11 @@ class ProjectServiceTest {
                 .thenReturn(Optional.of(project));
 
         when(projectAccessService
-                .validateMember(1L, "admin@test.com"))
+                .validateMember(1L, ADMIN_STR))
                 .thenReturn(
                         ProjectMember.builder()
                                 .projectId(1L)
-                                .userId("admin@test.com")
+                                .userId(ADMIN_UUID)
                                 .role(ProjectRole.ADMIN)
                                 .build()
                 );
@@ -151,7 +154,7 @@ class ProjectServiceTest {
                 .id(1L)
                 .name("Old Name")
                 .description("Old Desc")
-                .ownerId("admin@test.com")
+                .ownerId(ADMIN_UUID)
                 .status(ProjectStatus.ACTIVE)
                 .build();
 
@@ -164,7 +167,7 @@ class ProjectServiceTest {
                 .thenReturn(Optional.of(existing));
 
         doNothing().when(projectAccessService)
-                .validateAdmin(1L, "admin@test.com");
+                .validateAdmin(1L, ADMIN_STR);
 
         when(projectRepository.save(any(Project.class)))
                 .thenReturn(existing);
@@ -184,7 +187,7 @@ class ProjectServiceTest {
                 .id(1L)
                 .name("Delete Project")
                 .description("Desc")
-                .ownerId("admin@test.com")
+                .ownerId(ADMIN_UUID)
                 .status(ProjectStatus.ACTIVE)
                 .build();
 
@@ -192,7 +195,7 @@ class ProjectServiceTest {
                 .thenReturn(Optional.of(project));
 
         doNothing().when(projectAccessService)
-                .validateAdmin(1L, "admin@test.com");
+                .validateAdmin(1L, ADMIN_STR);
 
         doNothing().when(projectRepository)
                 .delete(project);
@@ -214,20 +217,20 @@ class ProjectServiceTest {
                 .id(1L)
                 .name("Backend")
                 .description("Desc")
-                .ownerId("admin@test.com")
+                .ownerId(ADMIN_UUID)
                 .status(ProjectStatus.ACTIVE)
                 .build();
 
         ProjectMember member = ProjectMember.builder()
                 .projectId(1L)
-                .userId("admin@test.com")
+                .userId(ADMIN_UUID)
                 .role(ProjectRole.ADMIN)
                 .build();
 
         Page<Project> page =
                 new PageImpl<>(List.of(project));
 
-        when(projectMemberRepository.findByUserId("admin@test.com"))
+        when(projectMemberRepository.findByUserId(ADMIN_UUID))
                 .thenReturn(List.of(member));
 
         when(projectRepository.findDistinctByIdIn(

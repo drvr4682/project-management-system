@@ -47,10 +47,10 @@ public class Task {
     private Long projectId;
 
     @Column(nullable = false)
-    private String createdBy;
+    private java.util.UUID createdBy;
 
     /** nullable — tasks may be unassigned */
-    private String assignedTo;
+    private java.util.UUID assignedTo;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

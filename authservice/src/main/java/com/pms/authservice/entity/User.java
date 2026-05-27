@@ -28,11 +28,14 @@ import lombok.Setter;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(columnDefinition = "UUID")
+    private java.util.UUID id;
 
-    @Column(nullable = false, length = 100)
-    private String userName;
+    @Column(name = "first_name", nullable = false, length = 100)
+    private String firstName;
+
+    @Column(name = "surname", length = 100)
+    private String surname;
 
     @Column(nullable = false, unique = true, length = 150)
     private String email;
@@ -57,7 +60,9 @@ public class User {
 
     @PrePersist
     public void prePersist() {
-
+        if (this.id == null) {
+            this.id = java.util.UUID.randomUUID();
+        }
         if (this.createdAt == null) {
             this.createdAt = LocalDateTime.now();
         }

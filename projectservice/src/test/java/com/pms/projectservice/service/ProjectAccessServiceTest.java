@@ -26,6 +26,18 @@ class ProjectAccessServiceTest {
     @InjectMocks
     private ProjectAccessService projectAccessService;
 
+    private static final String USER_STR = "e5a31a61-9cbf-4bfb-b654-e67d4b9f36f1";
+    private static final java.util.UUID USER_UUID = java.util.UUID.fromString(USER_STR);
+
+    private static final String ADMIN_STR = "f8af7f79-8994-481e-99bf-2f78b498912c";
+    private static final java.util.UUID ADMIN_UUID = java.util.UUID.fromString(ADMIN_STR);
+
+    private static final String MEMBER_STR = "6fbe36c0-0381-45df-922e-e47bb37f3ad5";
+    private static final java.util.UUID MEMBER_UUID = java.util.UUID.fromString(MEMBER_STR);
+
+    private static final String MISSING_STR = "da6cd3a7-e17f-4702-861c-8ad621f3791a";
+    private static final java.util.UUID MISSING_UUID = java.util.UUID.fromString(MISSING_STR);
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -37,18 +49,18 @@ class ProjectAccessServiceTest {
 
         ProjectMember member = ProjectMember.builder()
                 .projectId(1L)
-                .userId("user@test.com")
+                .userId(USER_UUID)
                 .role(ProjectRole.MEMBER)
                 .build();
 
         when(projectMemberRepository
-                .findByProjectIdAndUserId(1L, "user@test.com"))
+                .findByProjectIdAndUserId(1L, USER_UUID))
                 .thenReturn(Optional.of(member));
 
         ProjectMember result =
                 projectAccessService.validateMember(
                         1L,
-                        "user@test.com"
+                        USER_STR
                 );
 
         assertNotNull(result);
@@ -60,14 +72,14 @@ class ProjectAccessServiceTest {
     void shouldDenyAccessWhenUserNotProjectMember() {
 
         when(projectMemberRepository
-                .findByProjectIdAndUserId(1L, "missing@test.com"))
+                .findByProjectIdAndUserId(1L, MISSING_UUID))
                 .thenReturn(Optional.empty());
 
         assertThrows(
                 AccessDeniedException.class,
                 () -> projectAccessService.validateMember(
                         1L,
-                        "missing@test.com"
+                        MISSING_STR
                 )
         );
     }
@@ -78,18 +90,18 @@ class ProjectAccessServiceTest {
 
         ProjectMember admin = ProjectMember.builder()
                 .projectId(1L)
-                .userId("admin@test.com")
+                .userId(ADMIN_UUID)
                 .role(ProjectRole.ADMIN)
                 .build();
 
         when(projectMemberRepository
-                .findByProjectIdAndUserId(1L, "admin@test.com"))
+                .findByProjectIdAndUserId(1L, ADMIN_UUID))
                 .thenReturn(Optional.of(admin));
 
         assertDoesNotThrow(() ->
                 projectAccessService.validateAdmin(
                         1L,
-                        "admin@test.com"
+                        ADMIN_STR
                 )
         );
     }
@@ -100,19 +112,19 @@ class ProjectAccessServiceTest {
 
         ProjectMember member = ProjectMember.builder()
                 .projectId(1L)
-                .userId("member@test.com")
+                .userId(MEMBER_UUID)
                 .role(ProjectRole.MEMBER)
                 .build();
 
         when(projectMemberRepository
-                .findByProjectIdAndUserId(1L, "member@test.com"))
+                .findByProjectIdAndUserId(1L, MEMBER_UUID))
                 .thenReturn(Optional.of(member));
 
         assertThrows(
                 AccessDeniedException.class,
                 () -> projectAccessService.validateAdmin(
                         1L,
-                        "member@test.com"
+                        MEMBER_STR
                 )
         );
     }

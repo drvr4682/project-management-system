@@ -55,7 +55,7 @@ public class ProjectMemberService {
 
         projectAccessService.validateAdmin(projectId, currentUser);
 
-        projectMemberRepository.findByProjectIdAndUserId(projectId, request.getUserId())
+        projectMemberRepository.findByProjectIdAndUserId(projectId, java.util.UUID.fromString(request.getUserId()))
                 .ifPresent(m -> {
                     throw new IllegalArgumentException("User already a member");
                 });
@@ -76,7 +76,7 @@ public class ProjectMemberService {
 
         ProjectMember member = ProjectMember.builder()
                 .projectId(projectId)
-                .userId(request.getUserId())
+                .userId(java.util.UUID.fromString(request.getUserId()))
                 .role(role)
                 .build();
 
@@ -115,7 +115,7 @@ public class ProjectMemberService {
         return projectMemberRepository.findByProjectId(projectId)
                 .stream()
                 .map(m -> ProjectMemberResponseDTO.builder()
-                        .userId(m.getUserId())
+                        .userId(m.getUserId().toString())
                         .role(m.getRole().name())
                         .build())
                 .toList();
@@ -141,7 +141,7 @@ public class ProjectMemberService {
         projectAccessService.validateAdmin(projectId, currentUser);
 
         ProjectMember member = projectMemberRepository
-                .findByProjectIdAndUserId(projectId, userId)
+                .findByProjectIdAndUserId(projectId, java.util.UUID.fromString(userId))
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
 
         if (currentUser.equals(userId)) {

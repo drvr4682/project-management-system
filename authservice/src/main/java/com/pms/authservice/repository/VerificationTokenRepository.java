@@ -14,17 +14,17 @@ public interface VerificationTokenRepository extends JpaRepository<VerificationT
 
     Optional<VerificationToken> findByToken(String token);
 
-    List<VerificationToken> findByUserId(Long userId);
+    List<VerificationToken> findByUserId(java.util.UUID userId);
 
     @Modifying
-    void deleteByUserId(Long userId);
+    void deleteByUserId(java.util.UUID userId);
 
     @Modifying
     void deleteByExpiryDateBefore(LocalDateTime dateTime);
 
     @Modifying(clearAutomatically = true)
     @Query("UPDATE VerificationToken v SET v.used = true WHERE v.user.id = :userId AND v.used = false")
-    int invalidateUnusedTokensByUserId(@Param("userId") Long userId);
+    int invalidateUnusedTokensByUserId(@Param("userId") java.util.UUID userId);
 
     @Modifying
     @Query("""
@@ -40,5 +40,5 @@ public interface VerificationTokenRepository extends JpaRepository<VerificationT
             AND v.used = false
             AND v.expiryDate > :now
     """)
-    long countActiveByUserId(@Param("userId") Long userId, @Param("now") LocalDateTime now);
+    long countActiveByUserId(@Param("userId") java.util.UUID userId, @Param("now") LocalDateTime now);
 }

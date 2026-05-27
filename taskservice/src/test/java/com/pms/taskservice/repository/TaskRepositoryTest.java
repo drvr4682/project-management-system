@@ -24,8 +24,8 @@ class TaskRepositoryTest {
     private TaskRepository taskRepository;
 
     private static final Long PROJECT_ID = 1L;
-    private static final String USER_A   = "usera@example.com";
-    private static final String USER_B   = "userb@example.com";
+    private static final java.util.UUID USER_A   = java.util.UUID.randomUUID();
+    private static final java.util.UUID USER_B   = java.util.UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
@@ -37,7 +37,7 @@ class TaskRepositoryTest {
         taskRepository.save(task("Other Work", TaskStatus.TODO,       TaskPriority.CRITICAL, null));
     }
 
-    private Task task(String title, TaskStatus status, TaskPriority priority, String assignedTo) {
+    private Task task(String title, TaskStatus status, TaskPriority priority, java.util.UUID assignedTo) {
         return Task.builder()
                 .title(title)
                 .status(status)

@@ -30,7 +30,7 @@ public class Project {
     private String description;
 
     @Column(nullable = false)
-    private String ownerId;
+    private java.util.UUID ownerId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
