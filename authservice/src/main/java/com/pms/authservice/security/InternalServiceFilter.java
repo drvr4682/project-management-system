@@ -34,7 +34,7 @@ public class InternalServiceFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        if (!path.startsWith("/internal/")) {
+        if (!path.contains("/internal/")) {
             filterChain.doFilter(request, response);
             return;
         }

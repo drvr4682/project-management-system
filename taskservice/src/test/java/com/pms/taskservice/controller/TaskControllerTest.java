@@ -500,9 +500,9 @@ class TaskControllerTest {
     @DisplayName("PUT /api/v1/tasks/{taskId}/assign — assignTask")
     class AssignTask {
 
-        private AssignTaskRequestDTO assignRequest(String email) {
+        private AssignTaskRequestDTO assignRequest(String uuid) {
             AssignTaskRequestDTO req = new AssignTaskRequestDTO();
-            req.setAssigneeId(email);
+            req.setAssigneeId(uuid);
             return req;
         }
 
@@ -510,17 +510,18 @@ class TaskControllerTest {
         @WithMockUser(username = "user@example.com", roles = {"USER"})
         @DisplayName("Returns 200 with assigned task on success")
         void assignTask_success_returns200() throws Exception {
+            String targetUuid = "f8af7f79-8994-481e-99bf-2f78b498912c";
             TaskResponseDTO response = buildResponse();
-            response.setAssignedTo("assignee@example.com");
+            response.setAssignedTo(targetUuid);
             when(taskService.assignTask(eq(TASK_ID), any(AssignTaskRequestDTO.class)))
                     .thenReturn(response);
 
             mockMvc.perform(put(BASE_URL + "/{taskId}/assign", TASK_ID)
                             .header(GATEWAY_SECRET_HDR, GATEWAY_SECRET_VAL)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(assignRequest("assignee@example.com"))))
+                            .content(objectMapper.writeValueAsString(assignRequest(targetUuid))))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.assignedTo").value("assignee@example.com"));
+                    .andExpect(jsonPath("$.assignedTo").value(targetUuid));
         }
 
         @Test
@@ -537,12 +538,12 @@ class TaskControllerTest {
 
         @Test
         @WithMockUser(username = "user@example.com", roles = {"USER"})
-        @DisplayName("Returns 400 when assigneeId is not a valid email")
-        void assignTask_invalidEmail_returns400() throws Exception {
+        @DisplayName("Returns 400 when assigneeId is not a valid UUID")
+        void assignTask_invalidUuid_returns400() throws Exception {
             mockMvc.perform(put(BASE_URL + "/{taskId}/assign", TASK_ID)
                             .header(GATEWAY_SECRET_HDR, GATEWAY_SECRET_VAL)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"assigneeId\": \"not-an-email\"}"))
+                            .content("{\"assigneeId\": \"not-a-uuid\"}"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errors.assigneeId").exists());
         }
@@ -551,13 +552,14 @@ class TaskControllerTest {
         @WithMockUser(username = "user@example.com", roles = {"USER"})
         @DisplayName("Returns 400 when assignee does not exist in auth service")
         void assignTask_assigneeNotFound_returns400() throws Exception {
+            String ghostUuid = "6fbe36c0-0381-45df-922e-e47bb37f3ad5";
             when(taskService.assignTask(eq(TASK_ID), any()))
                     .thenThrow(new IllegalArgumentException("Assignee user does not exist"));
 
             mockMvc.perform(put(BASE_URL + "/{taskId}/assign", TASK_ID)
                             .header(GATEWAY_SECRET_HDR, GATEWAY_SECRET_VAL)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(assignRequest("ghost@example.com"))))
+                            .content(objectMapper.writeValueAsString(assignRequest(ghostUuid))))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value("Assignee user does not exist"));
         }
@@ -566,13 +568,14 @@ class TaskControllerTest {
         @WithMockUser(username = "user@example.com", roles = {"USER"})
         @DisplayName("Returns 404 when task does not exist")
         void assignTask_taskNotFound_returns404() throws Exception {
+            String targetUuid = "f8af7f79-8994-481e-99bf-2f78b498912c";
             when(taskService.assignTask(eq(TASK_ID), any()))
                     .thenThrow(new ResourceNotFoundException("Task not found with id: " + TASK_ID));
 
             mockMvc.perform(put(BASE_URL + "/{taskId}/assign", TASK_ID)
                             .header(GATEWAY_SECRET_HDR, GATEWAY_SECRET_VAL)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(assignRequest("user@example.com"))))
+                            .content(objectMapper.writeValueAsString(assignRequest(targetUuid))))
                     .andExpect(status().isNotFound());
         }
 
@@ -580,13 +583,14 @@ class TaskControllerTest {
         @WithMockUser(username = "user@example.com", roles = {"USER"})
         @DisplayName("Returns 403 when user lacks permission to assign")
         void assignTask_forbidden_returns403() throws Exception {
+            String targetUuid = "f8af7f79-8994-481e-99bf-2f78b498912c";
             when(taskService.assignTask(eq(TASK_ID), any()))
                     .thenThrow(new AccessDeniedException("Only the task creator or a project admin can perform this action"));
 
             mockMvc.perform(put(BASE_URL + "/{taskId}/assign", TASK_ID)
                             .header(GATEWAY_SECRET_HDR, GATEWAY_SECRET_VAL)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(assignRequest("user@example.com"))))
+                            .content(objectMapper.writeValueAsString(assignRequest(targetUuid))))
                     .andExpect(status().isForbidden());
         }
     }

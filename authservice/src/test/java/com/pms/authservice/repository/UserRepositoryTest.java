@@ -24,8 +24,7 @@ class UserRepositoryTest {
     void shouldSaveAndFindUserByEmail() {
 
         User user = User.builder()
-                .firstName("Exists")
-                .surname("User")
+                .userName("existsuser")
                 .email("test@example.com")
                 .password("hashedpassword")
                 .role(Role.USER)
@@ -43,8 +42,7 @@ class UserRepositoryTest {
     void shouldReturnTrueIfEmailExists() {
 
         User user = User.builder()
-                .firstName("Test")
-                .surname("User")
+                .userName("testuser")
                 .email("exists@example.com")
                 .password("hashedpassword")
                 .role(Role.USER)

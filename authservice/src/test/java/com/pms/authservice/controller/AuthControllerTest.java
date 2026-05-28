@@ -64,16 +64,13 @@ class AuthControllerTest {
     void shouldAllowRegisterWithoutAuth() throws Exception {
 
         RegisterRequest request = new RegisterRequest();
-        request.setFirstName("Test");
-        request.setSurname("User");
+        request.setUserName("testuser");
         request.setEmail("test@test.com");
         request.setPassword("Test@123");
-        request.setRole(Role.USER);
 
         RegisterResponse mockResponse = RegisterResponse.builder()
                 .id(java.util.UUID.randomUUID())
-                .firstName("Test")
-                .surname("User")
+                .userName("testuser")
                 .email("test@test.com")
                 .role("USER")
                 .build();
@@ -102,11 +99,9 @@ class AuthControllerTest {
     void shouldFailRegisterWithWeakPassword() throws Exception {
 
         RegisterRequest request = new RegisterRequest();
-        request.setFirstName("Test");
-        request.setSurname("User");
+        request.setUserName("testuser");
         request.setEmail("test@test.com");
         request.setPassword("weakpassword"); // no uppercase, number or special char
-        request.setRole(Role.USER);
 
         mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -122,7 +117,7 @@ class AuthControllerTest {
     void shouldLoginAndReturnBothAccessAndRefreshTokens() throws Exception {
 
         LoginRequest request = new LoginRequest();
-        request.setEmail("user@test.com");
+        request.setEmailOrUsername("user@test.com");
         request.setPassword("Test@123");
 
         LoginResponse mockResponse = LoginResponse.builder()

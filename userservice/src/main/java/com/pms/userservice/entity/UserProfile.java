@@ -8,7 +8,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "user_profiles", indexes = {
-        @Index(name = "idx_username", columnList = "username"),
         @Index(name = "idx_first_name", columnList = "first_name"),
         @Index(name = "idx_surname", columnList = "surname")
 })
@@ -28,9 +27,6 @@ public class UserProfile {
 
     @Column(name = "surname", length = 100)
     private String surname;
-
-    @Column(nullable = false, unique = true, length = 100)
-    private String username;
 
     @Column(length = 1000)
     private String bio;
@@ -63,16 +59,10 @@ public class UserProfile {
             this.createdAt = LocalDateTime.now();
         }
         this.updatedAt = LocalDateTime.now();
-        if (this.username != null) {
-            this.username = this.username.trim().toLowerCase();
-        }
     }
 
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
-        if (this.username != null) {
-            this.username = this.username.trim().toLowerCase();
-        }
     }
 }

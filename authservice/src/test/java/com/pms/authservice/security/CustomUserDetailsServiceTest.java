@@ -27,7 +27,7 @@ class CustomUserDetailsServiceTest {
                 .role(Role.USER)
                 .build();
 
-        Mockito.when(userRepository.findByEmail("test@mail.com"))
+        Mockito.when(userRepository.findByEmailOrUserName("test@mail.com", "test@mail.com"))
                 .thenReturn(Optional.of(user));
 
         var result = service.loadUserByUsername("test@mail.com");
@@ -40,7 +40,7 @@ class CustomUserDetailsServiceTest {
     @Test
     void shouldThrowUsernameNotFoundExceptionWhenUserDoesNotExist() {
 
-        Mockito.when(userRepository.findByEmail("missing@mail.com"))
+        Mockito.when(userRepository.findByEmailOrUserName("missing@mail.com", "missing@mail.com"))
                 .thenReturn(Optional.empty());
 
         assertThrows(
@@ -59,7 +59,7 @@ class CustomUserDetailsServiceTest {
                 .enabled(false)
                 .build();
 
-        Mockito.when(userRepository.findByEmail("disabled@mail.com"))
+        Mockito.when(userRepository.findByEmailOrUserName("disabled@mail.com", "disabled@mail.com"))
                 .thenReturn(Optional.of(user));
 
         var result = service.loadUserByUsername("disabled@mail.com");

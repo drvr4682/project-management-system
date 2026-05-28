@@ -3,6 +3,7 @@ package com.pms.userservice.controller;
 import com.pms.common.dto.UserProfileResponse;
 import com.pms.common.dto.UserSearchResponse;
 import com.pms.common.security.SecurityUtils;
+import com.pms.userservice.dto.UserProfileCreationRequest;
 import com.pms.userservice.dto.UserProfileUpdateRequest;
 import com.pms.userservice.service.UserProfileService;
 import jakarta.validation.Valid;
@@ -43,6 +44,15 @@ public class UserProfileController {
     }
 
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PostMapping("/me")
+    public ResponseEntity<UserProfileResponse> completeProfile(
+            @Valid @RequestBody UserProfileCreationRequest request) {
+        String currentUserId = securityUtils.getCurrentUser();
+        log.info("Completing onboarding profile for user ID: {}", currentUserId);
+        return ResponseEntity.ok(userProfileService.createProfile(currentUserId, request));
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @PutMapping("/me")
     public ResponseEntity<UserProfileResponse> updateMyProfile(
             @Valid @RequestBody UserProfileUpdateRequest request) {
@@ -57,7 +67,7 @@ public class UserProfileController {
             @RequestParam String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "username") String sortBy,
+            @RequestParam(defaultValue = "firstName") String sortBy,
             @RequestParam(defaultValue = "asc") String direction) {
 
         log.info("Searching profiles with query: '{}' | page: {} | size: {}", q, page, size);

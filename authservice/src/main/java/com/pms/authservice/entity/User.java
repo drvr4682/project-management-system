@@ -31,11 +31,8 @@ public class User {
     @Column(columnDefinition = "UUID")
     private java.util.UUID id;
 
-    @Column(name = "first_name", nullable = false, length = 100)
-    private String firstName;
-
-    @Column(name = "surname", length = 100)
-    private String surname;
+    @Column(name = "username", nullable = false, unique = true, length = 50)
+    private String userName;
 
     @Column(nullable = false, unique = true, length = 150)
     private String email;

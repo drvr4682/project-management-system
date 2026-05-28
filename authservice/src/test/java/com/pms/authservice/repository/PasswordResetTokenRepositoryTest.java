@@ -29,8 +29,7 @@ class PasswordResetTokenRepositoryTest {
 
     private User createTestUser(String email) {
         return userRepository.save(User.builder()
-                .firstName("Test")
-                .surname("User")
+                .userName(email.split("@")[0])
                 .email(email)
                 .password("Password@123")
                 .role(Role.USER)

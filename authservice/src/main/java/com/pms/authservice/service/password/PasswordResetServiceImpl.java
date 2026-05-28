@@ -40,7 +40,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
-    @Value("${app.frontend-base-url:http://localhost:5173}")
+    @Value("${app.frontend-base-url:http://localhost:3000}")
     private String frontendBaseUrl;
 
     @Override
@@ -102,7 +102,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         // 5. Send plain text email pointing to the frontend
         String resetLink = frontendBaseUrl + "/reset-password?token=" + tokenValue;
-        String fullName = user.getFirstName() + (user.getSurname() != null ? " " + user.getSurname() : "");
+        String fullName = user.getUserName();
         emailService.sendPasswordResetEmail(user.getEmail(), fullName, resetLink);
 
         // 6. Record cooldown (Primary: Redis, Fallback: In-memory)

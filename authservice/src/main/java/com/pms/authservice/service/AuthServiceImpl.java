@@ -49,7 +49,6 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenService         refreshTokenService;
     private final StringRedisTemplate         redisTemplate;
     private final EmailService                emailService;
-    private final com.pms.authservice.client.UserFeignClient userFeignClient;
 
     @Value("${app.email-verification.token-expiry-minutes:1440}")
     private long verificationTokenExpiryMinutes;
@@ -57,7 +56,7 @@ public class AuthServiceImpl implements AuthService {
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
-    @Value("${app.frontend-base-url:http://localhost:5173}")
+    @Value("${app.frontend-base-url:http://localhost:3000}")
     private String frontendBaseUrl;
 
     private final java.util.concurrent.ConcurrentHashMap<String, LocalDateTime> resendCooldowns = new java.util.concurrent.ConcurrentHashMap<>();
@@ -71,51 +70,41 @@ public class AuthServiceImpl implements AuthService {
     public RegisterResponse register(RegisterRequest request) {
 
         String email = request.getEmail().trim().toLowerCase();
+        String userName = request.getUserName().trim().toLowerCase();
 
         if (userRepository.existsByEmail(email)) {
             throw new UserAlreadyExistsException(
                     "User already exists with email: " + email);
         }
 
+        if (userRepository.existsByUserName(userName)) {
+            throw new UserAlreadyExistsException(
+                    "User already exists with username: " + userName);
+        }
+
         // 1. Persist user — no token fields on the entity
         User user = User.builder()
                 .id(java.util.UUID.randomUUID())
-                .firstName(request.getFirstName().trim())
-                .surname(request.getSurname() != null ? request.getSurname().trim() : null)
+                .userName(userName)
                 .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
+                .role(com.pms.authservice.entity.Role.USER) // Default role
                 .emailVerified(false)
                 .enabled(false)
                 .build();
 
         User savedUser = userRepository.saveAndFlush(user);
 
-        // 2. Explicitly create profile in userservice via Feign
-        try {
-            userFeignClient.createProfile(com.pms.authservice.dto.InternalProfileCreationRequest.builder()
-                    .id(savedUser.getId())
-                    .firstName(savedUser.getFirstName())
-                    .surname(savedUser.getSurname())
-                    .build());
-        } catch (Exception ex) {
-            log.error("Failed to create profile in userservice for user: {} | Triggering compensation rollback", savedUser.getId(), ex);
-            userRepository.delete(savedUser);
-            userRepository.flush();
-            throw new RuntimeException("Profile creation failed, registration aborted: " + ex.getMessage(), ex);
-        }
-
-        // 3. Create a VerificationToken record
+        // 2. Create a VerificationToken record
         VerificationToken vToken = verificationService.createVerificationToken(savedUser);
 
-        // 4. Build verification URL pointing to the frontend
+        // 3. Build verification URL pointing to the frontend
         String verificationLink = frontendBaseUrl + "/verify-email?token=" + vToken.getToken();
 
-        // 5. Send verification email
-        String fullName = savedUser.getFirstName() + (savedUser.getSurname() != null ? " " + savedUser.getSurname() : "");
+        // 4. Send verification email using username
         emailService.sendVerificationEmail(
                 savedUser.getEmail(),
-                fullName,
+                savedUser.getUserName(),
                 verificationLink
         );
 
@@ -124,8 +113,7 @@ public class AuthServiceImpl implements AuthService {
 
         return RegisterResponse.builder()
                 .id(savedUser.getId())
-                .firstName(savedUser.getFirstName())
-                .surname(savedUser.getSurname())
+                .userName(savedUser.getUserName())
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole().name())
                 .build();
@@ -139,13 +127,13 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public LoginResponse login(LoginRequest request) {
 
-        String email = request.getEmail() == null
-                ? null
-                : request.getEmail().trim().toLowerCase();
+        String identifier = request.getEmailOrUsername() == null
+                ? ""
+                : request.getEmailOrUsername().trim().toLowerCase();
 
-        // 0. Enforce rate limiting per email (Primary: Redis, Fallback: none/passthrough)
-        if (email != null) {
-            String rateLimitKey = "rate:limit:login:" + email;
+        // 0. Enforce rate limiting per identifier (Primary: Redis, Fallback: none/passthrough)
+        if (!identifier.isEmpty()) {
+            String rateLimitKey = "rate:limit:login:" + identifier;
             boolean isBlocked = false;
             try {
                 String val = redisTemplate.opsForValue().get(rateLimitKey);
@@ -157,7 +145,7 @@ public class AuthServiceImpl implements AuthService {
             }
 
             if (isBlocked) {
-                log.warn("[Auth] Login rate limit exceeded for email: {}", email);
+                log.warn("[Auth] Login rate limit exceeded for identifier: {}", identifier);
                 throw new TooManyRequestsException("Too many login attempts. Please try again in 1 minute.");
             }
 
@@ -167,25 +155,25 @@ public class AuthServiceImpl implements AuthService {
                     redisTemplate.expire(rateLimitKey, 60, TimeUnit.SECONDS);
                 }
             } catch (Exception e) {
-                log.warn("[Auth] Redis is down. Unable to increment rate limit counter for: {}", email);
+                log.warn("[Auth] Redis is down. Unable to increment rate limit counter for: {}", identifier);
             }
         }
 
         // 1. Authenticate credentials
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email, request.getPassword()));
+                    new UsernamePasswordAuthenticationToken(identifier, request.getPassword()));
         } catch (BadCredentialsException e) {
-            throw new InvalidCredentialsException("Invalid email or password");
+            throw new InvalidCredentialsException("Invalid email/username or password");
         }
 
         // 2. Load user
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
+        User user = userRepository.findByEmailOrUserName(identifier, identifier)
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email/username or password"));
 
         // 3. Block unverified accounts
         if (!user.isEmailVerified()) {
-            log.warn("[Auth] Login attempt for unverified account: {}", email);
+            log.warn("[Auth] Login attempt for unverified account: {}", identifier);
             throw new EmailVerificationException(
                     "Email address is not verified. "
                     + "Please check your inbox and click the verification link.");
@@ -198,12 +186,12 @@ public class AuthServiceImpl implements AuthService {
         log.info("[Auth] Login successful: {}", user.getEmail());
 
         // 5. Clear rate limit counter on successful login
-        if (email != null) {
-            String rateLimitKey = "rate:limit:login:" + email;
+        if (!identifier.isEmpty()) {
+            String rateLimitKey = "rate:limit:login:" + identifier;
             try {
                 redisTemplate.delete(rateLimitKey);
             } catch (Exception e) {
-                log.warn("[Auth] Redis is down. Unable to clear rate limit counter for: {}", email);
+                log.warn("[Auth] Redis is down. Unable to clear rate limit counter for: {}", identifier);
             }
         }
 
@@ -213,8 +201,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .id(user.getId())
-                .firstName(user.getFirstName())
-                .surname(user.getSurname())
+                .userName(user.getUserName())
                 .build();
     }
 
@@ -329,7 +316,7 @@ public class AuthServiceImpl implements AuthService {
         String verificationLink = frontendBaseUrl + "/verify-email?token=" + newToken.getToken();
 
         // 4. Send email
-        String fullName = user.getFirstName() + (user.getSurname() != null ? " " + user.getSurname() : "");
+        String fullName = user.getUserName();
         emailService.sendVerificationEmail(user.getEmail(), fullName, verificationLink);
 
         // 5. Update cooldown timestamp (Primary: Redis, Fallback: In-memory)

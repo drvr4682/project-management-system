@@ -57,9 +57,6 @@ class EmailVerificationIntegrationTest {
     @MockBean
     private EmailService emailService;
 
-    @MockBean
-    private com.pms.authservice.client.UserFeignClient userFeignClient;
-
     @Value("${gateway.secret}")
     private String gatewaySecret;
 
@@ -75,11 +72,9 @@ class EmailVerificationIntegrationTest {
         // A. Register User & Assert Token Generation
         // ---------------------------------------------------------
         RegisterRequest registerReq = new RegisterRequest();
-        registerReq.setFirstName("Jane");
-        registerReq.setSurname("Hardened");
+        registerReq.setUserName("janehardened");
         registerReq.setEmail("jane.hardened@test.com");
         registerReq.setPassword("Password123!");
-        registerReq.setRole(Role.USER);
 
         mockMvc.perform(post("/api/v1/auth/register")
                         .header("X-Gateway-Secret", gatewaySecret)
@@ -102,13 +97,13 @@ class EmailVerificationIntegrationTest {
         assertThat(token.isUsed()).isFalse();
 
         // Verify that verification email was sent
-        verify(emailService).sendVerificationEmail(eq("jane.hardened@test.com"), eq("Jane Hardened"), anyString());
+        verify(emailService).sendVerificationEmail(eq("jane.hardened@test.com"), eq("janehardened"), anyString());
 
         // ---------------------------------------------------------
         // B. Login Blocked Before Verification
         // ---------------------------------------------------------
         LoginRequest loginReq = new LoginRequest();
-        loginReq.setEmail("jane.hardened@test.com");
+        loginReq.setEmailOrUsername("jane.hardened@test.com");
         loginReq.setPassword("Password123!");
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -180,11 +175,9 @@ class EmailVerificationIntegrationTest {
     void shouldResendVerificationAndInvalidateOldTokensWithCooldown() throws Exception {
         // Register user first
         RegisterRequest registerReq = new RegisterRequest();
-        registerReq.setFirstName("Resend");
-        registerReq.setSurname("Guy");
+        registerReq.setUserName("resendguy");
         registerReq.setEmail("resend.guy@test.com");
         registerReq.setPassword("Password123!");
-        registerReq.setRole(Role.USER);
 
         mockMvc.perform(post("/api/v1/auth/register")
                         .header("X-Gateway-Secret", gatewaySecret)

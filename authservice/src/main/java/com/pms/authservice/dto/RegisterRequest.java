@@ -12,10 +12,12 @@ import lombok.Data;
 @Data
 public class RegisterRequest {
 
-    @NotBlank(message = "First name is required")
-    private String firstName;
-
-    private String surname;
+    @NotBlank(message = "Username is required")
+    @jakarta.validation.constraints.Pattern(
+        regexp = "^[a-zA-Z0-9_]{3,30}$",
+        message = "Username must be alphanumeric and between 3 to 30 characters"
+    )
+    private String userName;
 
     @Email(message = "Invalid email format")
     @NotBlank(message = "Email is required")
@@ -27,7 +29,4 @@ public class RegisterRequest {
         message = "Password must contain uppercase, lowercase, number, special character and minimum 8 characters"
     )
     private String password;
-
-    @NotNull(message = "Role is required")
-    private Role role;
 }

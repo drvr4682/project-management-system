@@ -24,6 +24,7 @@ public class UserProfileResponse {
     private String timezone;
     private String statusMessage;
     private boolean active;
+    private boolean profileCompleted;
     private List<SocialLinkResponse> socialLinks;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

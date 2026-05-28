@@ -8,8 +8,11 @@ import lombok.Data;
 @Data
 public class AddMemberRequestDTO {
 
-    @NotBlank(message = "UserId (email) is required")
-    @Email(message = "Invalid email format")
+    @NotBlank(message = "UserId is required")
+    @Pattern(
+        regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+        message = "UserId must be a valid UUID"
+    )
     private String userId;
 
     @Pattern(

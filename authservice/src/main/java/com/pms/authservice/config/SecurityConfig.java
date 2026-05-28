@@ -81,7 +81,7 @@ public class SecurityConfig {
                         "/api/v1/auth/forgot-password",
                         "/api/v1/auth/reset-password"
                 ).permitAll()
-                .requestMatchers("/internal/**").permitAll()
+                .requestMatchers("/internal/**", "/api/v1/internal/**").permitAll()
                 .requestMatchers("/api/v1/auth/change-password").hasAnyRole("USER", "ADMIN")
                 .anyRequest().authenticated()
             );

@@ -3,6 +3,9 @@ package com.pms.userservice.service;
 import com.pms.common.dto.SocialLinkResponse;
 import com.pms.common.dto.UserProfileResponse;
 import com.pms.common.dto.UserSearchResponse;
+import com.pms.userservice.client.AuthFeignClient;
+import com.pms.userservice.dto.InternalUserDto;
+import com.pms.userservice.dto.UserProfileCreationRequest;
 import com.pms.userservice.dto.UserProfileUpdateRequest;
 import com.pms.userservice.entity.SocialLink;
 import com.pms.userservice.entity.UserProfile;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -29,6 +33,7 @@ public class UserProfileService {
     private final UserProfileRepository userProfileRepository;
     private final SocialLinkRepository socialLinkRepository;
     private final AuditLogger auditLogger;
+    private final AuthFeignClient authFeignClient;
 
     @Transactional
     public void createDefaultProfile(UUID id, String firstName, String surname) {
@@ -39,34 +44,15 @@ public class UserProfileService {
             return;
         }
 
-        // Generate unique, valid username
-        String baseUsername = (firstName + (surname != null ? surname : "")).replaceAll("\\s+", "").toLowerCase();
-        if (baseUsername.length() < 3) {
-            baseUsername = "user" + baseUsername;
-        }
-        
-        // Strip out non-alphanumeric characters just in case
-        baseUsername = baseUsername.replaceAll("[^a-z0-9]", "");
-        if (baseUsername.isEmpty()) {
-            baseUsername = "user" + id.toString().substring(0, 5);
-        }
-
-        String finalUsername = baseUsername;
-        int suffix = 1;
-        while (userProfileRepository.existsByUsernameIgnoreCase(finalUsername)) {
-            finalUsername = baseUsername + suffix++;
-        }
-
         UserProfile profile = UserProfile.builder()
                 .id(id)
                 .firstName(firstName)
                 .surname(surname)
-                .username(finalUsername)
                 .active(true)
                 .build();
 
         userProfileRepository.save(profile);
-        auditLogger.log("SYSTEM", "CREATE_PROFILE", id.toString(), "Default profile created with username: " + finalUsername);
+        auditLogger.log("SYSTEM", "CREATE_PROFILE", id.toString(), "Default profile created");
     }
 
     @Transactional(readOnly = true)
@@ -82,7 +68,36 @@ public class UserProfileService {
     @Transactional(readOnly = true)
     public UserProfileResponse getProfileMe(String userIdStr) {
         UUID userId = parseUUID(userIdStr);
-        return getProfileById(userId);
+        return userProfileRepository.findByIdAndActiveTrue(userId)
+                .map(profile -> {
+                    List<SocialLink> links = socialLinkRepository.findByProfileId(userId);
+                    return mapToProfileResponse(profile, links);
+                })
+                .orElseGet(() -> UserProfileResponse.builder()
+                        .profileCompleted(false)
+                        .build());
+    }
+
+    @Transactional
+    public UserProfileResponse createProfile(String userIdStr, UserProfileCreationRequest request) {
+        UUID userId = parseUUID(userIdStr);
+        log.info("Creating profile for user ID: {} | Name: {} {}", userId, request.getFirstName(), request.getSurname());
+
+        UserProfile profile = userProfileRepository.findById(userId)
+                .orElseGet(() -> {
+                    UserProfile newProfile = UserProfile.builder()
+                            .id(userId)
+                            .firstName(request.getFirstName())
+                            .surname(request.getSurname())
+                            .active(true)
+                            .build();
+                    UserProfile saved = userProfileRepository.save(newProfile);
+                    auditLogger.log(userIdStr, "CREATE_PROFILE", userId.toString(), "Profile completed successfully");
+                    return saved;
+                });
+
+        List<SocialLink> links = socialLinkRepository.findByProfileId(userId);
+        return mapToProfileResponse(profile, links);
     }
 
     @Transactional
@@ -120,7 +135,25 @@ public class UserProfileService {
         String cleanedQuery = query.trim();
         Page<UserProfile> profilesPage = userProfileRepository.searchActiveProfiles(cleanedQuery, pageable);
 
-        return profilesPage.map(this::mapToSearchResponse);
+        List<UserProfile> profiles = profilesPage.getContent();
+        List<UUID> ids = profiles.stream().map(UserProfile::getId).collect(Collectors.toList());
+        Map<UUID, String> usernameMap = new java.util.HashMap<>();
+
+        if (!ids.isEmpty()) {
+            try {
+                Map<UUID, String> resolved = authFeignClient.getBulkUsernames(ids);
+                if (resolved != null) {
+                    usernameMap.putAll(resolved);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to bulk resolve usernames for search results via AuthFeignClient: {}", e.getMessage());
+            }
+        }
+
+        return profilesPage.map(profile -> {
+            String resolvedUsername = usernameMap.get(profile.getId());
+            return mapToSearchResponse(profile, resolvedUsername);
+        });
     }
 
     private UUID parseUUID(String uuidStr) {
@@ -141,11 +174,21 @@ public class UserProfileService {
                         .build())
                 .collect(Collectors.toList());
 
+        String resolvedUsername = null;
+        try {
+            InternalUserDto internalUser = authFeignClient.getUserInfo(profile.getId());
+            if (internalUser != null) {
+                resolvedUsername = internalUser.getUserName();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to dynamically resolve username for ID: {} via AuthFeignClient: {}", profile.getId(), e.getMessage());
+        }
+
         return UserProfileResponse.builder()
                 .id(profile.getId())
                 .firstName(profile.getFirstName())
                 .surname(profile.getSurname())
-                .username(profile.getUsername())
+                .username(resolvedUsername)
                 .bio(profile.getBio())
                 .profileImageUrl(profile.getProfileImageUrl())
                 .designation(profile.getDesignation())
@@ -155,15 +198,16 @@ public class UserProfileService {
                 .socialLinks(linkResponses)
                 .createdAt(profile.getCreatedAt())
                 .updatedAt(profile.getUpdatedAt())
+                .profileCompleted(true)
                 .build();
     }
 
-    private UserSearchResponse mapToSearchResponse(UserProfile profile) {
+    private UserSearchResponse mapToSearchResponse(UserProfile profile, String username) {
         return UserSearchResponse.builder()
                 .id(profile.getId())
                 .firstName(profile.getFirstName())
                 .surname(profile.getSurname())
-                .username(profile.getUsername())
+                .username(username)
                 .designation(profile.getDesignation())
                 .profileImageUrl(profile.getProfileImageUrl())
                 .build();

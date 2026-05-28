@@ -30,10 +30,9 @@ class RefreshTokenRepositoryTest {
 
     private User savedUser;
 
-    private User createTestUser(String email, String firstName, String surname) {
+    private User createTestUser(String email, String userName) {
         return userRepository.save(User.builder()
-                .firstName(firstName)
-                .surname(surname)
+                .userName(userName)
                 .email(email)
                 .password("hashed")
                 .role(Role.USER)
@@ -42,7 +41,7 @@ class RefreshTokenRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        savedUser = createTestUser("test@example.com", "Test", "User");
+        savedUser = createTestUser("test@example.com", "testuser");
     }
 
     // -------------------------------------------------------------------------
@@ -118,7 +117,7 @@ class RefreshTokenRepositoryTest {
     @Test
     void shouldNotRevokeTokensForOtherUsers() {
 
-        User otherUser = createTestUser("other@example.com", "Other", "User");
+        User otherUser = createTestUser("other@example.com", "otheruser");
 
         String otherToken = UUID.randomUUID().toString();
 

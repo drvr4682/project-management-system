@@ -77,8 +77,7 @@ class PasswordResetIntegrationTest {
         }
 
         verifiedUser = User.builder()
-                .firstName("John")
-                .surname("Reset")
+                .userName("johnreset")
                 .email("john.reset@test.com")
                 .password("$2a$10$nCoFshq5wO.V.306sE198.g4z4R083lZcQW3d0G6D9w6c.yC2.K2C") // encrypted "Password123!"
                 .role(Role.USER)
@@ -112,7 +111,7 @@ class PasswordResetIntegrationTest {
         assertThat(token.isUsed()).isFalse();
 
         // Verify that reset email was sent via EmailService
-        verify(emailService).sendPasswordResetEmail(eq("john.reset@test.com"), eq("John Reset"), anyString());
+        verify(emailService).sendPasswordResetEmail(eq("john.reset@test.com"), eq("johnreset"), anyString());
 
         // ---------------------------------------------------------
         // H. Cooldown respect (Anti-enumeration does not send email, but returns 200 success)
@@ -197,7 +196,7 @@ class PasswordResetIntegrationTest {
         // J. Reject Old Password After Reset
         // ---------------------------------------------------------
         LoginRequest loginOldReq = new LoginRequest();
-        loginOldReq.setEmail("john.reset@test.com");
+        loginOldReq.setEmailOrUsername("john.reset@test.com");
         loginOldReq.setPassword("Password123!"); // Old password
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -205,13 +204,13 @@ class PasswordResetIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginOldReq)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid email or password"));
+                .andExpect(jsonPath("$.message").value("Invalid email/username or password"));
 
         // ---------------------------------------------------------
         // I. Allow Login With New Password
         // ---------------------------------------------------------
         LoginRequest loginNewReq = new LoginRequest();
-        loginNewReq.setEmail("john.reset@test.com");
+        loginNewReq.setEmailOrUsername("john.reset@test.com");
         loginNewReq.setPassword("NewSecurePass123!"); // New password
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -241,8 +240,7 @@ class PasswordResetIntegrationTest {
         assertThat(token1.isUsed()).isFalse();
 
         User anotherUser = User.builder()
-                .firstName("Bob")
-                .surname("Invalidator")
+                .userName("bobinvalidator")
                 .email("bob.invalidate@test.com")
                 .password("hash")
                 .role(Role.USER)

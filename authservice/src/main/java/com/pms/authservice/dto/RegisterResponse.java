@@ -7,8 +7,7 @@ import lombok.Data;
 @Builder
 public class RegisterResponse {
     private java.util.UUID id;
-    private String firstName;
-    private String surname;
+    private String userName;
     private String email;
     private String role;
 }
