@@ -10,7 +10,8 @@
 #   4. test-projectservice→ run projectservice tests (needs common)
 #   5. test-taskservice   → run taskservice tests (needs common)
 #   6. test-apigateway    → run apigateway tests (needs common)
-#   7. build-images       → docker build all 4 service images (needs all tests)
+#   7. test-userservice   → run userservice tests (needs common)
+#   8. test-frontend      → lint and build frontend assets
 #
 # Triggers: push or PR to main or develop
 # ============================================================
@@ -20,8 +21,14 @@ name: CI
 on:
   push:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   pull_request:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 
 # Cancel any in-progress run for the same branch/PR
 concurrency:
@@ -85,7 +92,7 @@ jobs:
       - name: Install common jar (skip tests — already passed in Stage 1)
         run: mvn -f common/pom.xml install -DskipTests -q
 
-      # Save the installed jar so Stage 3–6 jobs can restore it
+      # Save the installed jar so Stage 3–7 jobs can restore it
       # without re-building common from scratch on each parallel runner.
       - name: Cache installed common jar
         uses: actions/cache/save@v4
@@ -95,8 +102,8 @@ jobs:
 
 
   # ============================================================
-  # STAGE 3–6 — Test each service (run in parallel, all need
-  #             Stage 2 to finish first)
+  # STAGE 3–7 — Test each service in parallel
+  #             (all need Stage 2 to finish first)
   # ============================================================
 
   test-authservice:
@@ -122,9 +129,6 @@ jobs:
           path: ~/.m2/repository/com/pms/common
           key: common-jar-${{ github.sha }}
 
-      # authservice tests use H2 (in-memory) for DB and a non-existent
-      # Redis port (6370). The JwtAuthenticationFilter handles Redis
-      # connection failures gracefully — no real Redis needed.
       - name: Run authservice tests
         run: mvn -f authservice/pom.xml clean test -q
 
@@ -159,8 +163,6 @@ jobs:
           path: ~/.m2/repository/com/pms/common
           key: common-jar-${{ github.sha }}
 
-      # projectservice tests use H2, WireMock for Feign stubs,
-      # and H2 in-memory — no real Postgres or Redis needed.
       - name: Run projectservice tests
         run: mvn -f projectservice/pom.xml clean test -q
 
@@ -195,7 +197,6 @@ jobs:
           path: ~/.m2/repository/com/pms/common
           key: common-jar-${{ github.sha }}
 
-      # taskservice tests use H2 and WireMock — no external services needed.
       - name: Run taskservice tests
         run: mvn -f taskservice/pom.xml clean test -q
 
@@ -230,8 +231,6 @@ jobs:
           path: ~/.m2/repository/com/pms/common
           key: common-jar-${{ github.sha }}
 
-      # apigateway tests use MockMvc — no real downstream services needed.
-      # Redis on port 6370 is gracefully skipped by JwtAuthenticationFilter.
       - name: Run apigateway tests
         run: mvn -f apigateway/pom.xml clean test -q
 
@@ -244,68 +243,64 @@ jobs:
           retention-days: 7
 
 
-  # ============================================================
-  # STAGE 7 — Build Docker images
-  #           Only runs after ALL 4 service tests pass.
-  # ============================================================
-
-  build-images:
-    name: "7 · Build Docker images"
+  test-userservice:
+    name: "7 · Test userservice"
     runs-on: ubuntu-latest
-    needs:                      # ALL of these must pass first
-      - test-authservice
-      - test-projectservice
-      - test-taskservice
-      - test-apigateway
+    needs: install-common
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # Build authservice image
-      # Context is repo root (matches the Dockerfile COPY paths)
-      - name: Build authservice image
-        uses: docker/build-push-action@v6
+      - name: Set up Java 21
+        uses: actions/setup-java@v4.2.1
         with:
-          context: .
-          file: authservice/Dockerfile
-          push: false
-          tags: pms-authservice:${{ github.sha }}
-          cache-from: type=gha,scope=authservice
-          cache-to: type=gha,mode=max,scope=authservice
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
 
-      # Build projectservice image
-      - name: Build projectservice image
-        uses: docker/build-push-action@v6
+      - name: Restore common jar from cache
+        uses: actions/cache/restore@v4
         with:
-          context: .
-          file: projectservice/Dockerfile
-          push: false
-          tags: pms-projectservice:${{ github.sha }}
-          cache-from: type=gha,scope=projectservice
-          cache-to: type=gha,mode=max,scope=projectservice
+          path: ~/.m2/repository/com/pms/common
+          key: common-jar-${{ github.sha }}
 
-      # Build taskservice image
-      - name: Build taskservice image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: taskservice/Dockerfile
-          push: false
-          tags: pms-taskservice:${{ github.sha }}
-          cache-from: type=gha,scope=taskservice
-          cache-to: type=gha,mode=max,scope=taskservice
+      - name: Run userservice tests
+        run: mvn -f userservice/pom.xml clean test -q
 
-      # Build apigateway image
-      - name: Build apigateway image
-        uses: docker/build-push-action@v6
+      - name: Upload userservice test report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          context: .
-          file: apigateway/Dockerfile
-          push: false
-          tags: pms-apigateway:${{ github.sha }}
-          cache-from: type=gha,scope=apigateway
-          cache-to: type=gha,mode=max,scope=apigateway
+          name: userservice-test-report
+          path: userservice/target/surefire-reports/
+          retention-days: 7
+
+
+  # ============================================================
+  # STAGE 8 — Test & lint React Frontend
+  # ============================================================
+
+  test-frontend:
+    name: "8 · Test frontend"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Run eslint checks
+        run: npm run lint --prefix frontend
+
+      - name: Run frontend compile / build
+        run: npm run build --prefix frontend
