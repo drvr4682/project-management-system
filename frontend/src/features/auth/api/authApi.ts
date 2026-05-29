@@ -25,6 +25,11 @@ export const authApi = {
     return response.data
   },
 
+  changePassword: async (payload: Record<string, string>): Promise<{ message: string }> => {
+    const response = await axiosInstance.post('/api/v1/auth/change-password', payload)
+    return response.data
+  },
+
   verifyEmail: async (token: string): Promise<{ message: string }> => {
     const response = await axiosInstance.get(`/api/v1/auth/verify?token=${token}`)
     return response.data

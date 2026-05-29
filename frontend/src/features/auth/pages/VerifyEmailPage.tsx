@@ -25,8 +25,12 @@ export const VerifyEmailPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
 
-  const [verificationStatus, setVerificationStatus] = React.useState<'idle' | 'verifying' | 'success' | 'failed'>('idle')
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
+  const [verificationStatus, setVerificationStatus] = React.useState<'idle' | 'verifying' | 'success' | 'failed'>(
+    token ? 'idle' : 'failed'
+  )
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(
+    token ? null : 'Verification token is missing. Please request a new verification link.'
+  )
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
   const [resendLoading, setResendLoading] = React.useState(false)
 
@@ -42,8 +46,6 @@ export const VerifyEmailPage: React.FC = () => {
   // Auto-verify token on mount
   React.useEffect(() => {
     if (!token) {
-      setVerificationStatus('failed')
-      setErrorMessage('Verification token is missing. Please request a new verification link.')
       return
     }
 
@@ -53,8 +55,9 @@ export const VerifyEmailPage: React.FC = () => {
         await authApi.verifyEmail(token)
         setVerificationStatus('success')
         setSuccessMessage('Your email has been verified successfully!')
-      } catch (e: any) {
-        const msg = e.response?.data?.message || 'Verification failed. The token may be expired or invalid.'
+      } catch (e: unknown) {
+        const axiosError = e as { response?: { data?: { message?: string } } }
+        const msg = axiosError.response?.data?.message || 'Verification failed. The token may be expired or invalid.'
         setVerificationStatus('failed')
         setErrorMessage(msg)
       }
@@ -70,8 +73,9 @@ export const VerifyEmailPage: React.FC = () => {
     try {
       await authApi.resendVerification(values.email)
       setSuccessMessage('A new verification email has been sent successfully!')
-    } catch (e: any) {
-      const msg = e.response?.data?.message || 'Failed to resend verification email.'
+    } catch (e: unknown) {
+      const axiosError = e as { response?: { data?: { message?: string } } }
+      const msg = axiosError.response?.data?.message || 'Failed to resend verification email.'
       setErrorMessage(msg)
     } finally {
       setResendLoading(false)

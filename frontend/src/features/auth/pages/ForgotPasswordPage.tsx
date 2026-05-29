@@ -41,8 +41,9 @@ export const ForgotPasswordPage: React.FC = () => {
     try {
       const response = await authApi.forgotPassword(values.email)
       setApiSuccess(response.message || 'If the account exists, a password reset link has been sent.')
-    } catch (e: any) {
-      const msg = e.response?.data?.message || 'Something went wrong. Please try again.'
+    } catch (e: unknown) {
+      const axiosError = e as { response?: { data?: { message?: string } } }
+      const msg = axiosError.response?.data?.message || 'Something went wrong. Please try again.'
       setApiError(msg)
     } finally {
       setIsLoading(false)

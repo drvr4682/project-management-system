@@ -21,7 +21,7 @@ export function isTokenExpired(token: string | null): boolean {
     // Return true if within 10 seconds of expiration (safety buffer to avoid network race conditions)
     const currentTime = Math.floor(Date.now() / 1000)
     return payload.exp - currentTime < 10
-  } catch (e) {
+  } catch {
     return true
   }
 }

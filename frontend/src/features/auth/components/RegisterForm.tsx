@@ -11,14 +11,16 @@ import { Button } from '@/components/ui/Button'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { AuthHeader } from './AuthHeader'
 import { AuthFooter } from './AuthFooter'
-import type { UserRole } from '../types/authTypes'
 import { cn } from '@/lib/utils'
 
 const registerSchema = z
   .object({
-    name: z.string().min(1, 'Name is required'),
+    userName: z
+      .string()
+      .min(3, 'Username must be at least 3 characters')
+      .max(30, 'Username must not exceed 30 characters')
+      .regex(/^[a-zA-Z0-9_]{3,30}$/, 'Username can only contain alphanumeric characters and underscores'),
     email: z.string().email('Please enter a valid email address').min(1, 'Email is required'),
-    role: z.enum(['USER', 'ADMIN']),
     password: z
       .string()
       .min(8, 'Password must be at least 8 characters')
@@ -52,9 +54,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isRegister }) => {
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      name: '',
+      userName: '',
       email: '',
-      role: 'USER',
       password: '',
       confirmPassword: '',
     },
@@ -66,9 +67,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isRegister }) => {
     setApiSuccess(null)
     try {
       await authApi.register({
-        name: values.name,
+        userName: values.userName,
         email: values.email,
-        role: values.role as UserRole,
         password: values.password,
       })
 
@@ -76,8 +76,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isRegister }) => {
       setTimeout(() => {
         navigate('/login')
       }, 5000)
-    } catch (e: any) {
-      const msg = e.response?.data?.message || 'Registration failed. Please try again.'
+    } catch (e: unknown) {
+      const axiosError = e as { response?: { data?: { message?: string } } }
+      const msg = axiosError.response?.data?.message || 'Registration failed. Please try again.'
       setApiError(msg)
     } finally {
       setIsLoading(false)
@@ -93,7 +94,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isRegister }) => {
         ease: [0.25, 1, 0.5, 1],
       }}
       className={cn(
-        'w-full md:w-1/2 h-full flex flex-col justify-center p-6 md:p-10 bg-card relative z-10',
+        'w-full md:w-1/2 h-full flex flex-col justify-center p-6 md:pr-12 md:pl-8 md:py-6 bg-card relative z-10',
         !isRegister ? 'hidden md:flex pointer-events-none select-none' : 'flex'
       )}
     >
@@ -102,7 +103,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isRegister }) => {
         subtitle="Get started with your DRVRHub collaborative workspace."
       />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-1.5">
         {apiError && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -125,40 +126,21 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isRegister }) => {
           </motion.div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="name" className="text-xs font-bold text-foreground">
-              Full Name
-            </Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="John Doe"
-              error={!!errors.name}
-              className="rounded-xl h-10 border-border/80 text-sm focus-visible:ring-primary/30"
-              {...register('name')}
-            />
-            {errors.name && (
-              <p className="text-[10px] text-destructive font-semibold">{errors.name.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="role" className="text-xs font-bold text-foreground">
-              Account Role
-            </Label>
-            <select
-              id="role"
-              className="flex h-10 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm ring-offset-background text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              {...register('role')}
-            >
-              <option value="USER">Standard User</option>
-              <option value="ADMIN">Administrator</option>
-            </select>
-            {errors.role && (
-              <p className="text-[10px] text-destructive font-semibold">{errors.role.message}</p>
-            )}
-          </div>
+        <div className="space-y-1">
+          <Label htmlFor="userName" className="text-xs font-bold text-foreground">
+            Username
+          </Label>
+          <Input
+            id="userName"
+            type="text"
+            placeholder="johndoe_99"
+            error={!!errors.userName}
+            className="rounded-xl h-10 border-border/80 text-sm focus-visible:ring-primary/30"
+            {...register('userName')}
+          />
+          {errors.userName && (
+            <p className="text-[10px] text-destructive font-semibold">{errors.userName.message}</p>
+          )}
         </div>
 
         <div className="space-y-1">
@@ -178,7 +160,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isRegister }) => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div className="space-y-1">
             <Label htmlFor="password" className="text-xs font-bold text-foreground">
               Password
@@ -214,7 +196,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isRegister }) => {
           </div>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-0.5">
           <Button
             type="submit"
             className="w-full h-10 rounded-xl font-bold bg-primary hover:bg-primary/95 text-sm shadow-md shadow-primary/20 transition-all duration-300"

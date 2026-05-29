@@ -47,41 +47,45 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: 'easeOut' }}
-          className="w-full max-w-3xl min-h-[500px] md:h-[520px] bg-card rounded-[28px] overflow-hidden border border-border/80 shadow-2xl grid grid-cols-1 md:grid-cols-12 relative z-10"
+          className="w-full max-w-3xl min-h-[500px] md:h-[580px] bg-card rounded-[28px] overflow-hidden border border-border/80 shadow-2xl grid grid-cols-1 md:grid-cols-12 relative z-10"
         >
           {/* Static Side Panel */}
-          <div className="hidden md:block md:col-span-5">
-            <div className="relative h-full w-full bg-gradient-to-br from-violet-600 via-violet-700 to-indigo-900 text-white p-6 md:p-8 flex flex-col justify-between overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-80 h-80 bg-violet-500/20 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none" />
-              <div className="z-10">
-                <Link to="/" className="inline-block">
-                  <Logo size="md" light />
-                </Link>
+          <div className="hidden md:block md:col-span-5 h-full">
+            {sidePanel ? (
+              sidePanel
+            ) : (
+              <div className="relative h-full w-full bg-gradient-to-br from-violet-600 via-violet-700 to-indigo-900 text-white p-6 md:p-8 flex flex-col justify-between overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-80 h-80 bg-violet-500/20 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none" />
+                <div className="z-10">
+                  <Link to="/" className="inline-block">
+                    <Logo size="md" light />
+                  </Link>
+                </div>
+                <div className="my-auto py-12 space-y-4 z-10">
+                  <h2 className="text-2xl font-extrabold tracking-tight leading-tight">Password & Verification</h2>
+                  <p className="text-violet-200/90 text-xs font-semibold leading-relaxed">
+                    Regain account access, confirm credentials, and keep your collaborative workspace secure.
+                  </p>
+                </div>
+                <div className="z-10 space-y-4 border-t border-white/10 pt-6">
+                  <Link to="/login" className="inline-block">
+                    <motion.button
+                      whileHover={{ scale: 1.03, backgroundColor: 'rgba(255,255,255,1)', color: '#7C3AED' }}
+                      whileTap={{ scale: 0.98 }}
+                      className="px-5 py-2 rounded-xl border border-white/30 text-white font-bold text-xs bg-white/5 backdrop-blur-sm transition-all duration-300 shadow-sm"
+                    >
+                      Back to Sign In
+                    </motion.button>
+                  </Link>
+                </div>
               </div>
-              <div className="my-auto py-12 space-y-4 z-10">
-                <h2 className="text-2xl font-extrabold tracking-tight leading-tight">Password & Verification</h2>
-                <p className="text-violet-200/90 text-xs font-semibold leading-relaxed">
-                  Regain account access, confirm credentials, and keep your collaborative workspace secure.
-                </p>
-              </div>
-              <div className="z-10 space-y-4 border-t border-white/10 pt-6">
-                <Link to="/login" className="inline-block">
-                  <motion.button
-                    whileHover={{ scale: 1.03, backgroundColor: 'rgba(255,255,255,1)', color: '#7C3AED' }}
-                    whileTap={{ scale: 0.98 }}
-                    className="px-5 py-2 rounded-xl border border-white/30 text-white font-bold text-xs bg-white/5 backdrop-blur-sm transition-all duration-300 shadow-sm"
-                  >
-                    Back to Sign In
-                  </motion.button>
-                </Link>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Form Content */}
           <div className="col-span-12 md:col-span-7 flex flex-col justify-center">
-            {sidePanel || children}
+            {children}
           </div>
         </motion.div>
       </div>
@@ -100,7 +104,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         animate={{ rotateX, rotateY }}
         transition={{ type: 'spring', stiffness: 120, damping: 25 }}
         style={{ transformStyle: 'preserve-3d' }}
-        className="w-full max-w-3xl min-h-[500px] md:h-[520px] bg-card rounded-[28px] overflow-hidden border border-border/80 shadow-2xl flex flex-col md:flex-row relative z-10 transition-shadow duration-300 hover:shadow-primary/5 hover:shadow-3xl"
+        className="w-full max-w-3xl min-h-[500px] md:h-[580px] bg-card rounded-[28px] overflow-hidden border border-border/80 shadow-2xl flex flex-col md:flex-row relative z-10 transition-shadow duration-300 hover:shadow-primary/5 hover:shadow-3xl"
       >
         {children}
 

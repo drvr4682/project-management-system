@@ -22,10 +22,22 @@ const authSlice = createSlice({
         const userJson = localStorage.getItem('user')
 
         if (accessToken && refreshToken && userJson) {
+          // Hardened Token segment validation (accessToken must be a 3-segment JWT)
+          if (accessToken.split('.').length !== 3 || !refreshToken) {
+            throw new Error('Malformed token structure')
+          }
+
           const user = JSON.parse(userJson) as UserProfile
+
+          // Hardened UUID format validation
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+          if (!uuidRegex.test(user.id)) {
+            throw new Error('Malformed UUID identity')
+          }
+
           state.user = {
             id: user.id,
-            name: user.name,
+            userName: user.userName,
             email: user.email,
             role: user.role,
           }
@@ -33,7 +45,7 @@ const authSlice = createSlice({
           state.refreshToken = refreshToken
           state.isAuthenticated = true
         }
-      } catch (e) {
+      } catch {
         // Clear corrupt storage
         localStorage.removeItem('accessToken')
         localStorage.removeItem('refreshToken')
@@ -49,7 +61,7 @@ const authSlice = createSlice({
       const { user, accessToken, refreshToken } = action.payload
       const minimalUser: UserProfile = {
         id: user.id,
-        name: user.name,
+        userName: user.userName,
         email: user.email,
         role: user.role,
       }

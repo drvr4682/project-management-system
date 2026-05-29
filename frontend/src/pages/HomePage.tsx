@@ -1,44 +1,31 @@
 import React from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks/store'
 import { logout, selectAuth } from '@/features/auth/store/authSlice'
+import { selectProfile, clearProfileState } from '@/features/auth/store/profileSlice'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Link } from 'react-router-dom'
-
 import { Logo } from '@/components/branding/Logo'
+import { formatDisplayName } from '@/features/auth/utils/userUtils'
 
 export const HomePage: React.FC = () => {
   const dispatch = useAppDispatch()
   const { user } = useAppSelector(selectAuth)
+  const { profileData } = useAppSelector(selectProfile)
 
   const handleLogout = () => {
     dispatch(logout())
+    dispatch(clearProfileState())
   }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* Premium Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50 animate-in fade-in duration-500">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <Logo size="sm" />
-            <nav className="hidden md:flex items-center space-x-4">
-              <Link
-                to="/projects"
-                className="text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Projects
-              </Link>
-            </nav>
-          </div>
+          <Logo size="sm" />
           
           <div className="flex items-center space-x-3">
-            <Link to="/projects" className="md:hidden">
-              <Button variant="ghost" size="sm">
-                Projects
-              </Button>
-            </Link>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl font-bold h-9">
               Sign Out
             </Button>
           </div>
@@ -50,18 +37,13 @@ export const HomePage: React.FC = () => {
         <div className="w-full max-w-2xl space-y-6">
           <div className="space-y-2 text-center md:text-left">
             <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-              Welcome back, <span className="text-primary">{user?.name || 'User'}</span>!
+              Welcome back, <span className="text-primary">
+                {profileData ? `${profileData.firstName} ${profileData.surname || ''}`.trim() : formatDisplayName(user)}
+              </span>!
             </h1>
-            <p className="text-muted-foreground text-lg">
-              This is a secure page protected by active JWT authorization.
+            <p className="text-muted-foreground text-sm font-semibold">
+              This is a secure profile session authenticated by secure JSON Web Tokens.
             </p>
-            <div className="pt-2 flex justify-center md:justify-start">
-              <Link to="/projects">
-                <Button className="font-semibold shadow-md">
-                  Go to Projects Workspace
-                </Button>
-              </Link>
-            </div>
           </div>
 
           <Card className="border border-border bg-card shadow-md">
@@ -77,27 +59,27 @@ export const HomePage: React.FC = () => {
                   <span className="text-xs text-muted-foreground uppercase font-bold block mb-1">
                     User Identifier
                   </span>
-                  <span className="text-foreground font-mono text-sm">
+                  <span className="text-foreground font-mono text-xs break-all">
                     {user?.id || 'N/A'}
                   </span>
                 </div>
                 <div className="p-4 rounded-lg bg-muted/50 border border-border">
                   <span className="text-xs text-muted-foreground uppercase font-bold block mb-1">
-                    Full Name
+                    Username
                   </span>
                   <span className="text-foreground font-semibold">
-                    {user?.name || 'N/A'}
+                    {user?.userName || 'N/A'}
                   </span>
                 </div>
-                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                <div className="p-4 rounded-lg bg-muted/50 border border-border col-span-1 sm:col-span-2">
                   <span className="text-xs text-muted-foreground uppercase font-bold block mb-1">
                     Email Address
                   </span>
-                  <span className="text-foreground">
+                  <span className="text-foreground font-semibold">
                     {user?.email || 'N/A'}
                   </span>
                 </div>
-                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                <div className="p-4 rounded-lg bg-muted/50 border border-border col-span-1 sm:col-span-2">
                   <span className="text-xs text-muted-foreground uppercase font-bold block mb-1">
                     Assigned Role
                   </span>

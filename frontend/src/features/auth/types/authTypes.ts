@@ -1,8 +1,8 @@
 export type UserRole = 'ADMIN' | 'USER'
 
 export interface UserProfile {
-  id: number
-  name: string
+  id: string
+  userName: string
   email: string
   role: UserRole
 }
@@ -27,13 +27,13 @@ export interface LoginResponse {
   refreshToken: string
   email: string
   role: string
-  id?: number
-  name?: string
+  id: string
+  userName: string
 }
 
 export interface RegisterResponse {
-  id: number
-  name: string
+  id: string
+  userName: string
   email: string
   role: string
 }

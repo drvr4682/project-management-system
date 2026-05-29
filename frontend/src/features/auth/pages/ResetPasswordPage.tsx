@@ -42,6 +42,33 @@ export const ResetPasswordPage: React.FC = () => {
   const [apiSuccess, setApiSuccess] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
 
+  // Additional state for requesting reset link (when token is missing)
+  const [requestEmail, setRequestEmail] = React.useState('')
+  const [requestError, setRequestError] = React.useState<string | null>(null)
+  const [requestSuccess, setRequestSuccess] = React.useState<string | null>(null)
+  const [isRequesting, setIsRequesting] = React.useState(false)
+
+  const handleRequestResetLink = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!requestEmail.trim()) {
+      setRequestError('Please enter your email address.')
+      return
+    }
+    setIsRequesting(true)
+    setRequestError(null)
+    setRequestSuccess(null)
+    try {
+      await authApi.forgotPassword(requestEmail.trim())
+      setRequestSuccess('If the account exists, a secure password reset link has been sent to your email.')
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } } }
+      const msg = axiosError.response?.data?.message || 'Failed to send reset link.'
+      setRequestError(msg)
+    } finally {
+      setIsRequesting(false)
+    }
+  }
+
   const {
     register,
     handleSubmit,
@@ -72,8 +99,9 @@ export const ResetPasswordPage: React.FC = () => {
       setTimeout(() => {
         navigate('/login')
       }, 4000)
-    } catch (e: any) {
-      const msg = e.response?.data?.message || 'Failed to reset password. The link may have expired or is invalid.'
+    } catch (e: unknown) {
+      const axiosError = e as { response?: { data?: { message?: string } } }
+      const msg = axiosError.response?.data?.message || 'Failed to reset password. The link may have expired or is invalid.'
       setApiError(msg)
     } finally {
       setIsLoading(false)
@@ -99,17 +127,50 @@ export const ResetPasswordPage: React.FC = () => {
         />
 
         {!token ? (
-          <div className="space-y-4">
-            <Alert variant="destructive" className="rounded-xl border border-destructive/20 bg-destructive/5">
-              <AlertDescription className="text-xs font-semibold">
-                Reset token is missing in the URL query parameters. Please make sure to copy/paste the entire link from your email.
-              </AlertDescription>
-            </Alert>
+          <form onSubmit={handleRequestResetLink} className="space-y-4">
+            <p className="text-xs text-muted-foreground font-semibold leading-relaxed">
+              Want to reset or change your password? Enter your email address below and we will send you a secure link to update your credentials.
+            </p>
+
+            {requestError && (
+              <Alert variant="destructive" className="rounded-xl border border-destructive/20 bg-destructive/5">
+                <AlertDescription className="text-xs font-semibold">{requestError}</AlertDescription>
+              </Alert>
+            )}
+
+            {requestSuccess && (
+              <Alert className="rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                <AlertDescription className="text-xs text-emerald-500 font-bold">{requestSuccess}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="requestEmail" className="text-xs font-bold text-foreground">
+                Email Address
+              </Label>
+              <Input
+                id="requestEmail"
+                type="email"
+                placeholder="you@example.com"
+                value={requestEmail}
+                onChange={(e) => setRequestEmail(e.target.value)}
+                className="rounded-xl h-10 border-border/80 text-sm focus-visible:ring-primary/30"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-10 rounded-xl font-bold bg-primary hover:bg-primary/95 text-sm shadow-md shadow-primary/20 transition-all duration-300"
+              isLoading={isRequesting}
+            >
+              Send Reset Link
+            </Button>
+
             <AuthFooter
-              backLinkText="Return to Login"
-              backLinkTo="/login"
+              backLinkText="Back to Safety"
+              backLinkTo="/"
             />
-          </div>
+          </form>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {apiError && (

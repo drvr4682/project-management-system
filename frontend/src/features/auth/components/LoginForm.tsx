@@ -17,7 +17,7 @@ import type { UserRole } from '../types/authTypes'
 import { cn } from '@/lib/utils'
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address').min(1, 'Email is required'),
+  email: z.string().min(1, 'Email or Username is required'),
   password: z.string().min(1, 'Password is required'),
 })
 
@@ -50,26 +50,25 @@ export const LoginForm: React.FC<LoginFormProps> = ({ isRegister }) => {
     setApiError(null)
     try {
       const response = await authApi.login({
-        email: values.email,
+        emailOrUsername: values.email,
         password: values.password,
       })
 
-      const userEmail = response.email
-      const userRole = response.role as UserRole
       const accessToken = response.token
       const refreshToken = response.refreshToken
 
       const user = {
-        id: response.id || 1,
-        email: userEmail,
-        name: response.name || userEmail.split('@')[0],
-        role: userRole,
+        id: response.id,
+        email: response.email,
+        userName: response.userName,
+        role: response.role as UserRole,
       }
 
       dispatch(setCredentials({ user, accessToken, refreshToken }))
       navigate('/', { replace: true })
-    } catch (e: any) {
-      const msg = e.response?.data?.message || 'Invalid email or password'
+    } catch (e: unknown) {
+      const axiosError = e as { response?: { data?: { message?: string } } }
+      const msg = axiosError.response?.data?.message || 'Invalid email or password'
       setApiError(msg)
     } finally {
       setIsLoading(false)
@@ -85,7 +84,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ isRegister }) => {
         ease: [0.25, 1, 0.5, 1],
       }}
       className={cn(
-        'w-full md:w-1/2 h-full flex flex-col justify-center p-6 md:p-10 bg-card relative z-10',
+        'w-full md:w-1/2 h-full flex flex-col justify-center p-6 md:pl-12 md:pr-8 md:py-6 bg-card relative z-10',
         isRegister ? 'hidden md:flex pointer-events-none select-none' : 'flex'
       )}
     >
@@ -94,7 +93,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ isRegister }) => {
         subtitle="Welcome back! Please enter your workspace credentials."
       />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
         {apiError && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -108,12 +107,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ isRegister }) => {
 
         <div className="space-y-1.5">
           <Label htmlFor="email" className="text-xs font-bold text-foreground">
-            Email Address
+            Email or Username
           </Label>
           <Input
             id="email"
-            type="email"
-            placeholder="you@example.com"
+            type="text"
+            placeholder="you@example.com or username"
             error={!!errors.email}
             className="rounded-xl h-10 border-border/80 text-sm focus-visible:ring-primary/30"
             {...register('email')}
@@ -148,7 +147,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ isRegister }) => {
           )}
         </div>
 
-        <div className="pt-2">
+        <div className="pt-0.5">
           <Button
             type="submit"
             className="w-full h-10 rounded-xl font-bold bg-primary hover:bg-primary/95 text-sm shadow-md shadow-primary/20 transition-all duration-300"

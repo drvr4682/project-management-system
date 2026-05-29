@@ -1,159 +1,288 @@
-import React from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { taskSchema, type TaskFormValues } from '../validations/taskSchemas'
-import { Label } from '@/components/ui/Label'
-import { Input } from '@/components/ui/Input'
+import React, { useState, useEffect } from 'react'
+import { useAppDispatch } from '@/hooks/store'
+import { createTask, updateTask, assignTask, unassignTask } from '../store/taskSlice'
+import { type ProjectMemberResponseDTO } from '@/features/projects/api/projectApi'
+import profileApi, { type UserProfileResponse } from '@/features/auth/api/profileApi'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
+import { X, Calendar, User, AlignLeft } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface TaskFormProps {
-  onSubmit: (values: TaskFormValues) => Promise<void>
-  defaultValues?: Partial<TaskFormValues>
-  isLoading: boolean
-  submitLabel: string
-  projects: { id: number; name: string }[]
-  disableProjectSelect?: boolean
+  isOpen: boolean
+  onClose: () => void
+  projectId: number
+  projectMembers: ProjectMemberResponseDTO[]
+  initialData?: {
+    id: number
+    title: string
+    description: string
+    status: 'TODO' | 'IN_PROGRESS' | 'DONE' | 'BLOCKED'
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+    dueDate: number | null // timestamp
+    assignedTo: string | null // UUID
+  }
 }
 
 export const TaskForm: React.FC<TaskFormProps> = ({
-  onSubmit,
-  defaultValues = {
-    title: '',
-    description: '',
-    status: 'TODO',
-    priority: 'MEDIUM',
-    dueDate: '',
-    projectId: undefined,
-  },
-  isLoading,
-  submitLabel,
-  projects,
-  disableProjectSelect = false,
+  isOpen,
+  onClose,
+  projectId,
+  projectMembers,
+  initialData,
 }) => {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<TaskFormValues>({
-    resolver: zodResolver(taskSchema),
-    defaultValues: {
-      title: defaultValues.title || '',
-      description: defaultValues.description || '',
-      status: defaultValues.status || 'TODO',
-      priority: defaultValues.priority || 'MEDIUM',
-      dueDate: defaultValues.dueDate ? defaultValues.dueDate.substring(0, 16) : '', // Format for datetime-local
-      projectId: defaultValues.projectId,
-    },
-  })
+  const dispatch = useAppDispatch()
+
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [status, setStatus] = useState('TODO')
+  const [priority, setPriority] = useState('MEDIUM')
+  const [dueDate, setDueDate] = useState('')
+  const [assignedTo, setAssignedTo] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  // Cache to store resolved member profile details
+  const [memberProfiles, setMemberProfiles] = useState<Record<string, UserProfileResponse>>({})
+
+  // Resolve member profiles when modal opens
+  useEffect(() => {
+    if (!isOpen) return
+
+    const resolveProfiles = async () => {
+      const pendingIds = projectMembers.map((m) => m.userId).filter((id) => !memberProfiles[id])
+      if (pendingIds.length === 0) return
+
+      try {
+        const resolved = await Promise.all(
+          pendingIds.map(async (id) => {
+            try {
+              const profile = await profileApi.getProfileById(id)
+              return { id, profile }
+            } catch {
+              return { id, profile: null }
+            }
+          })
+        )
+
+        const newProfiles = { ...memberProfiles }
+        resolved.forEach((item) => {
+          if (item.profile) {
+            newProfiles[item.id] = item.profile
+          }
+        })
+        setMemberProfiles(newProfiles)
+      } catch (err) {
+        console.error('Failed to resolve member profiles for dropdown', err)
+      }
+    }
+
+    resolveProfiles()
+  }, [isOpen, projectMembers])
+
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title)
+      setDescription(initialData.description || '')
+      setStatus(initialData.status)
+      setPriority(initialData.priority)
+      setAssignedTo(initialData.assignedTo || '')
+      
+      if (initialData.dueDate) {
+        const dateObj = new Date(initialData.dueDate)
+        const year = dateObj.getFullYear()
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+        const day = String(dateObj.getDate()).padStart(2, '0')
+        setDueDate(`${year}-${month}-${day}`)
+      } else {
+        setDueDate('')
+      }
+    } else {
+      setTitle('')
+      setDescription('')
+      setStatus('TODO')
+      setPriority('MEDIUM')
+      setAssignedTo('')
+      setDueDate('')
+    }
+  }, [initialData, isOpen])
+
+  if (!isOpen) return null
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim()) {
+      toast.error('Task Title is required')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const payload = {
+        title,
+        description,
+        status,
+        priority,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+        projectId,
+      }
+
+      let savedTask
+      if (initialData) {
+        savedTask = await dispatch(updateTask({ taskId: initialData.id, payload })).unwrap()
+        
+        // Handle assignee separately if changed
+        if (assignedTo !== (initialData.assignedTo || '')) {
+          if (assignedTo) {
+            await dispatch(assignTask({ taskId: initialData.id, assigneeId: assignedTo, projectId })).unwrap()
+          } else {
+            await dispatch(unassignTask({ taskId: initialData.id, projectId })).unwrap()
+          }
+        }
+        
+        toast.success('Task updated successfully')
+      } else {
+        savedTask = await dispatch(createTask(payload)).unwrap()
+        
+        // Auto assign on creation if set
+        if (assignedTo && savedTask?.id) {
+          await dispatch(assignTask({ taskId: savedTask.id, assigneeId: assignedTo, projectId })).unwrap()
+        }
+        
+        toast.success('Task created successfully')
+      }
+      onClose()
+    } catch (err: any) {
+      toast.error(err || 'Action failed')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      <div className="space-y-2">
-        <Label htmlFor="projectId">Associated Project</Label>
-        <select
-          id="projectId"
-          disabled={isLoading || disableProjectSelect}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-75 disabled:cursor-not-allowed"
-          {...register('projectId', { valueAsNumber: true })}
-        >
-          <option value="">Select a project...</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-        {errors.projectId && (
-          <p className="text-xs text-destructive font-semibold">{errors.projectId.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="title">Task Title</Label>
-        <Input
-          id="title"
-          type="text"
-          placeholder="Refactor auth middleware, design landing page..."
-          error={!!errors.title}
-          disabled={isLoading}
-          {...register('title')}
-        />
-        {errors.title && (
-          <p className="text-xs text-destructive font-semibold">{errors.title.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <textarea
-          id="description"
-          placeholder="Provide clear technical briefs, checkboxes, or details for this task..."
-          disabled={isLoading}
-          className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
-          {...register('description')}
-        />
-        {errors.description && (
-          <p className="text-xs text-destructive font-semibold">{errors.description.message}</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="status">Task Status</Label>
-          <select
-            id="status"
-            disabled={isLoading}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            {...register('status')}
-          >
-            <option value="TODO">To Do</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="DONE">Completed</option>
-            <option value="BLOCKED">Blocked</option>
-          </select>
-          {errors.status && (
-            <p className="text-xs text-destructive font-semibold">{errors.status.message}</p>
-          )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
+      <div 
+        className="w-full max-w-lg bg-card border border-border/80 rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200"
+        role="dialog"
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/60">
+          <h3 className="text-lg font-bold text-foreground">
+            {initialData ? 'Edit Task Details' : 'Create Task'}
+          </h3>
+          <button onClick={onClose} className="p-1 rounded-lg text-muted-foreground hover:bg-muted transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="priority">Priority Level</Label>
-          <select
-            id="priority"
-            disabled={isLoading}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            {...register('priority')}
-          >
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
-            <option value="CRITICAL">Critical</option>
-          </select>
-          {errors.priority && (
-            <p className="text-xs text-destructive font-semibold">{errors.priority.message}</p>
-          )}
-        </div>
-      </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          <div className="space-y-1.5">
+            <Label htmlFor="taskTitle">Task Title</Label>
+            <Input
+              id="taskTitle"
+              placeholder="e.g. Implement user database indexing"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
+          </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="dueDate">Due Date & Time</Label>
-        <Input
-          id="dueDate"
-          type="datetime-local"
-          error={!!errors.dueDate}
-          disabled={isLoading}
-          {...register('dueDate')}
-        />
-        {errors.dueDate && (
-          <p className="text-xs text-destructive font-semibold">{errors.dueDate.message}</p>
-        )}
-      </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="taskDescription">Description</Label>
+            <div className="relative">
+              <textarea
+                id="taskDescription"
+                placeholder="Detail the technical implementation steps..."
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full rounded-xl border border-border bg-card/50 px-3 py-2 pl-9 text-sm text-foreground focus:outline-none focus:border-primary transition-all duration-200 resize-none"
+              />
+              <AlignLeft className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
+            </div>
+          </div>
 
-      <Button type="submit" className="w-full" isLoading={isLoading}>
-        {submitLabel}
-      </Button>
-    </form>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="taskStatus">Status</Label>
+              <select
+                id="taskStatus"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:border-primary transition-all duration-200"
+              >
+                <option value="TODO">TODO</option>
+                <option value="IN_PROGRESS">IN PROGRESS</option>
+                <option value="DONE">DONE</option>
+                <option value="BLOCKED">BLOCKED</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="taskPriority">Priority</Label>
+              <select
+                id="taskPriority"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:border-primary transition-all duration-200"
+              >
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+                <option value="CRITICAL">CRITICAL</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="taskDueDate">Due Date</Label>
+            <div className="relative">
+              <input
+                type="date"
+                id="taskDueDate"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full h-11 px-3 pl-10 rounded-xl border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:border-primary transition-all duration-200"
+              />
+              <Calendar className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3.5" />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="taskAssignee">Assignee</Label>
+            <div className="relative">
+              <select
+                id="taskAssignee"
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+                className="w-full h-11 px-3 pl-10 rounded-xl border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:border-primary transition-all duration-200"
+              >
+                <option value="">Unassigned</option>
+                {projectMembers.map((member) => {
+                  const profile = memberProfiles[member.userId]
+                  const nameStr = profile
+                    ? `${profile.firstName} ${profile.surname || ''}`.trim() + ` (@${profile.username})`
+                    : `User ${member.userId.substring(0, 8)}...`
+                  return (
+                    <option key={member.userId} value={member.userId}>
+                      {nameStr} ({member.role})
+                    </option>
+                  )
+                })}
+              </select>
+              <User className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3.5" />
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4 border-t border-border/60 mt-6">
+            <Button type="button" variant="outline" onClick={onClose} className="rounded-xl h-10 font-bold">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting} className="rounded-xl h-10 font-bold px-6">
+              {submitting ? 'Saving...' : initialData ? 'Save Changes' : 'Create Task'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
-
-export default TaskForm

@@ -1,20 +1,61 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { ProtectedRoute } from './ProtectedRoute'
 import { PublicRoute } from './PublicRoute'
+import { ProfileCompletionGuard } from './ProfileCompletionGuard'
 import { UnifiedAuthPage } from '@/features/auth/pages/UnifiedAuthPage'
 import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage'
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
+import { CompleteProfilePage } from '@/features/auth/pages/CompleteProfilePage'
+import { AppShell } from '@/components/AppShell'
+import { DashboardPage } from '@/pages/DashboardPage'
+import { ProjectsPage } from '@/pages/ProjectsPage'
+import { AllTasksPage } from '@/pages/AllTasksPage'
+import { ProjectDetailPage } from '@/pages/ProjectDetailPage'
+import { ProfilePage } from '@/pages/ProfilePage'
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage'
-import { projectRoutes } from '@/features/projects/routes/projectRoutes'
-import { taskRoutes } from '@/features/tasks/routes/taskRoutes'
-import { collaborationRoutes } from '@/features/collaboration/routes/collaborationRoutes'
-import { dashboardRoutes } from '@/features/dashboard/routes/dashboardRoutes'
 
 export const router = createBrowserRouter([
-  ...dashboardRoutes,
-  ...projectRoutes,
-  ...taskRoutes,
-  ...collaborationRoutes,
+  // Protected landing profile page
+  {
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <ProfileCompletionGuard />,
+        children: [
+          {
+            element: <AppShell />,
+            children: [
+              {
+                path: '/',
+                element: <DashboardPage />,
+              },
+              {
+                path: '/projects',
+                element: <ProjectsPage />,
+              },
+              {
+                path: '/projects/:projectId',
+                element: <ProjectDetailPage />,
+              },
+              {
+                path: '/tasks',
+                element: <AllTasksPage />,
+              },
+              {
+                path: '/profile',
+                element: <ProfilePage />,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        path: '/complete-profile',
+        element: <CompleteProfilePage />,
+      },
+    ],
+  },
   {
     path: '/unauthorized',
     element: <UnauthorizedPage />,

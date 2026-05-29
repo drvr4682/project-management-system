@@ -73,7 +73,7 @@ axiosInstance.interceptors.request.use(
 
           // Safely parse user from storage to keep profiles hydrated
           const rawUser = localStorage.getItem('user')
-          const user: UserProfile = rawUser ? JSON.parse(rawUser) : { id: 0, name: '', email: '', role: 'USER' }
+          const user: UserProfile = rawUser ? JSON.parse(rawUser) : { id: '', userName: '', email: '', role: 'USER' }
 
           store.dispatch(setCredentials({ user, accessToken, refreshToken }))
           token = accessToken
@@ -120,7 +120,7 @@ axiosInstance.interceptors.response.use(
           refreshPromise = null
 
           const rawUser = localStorage.getItem('user')
-          const user: UserProfile = rawUser ? JSON.parse(rawUser) : { id: 0, name: '', email: '', role: 'USER' }
+          const user: UserProfile = rawUser ? JSON.parse(rawUser) : { id: '', userName: '', email: '', role: 'USER' }
 
           store.dispatch(setCredentials({ user, accessToken, refreshToken }))
 
@@ -140,7 +140,6 @@ axiosInstance.interceptors.response.use(
 )
 
 function logMessage(msg: string) {
-  // eslint-disable-next-line no-console
   console.log(msg)
 }
 
