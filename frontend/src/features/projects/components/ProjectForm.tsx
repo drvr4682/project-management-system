@@ -95,7 +95,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ isOpen, onClose, initi
             <Label htmlFor="projectName">Project Name</Label>
             <Input
               id="projectName"
-              placeholder="e.g. DRVR PMS Refactoring"
+              placeholder="e.g. PMSHub Refactoring"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required

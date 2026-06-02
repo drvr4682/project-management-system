@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.authservice.dto.LoginRequest;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.ResendVerificationRequest;
-import com.pms.authservice.entity.Role;
 import com.pms.authservice.entity.User;
 import com.pms.authservice.entity.VerificationToken;
 import com.pms.authservice.repository.UserRepository;

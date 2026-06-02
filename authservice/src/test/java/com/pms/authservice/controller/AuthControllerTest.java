@@ -8,7 +8,6 @@ import com.pms.authservice.dto.RefreshTokenResponse;
 import com.pms.authservice.dto.RegisterRequest;
 import com.pms.authservice.dto.RegisterResponse;
 import com.pms.authservice.dto.ResendVerificationRequest;
-import com.pms.authservice.entity.Role;
 import com.pms.authservice.exception.EmailVerificationException;
 import com.pms.authservice.security.CustomUserDetailsService;
 import com.pms.authservice.service.AuthService;

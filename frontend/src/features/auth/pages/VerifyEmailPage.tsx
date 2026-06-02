@@ -85,7 +85,7 @@ export const VerifyEmailPage: React.FC = () => {
   const sidePanel = (
     <AuthSidePanel
       title="Email Validation"
-      subtitle="Confirm your registration details to unlock your DRVRHub dashboard metrics and collaboration hubs."
+      subtitle="Confirm your registration details to unlock your PMSHub dashboard metrics and collaboration hubs."
       ctaLabel="Back to safety?"
       ctaText="Sign In"
       ctaLink="/login"

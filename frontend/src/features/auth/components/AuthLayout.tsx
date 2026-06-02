@@ -160,7 +160,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
                   >
                     <h2 className="text-2xl font-extrabold tracking-tight leading-tight">Hello, Welcome!</h2>
                     <p className="text-violet-200/95 text-xs md:text-sm font-semibold leading-relaxed">
-                      Join your team space, track deliverables, and manage milestones on DRVRHub.
+                      Join your team space, track deliverables, and manage milestones on PMSHub.
                     </p>
                   </motion.div>
                 ) : (

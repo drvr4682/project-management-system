@@ -72,13 +72,13 @@ class ProjectServiceTest {
     void shouldCreateProjectSuccessfully() {
 
         ProjectRequestDTO request = new ProjectRequestDTO();
-        request.setName("PMS Backend");
+        request.setName("PMSHub Backend");
         request.setDescription("Project Desc");
         request.setStatus("ACTIVE");
 
         Project savedProject = Project.builder()
                 .id(1L)
-                .name("PMS Backend")
+                .name("PMSHub Backend")
                 .description("Project Desc")
                 .ownerId(ADMIN_UUID)
                 .status(ProjectStatus.ACTIVE)
@@ -91,7 +91,7 @@ class ProjectServiceTest {
                 projectService.createProject(request);
 
         assertNotNull(response);
-        assertEquals("PMS Backend", response.getName());
+        assertEquals("PMSHub Backend", response.getName());
         assertEquals("ACTIVE", response.getStatus());
 
         verify(projectRepository, times(1))

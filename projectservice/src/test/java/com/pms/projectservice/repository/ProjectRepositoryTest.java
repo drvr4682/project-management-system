@@ -31,7 +31,7 @@ class ProjectRepositoryTest {
     void shouldSaveProjectSuccessfully() {
 
         Project project = Project.builder()
-                .name("PMS Backend")
+                .name("PMSHub Backend")
                 .description("Backend system")
                 .ownerId(OWNER_ID)
                 .status(ProjectStatus.ACTIVE)
@@ -40,7 +40,7 @@ class ProjectRepositoryTest {
         Project saved = projectRepository.save(project);
 
         assertNotNull(saved.getId());
-        assertEquals("PMS Backend", saved.getName());
+        assertEquals("PMSHub Backend", saved.getName());
         assertEquals(ProjectStatus.ACTIVE, saved.getStatus());
     }
 

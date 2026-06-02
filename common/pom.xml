@@ -10,7 +10,7 @@
     <artifactId>common</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>common</name>
-    <description>Shared security, exception, and filter utilities for all PMS microservices</description>
+    <description>Shared security, exception, and filter utilities for all PMSHub microservices</description>
     <packaging>jar</packaging>
 
     <properties>

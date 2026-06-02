@@ -100,7 +100,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isRegister }) => {
     >
       <AuthHeader
         title="Create Account"
-        subtitle="Get started with your DRVRHub collaborative workspace."
+        subtitle="Get started with your PMSHub collaborative workspace."
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-1.5">

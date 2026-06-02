@@ -33,13 +33,13 @@ export const Logo: React.FC<LogoProps> = ({
       <div className={`${boxSize} rounded-lg flex items-center justify-center font-extrabold ${letterStyle} ${
         light ? 'bg-white text-violet-600 shadow-sm' : 'bg-primary text-primary-foreground'
       }`}>
-        D
+        PMS
       </div>
       {showText && (
         <span className={`font-bold tracking-tight ${textStyle} ${
           light ? 'text-white' : 'text-foreground'
         }`}>
-          DRVRHub
+          PMSHub
         </span>
       )}
     </div>

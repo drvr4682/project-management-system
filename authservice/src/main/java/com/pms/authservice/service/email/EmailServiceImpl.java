@@ -30,16 +30,16 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
 
-            helper.setFrom(fromAddress, "PMS App Support");
+            helper.setFrom(fromAddress, "PMSHub App Support");
             helper.setTo(to);
-            helper.setSubject("PMS — Verify your email address");
+            helper.setSubject("PMSHub — Verify your email address");
 
             String body = "Hi " + name + ",\n\n"
-                    + "Thank you for registering on PMS. Please click the link below to verify your email and activate your account:\n"
+                    + "Thank you for registering on PMSHub. Please click the link below to verify your email and activate your account:\n"
                     + verificationLink + "\n\n"
                     + "This verification link is valid for 24 hours.\n\n"
                     + "Best regards,\n"
-                    + "PMS App Support";
+                    + "PMSHub App Support";
 
             helper.setText(body, false); // false = plain text
 
@@ -58,16 +58,16 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
 
-            helper.setFrom(fromAddress, "PMS App Support");
+            helper.setFrom(fromAddress, "PMSHub App Support");
             helper.setTo(to);
-            helper.setSubject("PMS — Reset your password");
+            helper.setSubject("PMSHub — Reset your password");
 
             String body = "Hello " + name + ",\n\n"
                     + "Use the link below to reset your password:\n\n"
                     + resetLink + "\n\n"
                     + "This link expires in " + passwordResetExpiryMinutes + " minutes.\n\n"
                     + "Best regards,\n"
-                    + "PMS App Support";
+                    + "PMSHub App Support";
 
             helper.setText(body, false); // false = plain text
 

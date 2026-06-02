@@ -70,7 +70,7 @@ export const CompleteProfilePage: React.FC = () => {
   const sidePanel = (
     <AuthSidePanel
       title="Complete Your Profile"
-      subtitle="Just a final step! Introduce yourself so your teammates can identify and collaborate with you on DRVRHub workspace."
+      subtitle="Just a final step! Introduce yourself so your teammates can identify and collaborate with you on PMSHub workspace."
       ctaLabel="Need assistance?"
       ctaText="Support Desk"
       ctaLink="/support"

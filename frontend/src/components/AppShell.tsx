@@ -76,7 +76,7 @@ export const AppShell: React.FC = () => {
     ? `${profileData.firstName} ${profileData.surname || ''}`.trim()
     : formatDisplayName(user)
 
-  const userEmail = user?.email || 'user@projecthub.com'
+  const userEmail = user?.email || 'user@pmshub.com'
 
   // Profile initial letter
   const initialLetter = (profileData?.firstName?.[0] || user?.userName?.[0] || 'U').toUpperCase()
@@ -111,11 +111,11 @@ export const AppShell: React.FC = () => {
         <div className={`h-16 flex items-center border-b border-border/80 ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
           <div className="flex items-center space-x-3.5">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center font-extrabold text-white text-sm tracking-wide shadow-md shadow-primary/10 shrink-0">
-              PM
+              PMS
             </div>
             {!isCollapsed && (
               <span className="font-extrabold text-lg text-slate-900 font-outfit tracking-tight">
-                ProjectHub
+                PMSHub
               </span>
             )}
           </div>
@@ -250,10 +250,10 @@ export const AppShell: React.FC = () => {
         <div className="h-16 flex items-center justify-between px-6 border-b border-border/80">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center font-extrabold text-white text-sm tracking-wide">
-              PM
+              PMS
             </div>
             <span className="font-extrabold text-lg text-slate-900 font-outfit tracking-tight">
-              ProjectHub
+              PMSHub
             </span>
           </div>
           <button
