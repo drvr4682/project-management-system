@@ -51,6 +51,19 @@ services:
     networks:
       - pms-network
 
+
+  # =====================================================
+  # ZIPKIN (Distributed Tracing UI & Span Collector)
+  # =====================================================
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    restart: unless-stopped
+    networks:
+      - pms-network
+
   # =====================================================
   # AUTH SERVICE
   # =====================================================
@@ -91,6 +104,7 @@ services:
       # Public base URL used to build clickable links in emails.
       # Should be your API Gateway's externally-reachable URL.
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
 
     depends_on:
       postgres:
@@ -124,6 +138,7 @@ services:
 
       GATEWAY_SECRET: ${GATEWAY_SECRET}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -157,6 +172,7 @@ services:
 
       GATEWAY_SECRET: ${GATEWAY_SECRET}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -191,6 +207,7 @@ services:
 
       GATEWAY_SECRET: ${GATEWAY_SECRET}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -228,6 +245,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
     depends_on:
       authservice:
         condition: service_started
